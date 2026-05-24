@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+~/capstone_venv/
+
+# PyTorch artifacts
+*.pt
+*.pth
+checkpoints/
+*.onnx
+*.trt
+*.ncu-rep
+
+# Nsight profiling output
+*.nsys-rep
+*.qdrep
+*.sqlite
+reports/
+prof_output/
+logs/
+*.json
+!package.json
+*.svg
+!docs/*.svg
+
+# Results and plots
+results_*.txt
+gpu_memory_log.csv
+*.png
+tl_curve.png
+memory_plot.png
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Large model files
+*.bin
+*.safetensors
+*.gguf
+
+# Temp
+tmp/
+temp/
+perf.data
+perf.data.old
+flamegraph.svg
+
+# Datasets
+datasets/
+data/
+
+# Env files
+.env
+.envrc
