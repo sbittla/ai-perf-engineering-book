@@ -49,16 +49,13 @@ if DEVICE == "cuda":
     # CORRECT: CUDA events record timestamps on the GPU timeline
     # TODO 1: Create start and end CUDA events with enable_timing=True
     start_evt = None  # YOUR CODE HERE
-    end_evt   = torch.cuda.Event(enable_timing=True)
+    end_evt   = None  # YOUR CODE HERE
 
     # TODO 2: Record start_evt, run torch.mm(A, B), record end_evt
-    pass  # YOUR CODE HERE
-    C = torch.mm(A, B)
-    end_evt.record()
+    pass  # YOUR CODE HERE  (start_evt.record() → torch.mm → end_evt.record())
 
-    # TODO 3: Synchronize then get elapsed time
-    pass  # YOUR CODE HERE
-    elapsed_correct = start_evt.elapsed_time(end_evt)
+    # TODO 3: Synchronize then get the elapsed time in ms
+    elapsed_correct = None  # YOUR CODE HERE  (torch.cuda.synchronize(), then elapsed_time())
 
     assert start_evt is not None,       "create start event"
     assert end_evt   is not None,       "create end event"
@@ -179,10 +176,9 @@ model2.eval()
 
 ids = torch.randint(0, 1000, (8, 16), device=DEVICE)
 
-# TODO 5: Profile model2(ids) with CPU + CUDA activities
+# TODO 5: Build the activities list (always CPU; add CUDA if available)
+# e.g. [ProfilerActivity.CPU] or [ProfilerActivity.CPU, ProfilerActivity.CUDA]
 activities = None  # YOUR CODE HERE
-if DEVICE == "cuda":
-    activities.append(ProfilerActivity.CUDA)
 
 with profile(activities=activities, record_shapes=True) as prof:
     with torch.no_grad():
@@ -248,10 +244,9 @@ print("""
 """)
 
 if DEVICE == "cuda":
-    # TODO 8: Add NVTX markers around the three sections below.
-    # Names: "tokenize", "forward", "loss"
-
-    pass  # YOUR CODE HERE
+    # TODO 8: The NVTX markers below are already added — study the pattern, then
+    # run under nsys to see them:
+    #   nsys profile --trace=cuda,nvtx python exercise_05_performance_basics.py
     torch.cuda.nvtx.range_push("tokenize")
     ids2 = torch.randint(0, 1000, (4, 32), device=DEVICE)
     torch.cuda.nvtx.range_pop()

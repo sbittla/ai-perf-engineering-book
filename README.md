@@ -28,8 +28,7 @@ Engineers transitioning from **Enterprise / Cloud Performance Engineering** into
 ai-perf-engineering/
 │
 ├── 00_pytorch_basics/          ← Start here if new to PyTorch
-│   ├── exercises/              ← Fill in the TODOs
-│   └── solutions/              ← Reference answers
+│   └── exercises/              ← Fill in the TODOs (solutions in the book)
 │
 ├── 01_phase1_foundations/      ← CPU architecture & Linux internals
 │   ├── cpu_arch/
@@ -207,8 +206,8 @@ docker exec -it gpu-llm-monitor bash
 ### 1. Local Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ai-perf-engineering.git
-cd ai-perf-engineering
+git clone https://github.com/YOUR_USERNAME/ai-perf-engineering-book.git
+cd ai-perf-engineering-book
 
 chmod +x scripts/setup_env.sh
 bash scripts/setup_env.sh

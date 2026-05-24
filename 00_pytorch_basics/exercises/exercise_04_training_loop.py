@@ -74,11 +74,9 @@ print("  ✓ DataLoaders work")
 # ─────────────────────────────────────────────────────────
 print("\n── Section 3: Model ──")
 
-# TODO 5: Build a 3-layer MLP for regression:
+# TODO 5: Build a 3-layer MLP for regression and move it to DEVICE:
 #   Linear(1→64) → ReLU → Linear(64→64) → ReLU → Linear(64→1)
-model = None  # YOUR CODE HERE
-
-# TODO 6: Move model to DEVICE
+# TODO 6: Move model to DEVICE (chain .to(DEVICE) at the end)
 model = None  # YOUR CODE HERE
 
 n_params = sum(p.numel() for p in model.parameters())
@@ -106,7 +104,7 @@ for epoch in range(N_EPOCHS):
     for xb, yb in train_loader:
         # TODO 7: Move xb and yb to DEVICE
         xb = None  # YOUR CODE HERE
-        yb = yb.to(DEVICE)
+        yb = None  # YOUR CODE HERE
 
         # TODO 8: Zero the gradients
         pass  # YOUR CODE HERE
@@ -130,7 +128,7 @@ for epoch in range(N_EPOCHS):
     val_losses = []
 
     # TODO 13: Wrap the validation loop in torch.no_grad()
-    pass  # YOUR CODE HERE
+    with torch.no_grad():  # YOUR CODE HERE — add this context manager
         for xb, yb in val_loader:
             xb  = xb.to(DEVICE)
             yb  = yb.to(DEVICE)
@@ -179,16 +177,15 @@ else:
         opt_amp.zero_grad(set_to_none=True)
 
         # TODO 14: Use torch.autocast to run forward in FP16
-        pass  # YOUR CODE HERE
+        with torch.autocast(device_type=DEVICE, dtype=torch.float16):  # YOUR CODE HERE
             pred = model_amp(xb)
             loss = criterion(pred, yb)
 
         # TODO 15: Use scaler.scale(loss).backward()
         pass  # YOUR CODE HERE
 
-        # TODO 16: Use scaler.step(opt_amp) and scaler.update()
+        # TODO 16: Use scaler.step(opt_amp) then scaler.update()
         pass  # YOUR CODE HERE
-        scaler.update()
 
     amp_time = time.perf_counter() - t0
     print(f"  AMP training time (1 epoch): {amp_time*1000:.1f}ms")
@@ -202,8 +199,8 @@ print("\n── Section 6: Inference ──")
 model.eval()
 test_x = torch.tensor([[0.0], [1.5707], [3.1415]], device=DEVICE)   # 0, π/2, π
 
-# TODO 17: Run model inference — no_grad + eval mode
-pass  # YOUR CODE HERE
+# TODO 17: Run model inference — wrap with torch.no_grad()
+with torch.no_grad():  # YOUR CODE HERE
     pred_y = model(test_x)
 
 # sin(0)=0, sin(π/2)≈1, sin(π)≈0

@@ -46,8 +46,8 @@ model_weight = torch.tensor([2.0], requires_grad=True)
 
 # TODO 5: Inside torch.no_grad(), compute z = model_weight * 5.0
 # z should NOT have a grad_fn (no graph built)
-pass  # YOUR CODE HERE
-    z = model_weight * 5.0
+with torch.no_grad():
+    z = None  # YOUR CODE HERE
 
 # TODO 6: Does z have requires_grad?
 z_requires_grad = None  # YOUR CODE HERE

@@ -32,7 +32,7 @@ python exercise_01_tensors.py
 
 All assertions must pass. Hints are at the bottom of each file.
 
-Solutions are in the `solutions/` folder — try without them first.
+Worked solutions are provided in the book.
 
 ## Key Concepts by Exercise
 
