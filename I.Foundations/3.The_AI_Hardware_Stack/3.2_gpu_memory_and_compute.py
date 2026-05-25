@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-exercise_02_gpu_memory_and_compute.py  ─  Chapter 3: GPU Hardware Internals
+3.2_gpu_memory_and_compute.py  ─  Chapter 3: GPU Hardware Internals
 =============================================================================
 Covers book section 3.3:
   • HBM bandwidth measurement (how fast can we saturate the memory bus?)
@@ -9,7 +9,7 @@ Covers book section 3.3:
   • SM utilisation and occupancy concepts
   • The GPU memory hierarchy: registers → shared → L2 → HBM
 
-Run:  python exercise_02_gpu_memory_and_compute.py
+Run:  python 3.2_gpu_memory_and_compute.py
 Sections 1–4 require CUDA.  Section 5 runs on CPU for the concepts.
 """
 

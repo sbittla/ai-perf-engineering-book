@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-I.Foundations/2.PyTorch_Fundamentals/gpu_timing.py  ─  Chapter 2: GPU Timing & Profiling Basics
+I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py  ─  Chapter 2: GPU Timing & Profiling Basics
 =======================================================================
 Covers book section 2.5:
   • Why time.time() is wrong for GPU code (async execution)
@@ -11,8 +11,8 @@ Covers book section 2.5:
   • GPU memory tracking (allocated / reserved / peak)
   • NVTX markers for Nsight Systems
 
-Run:  python I.Foundations/2.PyTorch_Fundamentals/gpu_timing.py
-      nsys profile --trace=cuda,nvtx python I.Foundations/2.PyTorch_Fundamentals/gpu_timing.py   (for Section 6)
+Run:  python I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py
+      nsys profile --trace=cuda,nvtx python I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py   (for Section 6)
 All sections must print ✓.
 """
 
@@ -268,7 +268,7 @@ print("""
   coloured band labelled with your string.
 
   To see the markers in Nsight Systems:
-    nsys profile --trace=cuda,nvtx python I.Foundations/2.PyTorch_Fundamentals/gpu_timing.py
+    nsys profile --trace=cuda,nvtx python I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py
 
   Pattern:
     torch.cuda.nvtx.range_push("phase_name")
@@ -307,5 +307,5 @@ print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 05 complete!")
 print("  You now know how to time, profile, and track memory for GPU code.")
 print("  This is the foundation for every profiling chapter that follows.")
-print("  Next: I.Foundations/2.PyTorch_Fundamentals/common_mistakes.py")
+print("  Next: I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py")
 print("=" * 60)

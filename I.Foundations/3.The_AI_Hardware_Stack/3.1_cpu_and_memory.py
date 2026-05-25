@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-exercise_01_cpu_and_memory.py  ─  Chapter 3: CPU Architecture & PCIe
+3.1_cpu_and_memory.py  ─  Chapter 3: CPU Architecture & PCIe
 =====================================================================
 Covers book sections 3.1 and 3.2:
   • CPU cache hierarchy: L1 → L2 → L3 → DRAM latency and bandwidth
@@ -12,7 +12,7 @@ Covers book sections 3.1 and 3.2:
 This exercise runs on CPU-only machines for Sections 1–2.
 Sections 3–4 require CUDA.
 
-Run:  python exercise_01_cpu_and_memory.py
+Run:  python 3.1_cpu_and_memory.py
 """
 
 import time

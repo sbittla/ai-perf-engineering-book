@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-I.Foundations/2.PyTorch_Fundamentals/nn_modules.py  ─  Chapter 2: nn.Module & Neural Networks
+I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py  ─  Chapter 2: nn.Module & Neural Networks
 =====================================================================
 Covers book sections 2.3:
   • Built-in layers and nn.Sequential
@@ -11,7 +11,7 @@ Covers book sections 2.3:
   • Parameter and buffer registration
   • Module introspection
 
-Run:  python I.Foundations/2.PyTorch_Fundamentals/nn_modules.py
+Run:  python I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py
 All sections must print ✓.
 """
 
@@ -295,5 +295,5 @@ print("  ✓ Section 7 passed")
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 03 complete!")
 print("  You now know how to build, inspect, save, and deploy PyTorch models.")
-print("  Next: I.Foundations/2.PyTorch_Fundamentals/training_loop.py")
+print("  Next: I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py")
 print("=" * 60)

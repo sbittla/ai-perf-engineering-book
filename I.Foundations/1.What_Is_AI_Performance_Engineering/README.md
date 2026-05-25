@@ -2,7 +2,7 @@
 
 One exercise covering the roofline model and the economic case for GPU performance engineering.
 
-## exercise_01_roofline_model.py
+## exercise_01_1.1_roofline_model.py
 
 **Book sections:** 1.1 (hardware stack), 1.2 (roofline model), 1.5 (economics), 1.6 (optimisation hierarchy)
 

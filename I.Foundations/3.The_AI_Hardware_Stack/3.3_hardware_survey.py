@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-exercise_03_hardware_survey.py  ─  Chapter 3: Reading GPU Specifications
+3.3_hardware_survey.py  ─  Chapter 3: Reading GPU Specifications
 =========================================================================
 Covers book section 3.5:
   • Reading GPU specs programmatically (nvidia-smi, torch.cuda APIs)
@@ -12,7 +12,7 @@ Covers book section 3.5:
 This is a capstone exercise for Chapter 3.  It ties together sections
 3.1–3.5 by asking you to build a complete hardware report for your GPU.
 
-Run:  python exercise_03_hardware_survey.py
+Run:  python 3.3_hardware_survey.py
 """
 
 import subprocess
@@ -348,14 +348,14 @@ print("  ALL SECTIONS COMPLETE — Exercise 03 (Chapter 3) done!")
 print()
 print("  You have completed all exercises in Part I — Foundations.")
 print("  Before continuing to Part II, verify:")
-print("    part1_foundations/ch01_introduction/exercise_01_roofline_model.py   ✓")
-print("    part1_foundations/ch02_pytorch_fundamentals/I.Foundations/2.PyTorch_Fundamentals/tensors.py  ✓")
-print("    part1_foundations/ch02_pytorch_fundamentals/I.Foundations/2.PyTorch_Fundamentals/autograd.py ✓")
-print("    part1_foundations/ch02_pytorch_fundamentals/I.Foundations/2.PyTorch_Fundamentals/nn_modules.py ✓")
-print("    part1_foundations/ch02_pytorch_fundamentals/I.Foundations/2.PyTorch_Fundamentals/training_loop.py ✓")
-print("    part1_foundations/ch02_pytorch_fundamentals/I.Foundations/2.PyTorch_Fundamentals/gpu_timing.py ✓")
-print("    part1_foundations/ch02_pytorch_fundamentals/I.Foundations/2.PyTorch_Fundamentals/common_mistakes.py ✓")
-print("    part1_foundations/ch03_hardware_stack/exercise_01_cpu_and_memory.py ✓")
-print("    part1_foundations/ch03_hardware_stack/exercise_02_gpu_memory_and_compute.py ✓")
-print("    part1_foundations/ch03_hardware_stack/exercise_03_hardware_survey.py ✓")
+print("    I.Foundations/1.What_Is_AI_Performance_Engineering/1.1_roofline_model.py   ✓")
+print("    I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py  ✓")
+print("    I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py ✓")
+print("    I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py ✓")
+print("    I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py ✓")
+print("    I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py ✓")
+print("    I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py ✓")
+print("    I.Foundations/3.The_AI_Hardware_Stack/3.1_cpu_and_memory.py ✓")
+print("    I.Foundations/3.The_AI_Hardware_Stack/3.2_gpu_memory_and_compute.py ✓")
+print("    I.Foundations/3.The_AI_Hardware_Stack/3.3_hardware_survey.py ✓")
 print("=" * 65)

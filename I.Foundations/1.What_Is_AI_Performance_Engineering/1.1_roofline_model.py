@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-exercise_01_roofline_model.py  ─  Chapter 1: The Roofline Model
+1.1_roofline_model.py  ─  Chapter 1: The Roofline Model
 ================================================================
 Covers book sections 1.1, 1.2, 1.5, 1.6:
   • Hardware numbers: peak FLOP/s and memory bandwidth
@@ -13,7 +13,7 @@ Covers book sections 1.1, 1.2, 1.5, 1.6:
 This exercise is conceptual + measurement.  It runs on CPU or GPU.
 All TODO blocks are calculations you fill in; assertions verify correctness.
 
-Run:  python exercise_01_roofline_model.py
+Run:  python 1.1_roofline_model.py
 """
 
 import torch

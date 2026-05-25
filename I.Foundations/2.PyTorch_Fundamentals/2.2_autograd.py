@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-I.Foundations/2.PyTorch_Fundamentals/autograd.py  ─  PyTorch Basics: Autograd & Gradients
+I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py  ─  PyTorch Basics: Autograd & Gradients
 =================================================================
 """
 
@@ -154,5 +154,5 @@ print("  → loss.item() implicitly detaches — safe for logging, wrong for bac
 
 print("\n" + "=" * 55)
 print("  ALL SECTIONS PASSED — Exercise 02 complete!")
-print("  Next: I.Foundations/2.PyTorch_Fundamentals/nn_modules.py")
+print("  Next: I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py")
 print("=" * 55)

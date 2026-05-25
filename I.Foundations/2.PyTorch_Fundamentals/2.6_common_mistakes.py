@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-I.Foundations/2.PyTorch_Fundamentals/common_mistakes.py  ─  Chapter 2: The Ten Most Common Mistakes
+I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py  ─  Chapter 2: The Ten Most Common Mistakes
 ===========================================================================
 Covers book section 2.6.
 
@@ -8,7 +8,7 @@ Each section demonstrates a real mistake and has you:
   (a) observe the wrong behaviour (the bug is pre-coded so you can see it)
   (b) fix it and verify the correct behaviour
 
-Run:  python I.Foundations/2.PyTorch_Fundamentals/common_mistakes.py
+Run:  python I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py
 All sections must print ✓.
 """
 

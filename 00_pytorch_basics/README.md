@@ -1,119 +1,42 @@
 # 00 — PyTorch Basics
 
-**Complete these exercises before starting the main course.**
+> **The exercises for Part I have moved.**
+>
+> All exercises are now in the [`I.Foundations/`](../I.Foundations/) directory,
+> organised by chapter. See [`I.Foundations/README.md`](../I.Foundations/README.md)
+> for the full exercise map and setup instructions.
 
-Estimated time: 2–3 days
+## Exercise locations
 
----
+| Chapter | Topic | File |
+|---------|-------|------|
+| 1 | Roofline model, MFU, economics | [`I.Foundations/1.What_Is_AI_Performance_Engineering/1.1_roofline_model.py`](../I.Foundations/1.What_Is_AI_Performance_Engineering/1.1_roofline_model.py) |
+| 2 | Tensors | [`I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py`](../I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py) |
+| 2 | Autograd | [`I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py`](../I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py) |
+| 2 | nn.Module | [`I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py`](../I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py) |
+| 2 | Training loop | [`I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py`](../I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py) |
+| 2 | GPU timing & profiling | [`I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py`](../I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py) |
+| 2 | Ten common mistakes | [`I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py`](../I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py) |
+| 3 | CPU cache & PCIe | [`I.Foundations/3.The_AI_Hardware_Stack/3.1_cpu_and_memory.py`](../I.Foundations/3.The_AI_Hardware_Stack/3.1_cpu_and_memory.py) |
+| 3 | HBM & Tensor Cores | [`I.Foundations/3.The_AI_Hardware_Stack/3.2_gpu_memory_and_compute.py`](../I.Foundations/3.The_AI_Hardware_Stack/3.2_gpu_memory_and_compute.py) |
+| 3 | GPU spec reading | [`I.Foundations/3.The_AI_Hardware_Stack/3.3_hardware_survey.py`](../I.Foundations/3.The_AI_Hardware_Stack/3.3_hardware_survey.py) |
 
-## Why This Section Exists
-
-The rest of this course assumes you can read and write PyTorch fluently.
-These exercises give you a fast, practical on-ramp through the exact concepts
-you'll encounter when profiling and optimising models.
-
-## Exercise Order
-
-| # | File | Topics | Time |
-|---|------|--------|------|
-| 01 | `exercise_01_tensors.py` | Creation, shapes, dtypes, devices, math, indexing | 30 min |
-| 02 | `exercise_02_autograd.py` | `requires_grad`, backward, `no_grad`, gradient accumulation pitfall | 45 min |
-| 03 | `exercise_03_nn_modules.py` | `nn.Module`, `Sequential`, custom modules, train/eval, save/load | 45 min |
-| 04 | `exercise_04_training_loop.py` | Dataset, DataLoader, full train loop, AMP | 60 min |
-| 05 | `exercise_05_performance_basics.py` | CUDA events, warmup, profiler, memory tracking, NVTX | 60 min |
-
-## How to Use
-
-Each file has `TODO` blocks. Fill them in, then run:
+## Quick start
 
 ```bash
-python exercise_01_tensors.py
-```
+# Chapter 1
+python "I.Foundations/1.What_Is_AI_Performance_Engineering/1.1_roofline_model.py"
 
-All assertions must pass. Hints are at the bottom of each file.
+# Chapter 2 (in order)
+python "I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py"
+python "I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py"
+python "I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py"
+python "I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py"
+python "I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py"
+python "I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py"
 
-Worked solutions are provided in the book.
-
-## Key Concepts by Exercise
-
-### Exercise 01 — Tensors
-```python
-# Create
-t = torch.tensor([1.0, 2.0])          # from list
-t = torch.zeros(3, 4)                  # zeros
-t = torch.rand(2, 3)                   # uniform [0,1]
-t = torch.arange(10)                   # 0..9
-
-# Shape
-t.reshape(2, 5)                        # reinterpret shape
-t.transpose(0, 1)                      # swap dims
-t.flatten()                            # → 1D
-t.unsqueeze(0)                         # add dim
-
-# Move to GPU
-t_gpu = t.to("cuda")
-t_cpu = t_gpu.cpu()
-
-# Dtype
-t.half()                               # float16
-t.to(torch.bfloat16)                   # bfloat16
-```
-
-### Exercise 02 — Autograd
-```python
-x = torch.tensor([2.0], requires_grad=True)
-y = x**2
-y.backward()
-print(x.grad)                          # dy/dx = 2x = 4
-
-# Always zero before each step
-optimizer.zero_grad(set_to_none=True)
-loss.backward()
-optimizer.step()
-
-# No gradient tracking for inference
-with torch.no_grad():
-    pred = model(x)
-```
-
-### Exercise 03 — Modules
-```python
-# Custom module
-class MyLayer(nn.Module):
-    def __init__(self, d):
-        super().__init__()
-        self.w = nn.Linear(d, d)
-
-    def forward(self, x):
-        return self.w(x) + x   # residual
-
-# ALWAYS set mode
-model.train()   # dropout active, BN updates
-model.eval()    # dropout disabled, BN frozen
-```
-
-### Exercise 04 — Training Loop
-```python
-for xb, yb in dataloader:
-    xb, yb = xb.to(device), yb.to(device)
-    optimizer.zero_grad(set_to_none=True)  # must zero each step
-    pred = model(xb)
-    loss = criterion(pred, yb)
-    loss.backward()
-    optimizer.step()
-```
-
-### Exercise 05 — Performance
-```python
-# CORRECT GPU timing
-start = torch.cuda.Event(enable_timing=True)
-end   = torch.cuda.Event(enable_timing=True)
-start.record()
-output = model(x)
-end.record()
-torch.cuda.synchronize()
-ms = start.elapsed_time(end)           # milliseconds
-
-# Warmup before benchmarking
-for _ in range(5): model(x)            # discard first calls
+# Chapter 3
+python "I.Foundations/3.The_AI_Hardware_Stack/3.1_cpu_and_memory.py"
+python "I.Foundations/3.The_AI_Hardware_Stack/3.2_gpu_memory_and_compute.py"
+python "I.Foundations/3.The_AI_Hardware_Stack/3.3_hardware_survey.py"
 ```

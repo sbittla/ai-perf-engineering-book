@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-I.Foundations/2.PyTorch_Fundamentals/training_loop.py  ─  Chapter 2: The Complete Training Loop
+I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py  ─  Chapter 2: The Complete Training Loop
 =======================================================================
 Covers book sections 2.4:
   • Custom Dataset
@@ -12,7 +12,7 @@ Covers book sections 2.4:
   • Automatic Mixed Precision (AMP)
   • Inference
 
-Run:  python I.Foundations/2.PyTorch_Fundamentals/training_loop.py
+Run:  python I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py
 All sections must print ✓.
 """
 
@@ -324,5 +324,5 @@ print("  ✓ Section 7 passed")
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 04 complete!")
 print("  You now know the full training loop including AMP and gradient clipping.")
-print("  Next: I.Foundations/2.PyTorch_Fundamentals/gpu_timing.py")
+print("  Next: I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py")
 print("=" * 60)

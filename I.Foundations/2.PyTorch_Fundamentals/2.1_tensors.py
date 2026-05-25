@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-I.Foundations/2.PyTorch_Fundamentals/tensors.py  ─  PyTorch Basics: Tensors & Operations
+I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py  ─  PyTorch Basics: Tensors & Operations
 ================================================================
 """
 
@@ -164,5 +164,5 @@ print("  ✓ Section 6 passed")
 
 print("\n" + "=" * 55)
 print("  ALL SECTIONS PASSED — Exercise 01 complete!")
-print("  Next: I.Foundations/2.PyTorch_Fundamentals/autograd.py")
+print("  Next: I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py")
 print("=" * 55)
