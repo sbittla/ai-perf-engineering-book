@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-8.Perf_eBPF_and_Flamegraphs/8.2_cpu_flamegraphs.py  ─  Chapter 8: CPU Flamegraphs
+8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py  ─  Chapter 8: CPU Flamegraphs
 =======================================================================
 Covers book section 8.2:
   • What a flamegraph shows — x-axis = time, y-axis = call depth
@@ -9,7 +9,7 @@ Covers book section 8.2:
   • Differential flamegraphs for verifying optimisations
   • Classifying flamegraph frames by width percentage
 
-Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.2_cpu_flamegraphs.py
+Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py
 All sections must print ✓.
 """
 

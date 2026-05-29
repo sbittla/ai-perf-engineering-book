@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_profiling_audit.py
+VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 16: Capstone 1 — LLM Inference Optimisation Lab
 Section 3: Profiling Audit — Attributing Time to Operations
@@ -12,7 +12,7 @@ Covers capstone section 16.3:
   • Computing the "3 top bottlenecks" and which optimisation fixed each
   • Comparing FP32 and FP16 op-level breakdowns
 
-Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_profiling_audit.py
+Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py
 All sections must print ✓.
 """
 

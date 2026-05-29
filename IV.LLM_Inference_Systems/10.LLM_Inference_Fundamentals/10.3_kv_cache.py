@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_kv_cache.py
+IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_kv_cache.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 10: LLM Inference Fundamentals — Section 2: KV Cache
 =======================================================================
@@ -11,7 +11,7 @@ Covers book section 10.2:
   • How KV cache size limits batch size and sequence length
   • Practical constraints: when you run out of VRAM
 
-Run:  python IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_kv_cache.py
+Run:  python IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_kv_cache.py
 All sections must print ✓.
 """
 

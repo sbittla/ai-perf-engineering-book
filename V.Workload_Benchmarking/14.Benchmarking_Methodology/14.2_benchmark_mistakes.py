@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-V.Workload_Benchmarking/14.Benchmarking_Methodology/14.1_benchmark_mistakes.py
+V.Workload_Benchmarking/14.Benchmarking_Methodology/14.2_benchmark_mistakes.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 14: Benchmarking Methodology — Section 1: The Five Common Mistakes
 =======================================================================
@@ -12,7 +12,7 @@ Covers book section 14.1:
   • Mistake 5: Reporting peak, not steady state
   • The correct benchmark() helper that avoids all five mistakes
 
-Run:  python V.Workload_Benchmarking/14.Benchmarking_Methodology/14.1_benchmark_mistakes.py
+Run:  python V.Workload_Benchmarking/14.Benchmarking_Methodology/14.2_benchmark_mistakes.py
 All sections must print ✓.
 """
 

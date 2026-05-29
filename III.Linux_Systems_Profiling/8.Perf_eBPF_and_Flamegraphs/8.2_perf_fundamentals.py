@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-8.Perf_eBPF_and_Flamegraphs/8.1_perf_fundamentals.py  ─  Chapter 8: perf stat and Hardware Counters
+8.Perf_eBPF_and_Flamegraphs/8.2_perf_fundamentals.py  ─  Chapter 8: perf stat and Hardware Counters
 =======================================================================
 Covers book section 8.1:
   • IPC (Instructions Per Cycle) and what it reveals about CPU efficiency
@@ -8,7 +8,7 @@ Covers book section 8.1:
   • Branch misprediction cost and the sorted-array trick
   • perf stat command reference for AI workloads
 
-Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.1_perf_fundamentals.py
+Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.2_perf_fundamentals.py
 All sections must print ✓.
 """
 

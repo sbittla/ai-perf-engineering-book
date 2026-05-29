@@ -250,5 +250,5 @@ print(f"    B200 ridge point: {ridge_points['B200 SXM']:.0f} FLOP/byte  (≈ sam
 print(f"    Llama 70B FP16: {llama70_fp16_gb:.0f} GB — single B200 ✓, needs 2× H100")
 print(f"    B200 AllReduce (1 GB, 8 GPUs): {ar_times['B200 (NVLink 5)']:.2f} ms via NVLink 5")
 print()
-print("  Next: 20.2_blackwell_profiling.py")
+print("  Next: VII.Hardware_Landscape/20.NVIDIA_Blackwell/20.2_blackwell_profiling.py")
 print("=" * 70)

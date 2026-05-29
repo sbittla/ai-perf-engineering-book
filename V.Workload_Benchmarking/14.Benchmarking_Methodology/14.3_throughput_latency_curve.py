@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-V.Workload_Benchmarking/14.Benchmarking_Methodology/14.2_throughput_latency_curve.py
+V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_throughput_latency_curve.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 14: Benchmarking Methodology — Section 2: Throughput-Latency Curves
 =======================================================================
@@ -12,7 +12,7 @@ Covers book section 14.2:
   • Selecting the optimal operating point from the T-L curve
   • How the Pareto frontier is used in MLPerf submissions
 
-Run:  python V.Workload_Benchmarking/14.Benchmarking_Methodology/14.2_throughput_latency_curve.py
+Run:  python V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_throughput_latency_curve.py
 All sections must print ✓.
 """
 
