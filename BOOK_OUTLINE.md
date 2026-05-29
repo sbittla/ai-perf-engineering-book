@@ -88,11 +88,11 @@
    - GPU memory: allocated vs reserved vs peak
 
 **Code / Exercises**
-- `exercise_01_tensors.py` — 22 TODO blocks
-- `exercise_02_autograd.py` — 16 TODO blocks
-- `exercise_03_nn_modules.py` — 6 TODO blocks
-- `exercise_04_training_loop.py` — 16 TODO blocks
-- `exercise_05_performance_basics.py` — 8 TODO blocks
+- `I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py` — 22 TODO blocks
+- `I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py` — 16 TODO blocks
+- `I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py` — 6 TODO blocks
+- `I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py` — 16 TODO blocks
+- `I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py` — 8 TODO blocks
 
 **Est. Pages:** 28
 
@@ -119,8 +119,9 @@
    - Tensor Cores — the hardware behind `torch.float16`
 
 **Code / Exercises**
-- `01_phase1_foundations/exercise_01_tensors.py`
-- `03_phase3_systems/module7_memory_numa/memory_bench.py` — measure cache effects
+- `I.Foundations/3.The_AI_Hardware_Stack/3.1_cpu_and_memory.py`
+- `I.Foundations/3.The_AI_Hardware_Stack/3.2_gpu_memory_and_compute.py`
+- `I.Foundations/3.The_AI_Hardware_Stack/3.3_hardware_survey.py`
 
 **Est. Pages:** 18
 
@@ -162,10 +163,10 @@
    - How `torch.float16` and `torch.bfloat16` activate Tensor Cores
 
 **Code / Exercises**
-- `02_phase2_gpu/module3_cuda_fundamentals/vector_add.py` — observe the execution model
-- `02_phase2_gpu/module3_cuda_fundamentals/cuda_kernels.py` — 6 experiments: occupancy, coalescing, divergence, Tensor Cores, memory hierarchy, kernel fusion
-- `02_phase2_gpu/module3_cuda_fundamentals/occupancy_experiment.py`
-- `02_phase2_gpu/module3_cuda_fundamentals/matmul_bench.py` — roofline analysis
+- `II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.1_cuda_foundations.py` — CUDA stack overview (read-and-run)
+- `II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_execution_model.py` — warps, occupancy, warp divergence
+- `II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_memory_coalescing.py` — coalescing + memory hierarchy
+- `II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py` — Tensor Cores + torch.compile fusion
 
 **Est. Pages:** 32
 
@@ -202,9 +203,9 @@
    - Reading the op table: `Self CUDA %` is your target
 
 **Code / Exercises**
-- `02_phase2_gpu/module4_profiling/train.py` — the profiling target
-- `02_phase2_gpu/module4_profiling/profile_pytorch_infer.py` — all tools in one script
-- `06_capstone_projects/project1_llm_opt/torch_profiler_trace.py`
+- `II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.1_nsys_profiling.py` — nsys workflow + NVTX markers
+- `II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.2_ncu_profiling.py` — ncu metrics + roofline
+- `II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.3_torch_profiler.py` — op attribution + Chrome trace
 - Shell scripts: `project1_llm_opt/profile_nsys.sh`, `profile_ncu.sh`
 
 **Est. Pages:** 28
@@ -239,11 +240,9 @@
    - Finding the optimal batch size with a sweep
 
 **Code / Exercises**
-- `02_phase2_gpu/module5_pytorch_perf/fp16_bf16_bench.py`
-- `02_phase2_gpu/module5_pytorch_perf/quantization_bench.py`
-- `02_phase2_gpu/module5_pytorch_perf/llama_infer_optimize.py` — 5-step optimisation ladder
-- `02_phase2_gpu/module4_profiling/optimize_batch_size.py`
-- `06_capstone_projects/project1_llm_opt/torch_compile_bench.py`
+- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.1_precision_and_amp.py` — FP16/BF16/AMP benchmark
+- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.2_quantization.py` — INT8 / INT4 quantization
+- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.3_torch_compile.py` — compile modes + batch size sweep
 
 **Est. Pages:** 28
 
@@ -273,9 +272,8 @@
    - When to augment on CPU vs GPU
 
 **Code / Exercises**
-- `06_capstone_projects/project2_dataloader/slow_dataloader.py` — intentional bottleneck
-- `06_capstone_projects/project2_dataloader/fast_dataloader.py` — optimised version
-- `06_capstone_projects/project2_dataloader/diagnose_io.sh`
+- `II.GPU_Programming_and_Profiling/7.DataLoader_Optimisation/7.1_dataloader_pipeline.py` — num_workers, pin_memory, prefetch
+- `II.GPU_Programming_and_Profiling/7.DataLoader_Optimisation/7.2_io_bottleneck.py` — idle_pct diagnosis + fixes
 
 **Est. Pages:** 22
 
@@ -310,10 +308,11 @@
    - Detecting lock contention with `perf lock` and `bpftrace`
 
 **Code / Exercises**
-- `03_phase3_systems/module6_linux_profiling/cache_miss_analysis.py`
-- `03_phase3_systems/module6_linux_profiling/lock_contention.py`
-- `06_capstone_projects/project4_flamegraph/profile_flamegraph.sh`
-- `06_capstone_projects/project4_flamegraph/diff_flamegraph.sh`
+- `III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.1_tools_landscape.py` — profiling tool overview (read-and-run)
+- `III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.2_perf_fundamentals.py` — IPC, cache miss rate, branch misprediction
+- `III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py` — flamegraph generation + differential
+- `III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.4_ebpf_and_bpftrace.py` — eBPF one-liners
+- `III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.5_lock_contention.py` — GIL + CUDA allocator contention
 
 **Est. Pages:** 30
 
@@ -341,8 +340,9 @@
    - Prefetching and write-combining
 
 **Code / Exercises**
-- `03_phase3_systems/module7_memory_numa/memory_bench.py`
-- `03_phase3_systems/module7_memory_numa/numa_workload.py`
+- `III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.1_memory_hierarchy.py` — cache tier classification
+- `III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.2_numa_and_topology.py` — NUMA detection + binding
+- `III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.3_memory_bandwidth.py` — bandwidth measurement + roofline
 
 **Est. Pages:** 22
 
@@ -373,9 +373,10 @@
    - Cache eviction strategies: full eviction, sliding window, PagedAttention
 
 **Code / Exercises**
-- `04_phase4_inference/module8_llm_systems/infer.py` — prefill + decode phases, timed separately
-- `04_phase4_inference/module8_llm_systems/kv_cache_sim.py` — KV cache memory behaviour
-- `06_capstone_projects/project1_llm_opt/baseline_inference.py` — establish your baseline numbers
+- `IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.1_llm_evolution.py` — transformer history (read-and-run)
+- `IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_prefill_and_decode.py` — prefill/decode phases, timed separately
+- `IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_kv_cache.py` — KV cache memory formula + capacity
+- `IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.4_inference_metrics.py` — TTFT, TPS, P50/P99
 
 **Est. Pages:** 25
 
@@ -405,9 +406,9 @@
    - `vllm benchmark_serving.py` — online (QPS ramp test)
 
 **Code / Exercises**
-- `04_phase4_inference/module8_llm_systems/continuous_batching.py`
-- `04_phase4_inference/module8_llm_systems/serve.py`
-- `06_capstone_projects/project1_llm_opt/vllm_benchmark.sh`
+- `IV.LLM_Inference_Systems/11.Batching_Strategies/11.1_static_batching.py` — padding waste measurement
+- `IV.LLM_Inference_Systems/11.Batching_Strategies/11.2_continuous_batching.py` — slot scheduler simulation
+- `IV.LLM_Inference_Systems/11.Batching_Strategies/11.3_paged_attention.py` — PagedAllocator + prefix caching
 
 **Est. Pages:** 22
 
@@ -437,7 +438,8 @@
    - Memory: both models must fit in GPU memory simultaneously
 
 **Code / Exercises**
-- `04_phase4_inference/module8_llm_systems/speculative_decode.py`
+- `IV.LLM_Inference_Systems/12.Speculative_Decoding/12.1_draft_target_model.py` — speedup formula + rejection sampling
+- `IV.LLM_Inference_Systems/12.Speculative_Decoding/12.2_acceptance_rate.py` — acceptance rate analysis
 
 **Est. Pages:** 18
 
@@ -471,9 +473,9 @@
    - Bottleneck: PCIe (CPU-to-GPU) vs NVLink (GPU-to-GPU)
 
 **Code / Exercises**
-- `04_phase4_inference/module9_distributed/nccl_bench.py`
-- `04_phase4_inference/module9_distributed/fsdp_train.py`
-- `04_phase4_inference/module9_distributed/infer_distributed.py`
+- `IV.LLM_Inference_Systems/13.Distributed_Inference/13.1_tensor_parallelism.py` — AllReduce cost + TP degree selection
+- `IV.LLM_Inference_Systems/13.Distributed_Inference/13.2_nccl_collectives.py` — ring AllReduce/AllGather timing model
+- `IV.LLM_Inference_Systems/13.Distributed_Inference/13.3_fsdp_and_pipeline.py` — DDP vs FSDP memory + pipeline bubble
 
 **Est. Pages:** 30
 
@@ -510,8 +512,10 @@
    - Using the roofline model to classify your workload
 
 **Code / Exercises**
-- `05_phase5_workload/module11_benchmarking/throughput_latency_curve.py`
-- `05_phase5_workload/module11_benchmarking/workload_characterize.py`
+- `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.1_measurement_basics.py` — warmup, statistics, Amdahl (read-and-run)
+- `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.2_benchmark_mistakes.py` — five common mistakes
+- `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_throughput_latency_curve.py` — T-L curve + knee detection
+- `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py` — 8-measurement characterisation report
 
 **Est. Pages:** 22
 
@@ -540,8 +544,9 @@
    - Measuring worker utilisation
 
 **Code / Exercises**
-- `05_phase5_workload/module10_porting/workload_port.py`
-- `05_phase5_workload/module10_porting/dataloader_worker.py`
+- `V.Workload_Benchmarking/15.Porting_a_Workload/15.1_porting_checklist.py` — safe NumPy→CUDA porting with validation
+- `V.Workload_Benchmarking/15.Porting_a_Workload/15.2_bottleneck_shift.py` — how bottleneck changes after GPU move
+- `V.Workload_Benchmarking/15.Porting_a_Workload/15.3_dataloader_at_scale.py` — worker tuning + CPU affinity
 
 **Est. Pages:** 20
 
@@ -567,9 +572,10 @@
 6. Document speedup table: eager vs compiled, P50/P99 latency, compile time
 
 **Code / Exercises**
-- `06_capstone_projects/project1_llm_opt/`
-- `baseline_inference.py`, `torch_compile_bench.py`, `torch_profiler_trace.py`
-- `profile_nsys.sh`, `profile_ncu.sh`, `vllm_benchmark.sh`
+- `VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.1_production_readiness.py` — research vs production gap (read-and-run)
+- `VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_baseline_inference.py` — TTFT, TPS, VRAM baseline
+- `VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py` — FP16 + torch.compile ladder
+- `VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py` — torch.profiler op attribution
 
 **Est. Pages:** 18
 
@@ -587,8 +593,8 @@
 5. Compare throughput: batches/sec before and after
 
 **Code / Exercises**
-- `06_capstone_projects/project2_dataloader/`
-- `slow_dataloader.py`, `fast_dataloader.py`, `diagnose_io.sh`
+- `VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.1_slow_dataloader.py` — intentional bottleneck (3 bugs)
+- `VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.2_fast_dataloader.py` — all three fixes applied
 
 **Est. Pages:** 16
 
@@ -606,8 +612,8 @@
 5. Interpret: at what concurrency does memory hit 90%? When does latency spike?
 
 **Code / Exercises**
-- `06_capstone_projects/project3_kv_cache/`
-- `concurrent_requests.py`, `memory_monitor.sh`, `plot_memory.py`
+- `VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/18.1_kv_cache_scaling.py` — memory vs concurrency scaling
+- `VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/18.2_memory_budget_planning.py` — capacity planning formulas
 
 **Est. Pages:** 18
 
@@ -625,8 +631,8 @@
 5. Generate a differential flamegraph: `diff_flamegraph.sh` — before vs after side-by-side
 
 **Code / Exercises**
-- `06_capstone_projects/project4_flamegraph/`
-- `slow_training.py`, `fast_training.py`, `profile_flamegraph.sh`, `diff_flamegraph.sh`
+- `VI.Capstone_Projects/19.Flamegraph_Challenge/19.1_slow_training_analysis.py` — three hidden bottlenecks embedded
+- `VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimised_training.py` — all three fixes applied
 
 **Est. Pages:** 18
 
