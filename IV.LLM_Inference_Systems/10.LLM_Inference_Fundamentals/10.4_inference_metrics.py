@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_inference_metrics.py
+IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.4_inference_metrics.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 10: LLM Inference Fundamentals — Section 3: Inference Metrics
 =======================================================================

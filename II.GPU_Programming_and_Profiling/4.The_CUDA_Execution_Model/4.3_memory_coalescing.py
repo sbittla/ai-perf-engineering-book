@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-4.The_CUDA_Execution_Model/4.2_memory_coalescing.py  ─  Chapter 4: Memory Coalescing
+4.The_CUDA_Execution_Model/4.3_memory_coalescing.py  ─  Chapter 4: Memory Coalescing
 =======================================================================
 Covers book section 4.2:
   • Stride-1 vs stride-N access bandwidth measurement
@@ -8,7 +8,7 @@ Covers book section 4.2:
   • Shared memory concept
   • Layout implications for transformers
 
-Run:  python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_memory_coalescing.py
+Run:  python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_memory_coalescing.py
 All sections must print ✓.
 """
 
@@ -278,5 +278,5 @@ print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 4.2 complete!")
 print("  You now understand memory coalescing, cache tiers, layout access")
 print("  patterns, and the contiguous() API for matmul optimisation.")
-print("  Next: II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_tensor_cores_and_fusion.py")
+print("  Next: II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py")
 print("=" * 60)
