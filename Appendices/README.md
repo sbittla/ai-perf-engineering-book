@@ -14,19 +14,19 @@ Three reference appendices for the AI Systems Performance Engineering book.
 
 ```bash
 # Appendix A: verify your environment is ready
-python A.Environment_Setup/A.1_environment_check.py
+python Appendices/A.Environment_Setup/A.1_environment_check.py
 
 # Appendix B: print cheatsheet and run profiler demo
-python B.Command_Reference/B.1_profiling_cheatsheet.py
+python Appendices/B.Command_Reference/B.1_profiling_cheatsheet.py
 
 # Appendix C: print all 50 Q&A
-python C.Interview_Prep/C.1_interview_questions.py
+python Appendices/C.Interview_Prep/C.1_interview_questions.py
 
 # Self-quiz (answers hidden):
-python C.Interview_Prep/C.1_interview_questions.py --quiz
+python Appendices/C.Interview_Prep/C.1_interview_questions.py --quiz
 
 # One category at a time (1=GPU Arch, 2=LLM, 3=Profiling, 4=Distributed, 5=Benchmarking):
-python C.Interview_Prep/C.1_interview_questions.py --cat 2
+python Appendices/C.Interview_Prep/C.1_interview_questions.py --cat 2
 ```
 
 ## Appendix A — Environment Setup

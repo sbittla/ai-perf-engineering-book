@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-B.1_profiling_cheatsheet.py  —  Appendix B: Command Reference
+Appendices/B.Command_Reference/B.1_profiling_cheatsheet.py  —  Appendix B: Command Reference
 
 An interactive reference that:
   1. Prints the diagnostic decision tree (which tool to use first)
@@ -8,7 +8,7 @@ An interactive reference that:
   3. Demonstrates CUDA event timing vs wall-clock timing
   4. Prints the full command cheatsheet grouped by tool
 
-Run:  python B.1_profiling_cheatsheet.py
+Run:  python Appendices/B.Command_Reference/B.1_profiling_cheatsheet.py
 """
 
 import sys, time
@@ -315,5 +315,5 @@ print("=" * 68)
 print("  ALL SECTIONS PASSED")
 print(f"  Profiling cheatsheet complete (device={DEVICE})")
 print()
-print("  Next: Appendix C — C.1_interview_questions.py")
+print("  Next: Appendices/C.Interview_Prep/C.1_interview_questions.py")
 print("=" * 68)

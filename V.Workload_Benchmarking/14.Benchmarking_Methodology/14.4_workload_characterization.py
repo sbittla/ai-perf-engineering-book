@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_workload_characterization.py
+V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 14: Benchmarking Methodology — Section 3: Workload Characterisation
 =======================================================================
@@ -12,7 +12,7 @@ Covers book section 14.3:
   • Building and saving a structured JSON characterisation report
   • Comparing reports to track progress across optimisation rounds
 
-Run:  python V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_workload_characterization.py
+Run:  python V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py
 All sections must print ✓.
 """
 

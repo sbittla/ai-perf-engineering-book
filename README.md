@@ -1,335 +1,252 @@
-# AI Systems Performance Engineering — Complete Reference
+# AI Systems Performance Engineering — Companion Repository
 
-**Hands-on GPU profiling, LLM inference optimisation, and Linux systems performance.**  
-Full-stack environment built on NVIDIA NGC PyTorch 25.01 (Ubuntu 24.04 · CUDA 12.8 · PyTorch 2.6).
+**Hands-on exercises for GPU profiling, LLM inference optimisation, and Linux systems performance.**
+
+Companion repository for the book *AI Performance Engineering: From GPU Kernels to LLM Inference* by Srinivasa Rao Bittla.
 
 ---
 
 ## Who This Is For
 
-Engineers transitioning from **Enterprise / Cloud Performance Engineering** into **AI Systems & Infrastructure Performance Engineering**. You already know distributed systems, observability, and performance methodology. This repository adds GPU systems depth.
-
----
-
-## What You Will Be Able to Do After Completion
-
-- Profile GPU workloads with `nsys`, `ncu`, and `torch.profiler`
-- Diagnose CPU↔GPU bottlenecks using `perf`, `eBPF`, and flamegraphs
-- Optimise LLM inference: batch size, KV cache, quantization, `torch.compile`
-- Benchmark AI workloads end-to-end with repeatable methodology
-- Understand and navigate distributed inference systems (NCCL, FSDP, tensor parallelism)
-- Discuss hardware/software tradeoffs like a systems performance engineer
+Engineers transitioning from **Enterprise / Cloud Performance Engineering** into **AI Systems & Infrastructure**. You already understand distributed systems, observability, and performance methodology. This repository adds GPU systems depth.
 
 ---
 
 ## Repository Structure
 
 ```
-ai-perf-engineering/
+ai-perf-engineering-book/
 │
-├── 00_pytorch_basics/          ← Start here if new to PyTorch
-│   └── exercises/              ← Fill in the TODOs (solutions in the book)
+├── I.Foundations/                     ← Part I: Chapters 0–3
+│   ├── 0.GPU_Evolution/               ← Ch 0: GPU history (read-and-run)
+│   ├── 1.What_Is_AI_Performance_Engineering/  ← Ch 1: Roofline model
+│   ├── 2.PyTorch_Fundamentals/        ← Ch 2: Tensors → training loop → timing
+│   └── 3.The_AI_Hardware_Stack/       ← Ch 3: CPU, PCIe, GPU, HBM
 │
-├── 01_phase1_foundations/      ← CPU architecture & Linux internals
-│   ├── cpu_arch/
-│   └── linux_perf/
+├── II.GPU_Programming_and_Profiling/  ← Part II: Chapters 4–7
+│   ├── 4.The_CUDA_Execution_Model/    ← Ch 4: Warps, coalescing, Tensor Cores
+│   ├── 5.GPU_Profiling/               ← Ch 5: nsys, ncu, torch.profiler
+│   ├── 6.PyTorch_Optimisation/        ← Ch 6: AMP, quantization, torch.compile
+│   └── 7.DataLoader_Optimisation/     ← Ch 7: Pipeline tuning, I/O bottlenecks
 │
-├── 02_phase2_gpu/              ← GPU programming & CUDA profiling (most critical)
-│   ├── module3_cuda_fundamentals/
-│   ├── module4_profiling/
-│   └── module5_pytorch_perf/
+├── III.Linux_Systems_Profiling/       ← Part III: Chapters 8–9
+│   ├── 8.Perf_eBPF_and_Flamegraphs/  ← Ch 8: perf, flamegraphs, bpftrace, locks
+│   └── 9.Memory_Hierarchy_and_NUMA/  ← Ch 9: Cache, NUMA, memory bandwidth
 │
-├── 03_phase3_systems/          ← Linux low-level profiling
-│   ├── module6_linux_profiling/
-│   └── module7_memory_numa/
+├── IV.LLM_Inference_Systems/          ← Part IV: Chapters 10–13
+│   ├── 10.LLM_Inference_Fundamentals/ ← Ch 10: Prefill/decode, KV cache, metrics
+│   ├── 11.Batching_Strategies/        ← Ch 11: Static, continuous, PagedAttention
+│   ├── 12.Speculative_Decoding/       ← Ch 12: Draft/target, acceptance rate
+│   └── 13.Distributed_Inference/     ← Ch 13: Tensor parallel, NCCL, FSDP
 │
-├── 04_phase4_inference/        ← LLM inference systems
-│   ├── module8_llm_systems/
-│   └── module9_distributed/
+├── V.Workload_Benchmarking/           ← Part V: Chapters 14–15
+│   ├── 14.Benchmarking_Methodology/   ← Ch 14: Five mistakes, T-L curve
+│   └── 15.Porting_a_Workload/         ← Ch 15: Checklist, bottleneck shift
 │
-├── 05_phase5_workload/         ← Workload porting & benchmarking
-│   ├── module10_porting/
-│   └── module11_benchmarking/
+├── VI.Capstone_Projects/              ← Part VI: Chapters 16–19
+│   ├── 16.LLM_Inference_Optimisation/ ← Ch 16: Full optimisation lab
+│   ├── 17.DataLoader_Bottleneck_Hunt/ ← Ch 17: Diagnose + fix I/O starvation
+│   ├── 18.KV_Cache_Memory_Pressure/   ← Ch 18: Scaling + budget planning
+│   └── 19.Flamegraph_Challenge/       ← Ch 19: CPU-to-GPU pipeline diagnosis
 │
-├── 06_capstone_projects/       ← End-to-end portfolio projects
-│   ├── project1_llm_opt/       ← LLM Inference Optimisation Lab
-│   ├── project2_dataloader/    ← DataLoader I/O Bottleneck Hunt
-│   ├── project3_kv_cache/      ← KV Cache Memory Pressure Experiment
-│   └── project4_flamegraph/    ← CPU-to-GPU Pipeline Flamegraph Challenge
+├── VII.Hardware_Landscape/            ← Part VII: Chapters 20–22
+│   ├── 20.NVIDIA_Blackwell/           ← Ch 20: Blackwell architecture + profiling
+│   ├── 21.AMD_MI300X_ROCm/            ← Ch 21: MI300X, ROCm, vendor comparison
+│   └── 22.Custom_Silicon/             ← Ch 22: Gaudi 3, Trainium, AMX, CXL
+│
+├── Appendices/                        ← Reference material
+│   ├── A.Environment_Setup/           ← App A: System setup + verification
+│   ├── B.Command_Reference/           ← App B: Every profiling command
+│   └── C.Interview_Prep/              ← App C: 50 Q&A for interviews
 │
 ├── shared/
-│   ├── models/model.py         ← TinyTransformer used across all scripts
-│   └── utils/results_table.py  ← Before/after comparison table printer
+│   ├── models/model.py                ← TinyTransformer used across all exercises
+│   └── utils/results_table.py         ← Before/after comparison printer
 │
 ├── scripts/
-│   └── setup_env.sh            ← Install all dependencies
+│   └── setup_env.sh                   ← Install all dependencies
 │
 └── docs/
-    ├── ROADMAP.md              ← 6-phase learning plan with timelines
-    ├── COMMANDS.md             ← Every profiling command in one place
-    ├── INTERVIEW_PREP.md       ← Questions to answer before interviewing
-    └── HARDWARE_SETUP.md       ← RTX 4060 environment setup guide
+    ├── ROADMAP.md                     ← Learning plan with timelines
+    ├── COMMANDS.md                    ← Profiling command reference
+    ├── INTERVIEW_PREP.md              ← Interview Q&A reference
+    └── HARDWARE_SETUP.md              ← RTX 4060 / cloud setup guide
 ```
 
 ---
 
 ## Hardware Requirements
 
-- **GPU:** NVIDIA RTX 4060 (8GB) or equivalent CUDA-capable GPU
-- **OS:** Ubuntu 22.04 / 24.04 (recommended) or WSL2 on Windows
-- **RAM:** 16GB+ recommended
-- **Storage:** 50GB+ for models and datasets
-- **CUDA:** 12.x / 12.8
+| Component | Minimum | Recommended |
+|---|---|---|
+| GPU | RTX 3060 (12 GB) | RTX 4060 (8 GB) / RTX 4070 |
+| CPU | 6 cores | 8+ cores |
+| RAM | 16 GB | 32 GB |
+| Storage | 50 GB SSD | 500 GB NVMe |
+| OS | Ubuntu 20.04 | Ubuntu 22.04 LTS |
+| CUDA | 11.8 | 12.x |
+| Python | 3.10 | 3.11 |
+| PyTorch | 2.0 | 2.2+ |
 
-See [`docs/HARDWARE_SETUP.md`](docs/HARDWARE_SETUP.md) for detailed setup.
+**CPU-only:** All exercises include CPU fallbacks. GPU-specific measurements are skipped gracefully.
+
+---
+
+## Getting Started
+
+### 1. Install Dependencies
+
+```bash
+git clone https://github.com/YOUR_USERNAME/ai-perf-engineering-book.git
+cd ai-perf-engineering-book
+
+# Verify your environment before starting any chapter
+python Appendices/A.Environment_Setup/A.1_environment_check.py
+```
+
+### 2. Part I — Foundations (start here)
+
+```bash
+# Chapter 0: GPU history (read-and-run, no TODOs)
+python I.Foundations/0.GPU_Evolution/0.1_gpu_evolution.py
+
+# Chapter 1: Roofline model
+python I.Foundations/1.What_Is_AI_Performance_Engineering/1.1_roofline_model.py
+
+# Chapter 2: PyTorch fundamentals (6 exercises with TODOs)
+python I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py
+python I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py
+python I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py
+python I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py
+python I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py
+python I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py
+```
+
+### 3. Part II — GPU Profiling (most important part)
+
+```bash
+# Chapter 4: CUDA execution model
+python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.1_cuda_foundations.py
+python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_execution_model.py
+python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_memory_coalescing.py
+python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py
+
+# Chapter 5: Profiling tools
+python II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.1_nsys_profiling.py
+python II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.2_ncu_profiling.py
+python II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.3_torch_profiler.py
+
+# Chapter 6: Optimisation
+python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.1_precision_and_amp.py
+python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.2_quantization.py
+python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.3_torch_compile.py
+```
+
+### 4. Part VI — Capstone Projects (portfolio artifacts)
+
+```bash
+# Chapter 16: LLM inference optimisation lab
+python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.1_production_readiness.py
+python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_baseline_inference.py
+python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py
+python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py
+
+# Chapter 17: DataLoader bottleneck hunt
+python VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.1_slow_dataloader.py
+python VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.2_fast_dataloader.py
+```
+
+### 5. Appendices
+
+```bash
+# Full profiling command reference + live demo
+python Appendices/B.Command_Reference/B.1_profiling_cheatsheet.py
+
+# Interview prep: 50 Q&A across 5 domains
+python Appendices/C.Interview_Prep/C.1_interview_questions.py
+python Appendices/C.Interview_Prep/C.1_interview_questions.py --quiz
+python Appendices/C.Interview_Prep/C.1_interview_questions.py --cat 2
+```
+
+---
+
+## Exercise Format
+
+Every exercise file:
+
+- Has a **`Run:` line** in the docstring — the exact command from the repo root.
+- Has **`TODO` blocks** — fill in the calculation or code; assertions verify your answer.
+- Has a **`Next:` footer** pointing to the next exercise in reading order.
+- Runs on **CPU-only** machines (GPU sections degrade gracefully).
+- Background/intro files (numbered `N.0_` or the `.1_` file in chapters with an intro) are **read-and-run** with no TODOs.
 
 ---
 
 ## Tool Reference
 
 | Tool | Category | Purpose | Install |
-|------|----------|---------|---------|
+|---|---|---|---|
 | `nsys` | GPU profiling | System-wide GPU timeline | CUDA Toolkit |
 | `ncu` | GPU profiling | Per-kernel hardware counters | CUDA Toolkit |
 | `torch.profiler` | GPU profiling | PyTorch op-level timing | `pip install torch` |
-| `nvidia-smi` | GPU profiling | GPU utilisation & memory | CUDA Toolkit |
-| `nvitop` | GPU profiling | Rich GPU process monitor | `pip install nvitop` |
-| `vLLM` | LLM serving | High-throughput LLM serving | `pip install vllm` |
-| `benchmark_throughput.py` | LLM serving | Offline throughput benchmarks | bundled with vLLM |
-| `benchmark_serving.py` | LLM serving | Online serving benchmarks | bundled with vLLM |
-| `py-spy` | Python profiling | Python CPU flamegraphs | `pip install py-spy` |
-| `torch.utils.bottleneck` | Python profiling | Quick bottleneck scan | bundled with torch |
-| `perf` | Linux perf | Linux hardware counters | `apt install linux-tools-generic` |
-| `bpftrace` | Linux perf / eBPF | eBPF kernel tracing | `apt install bpftrace` |
-| `flamegraph.pl` | Linux perf | SVG flamegraph renderer | bundled with perf scripts |
+| `nvidia-smi` | GPU monitoring | Utilisation & memory | CUDA Toolkit |
+| `nvitop` | GPU monitoring | Rich process monitor | `pip install nvitop` |
+| `py-spy` | Python profiling | CPU flamegraphs | `pip install py-spy` |
+| `perf` | Linux perf | Hardware event counters | `apt install linux-tools-generic` |
+| `bpftrace` | eBPF | Kernel tracing one-liners | `apt install bpftrace` |
 | `opensnoop-bpfcc` | eBPF / I/O | File open tracing | `apt install bpfcc-tools` |
 | `biolatency-bpfcc` | eBPF / I/O | Block I/O latency histograms | `apt install bpfcc-tools` |
-| `iostat` / `vmstat` | eBPF / I/O | I/O and VM statistics | `apt install sysstat` |
-| `numactl` | NUMA | NUMA memory binding | `apt install numactl` |
+| `iostat` / `vmstat` | I/O monitoring | I/O and VM statistics | `apt install sysstat` |
+| `numactl` | NUMA | Memory node binding | `apt install numactl` |
 
-> **Ubuntu 24.04 note:** BCC tool names carry a `-bpfcc` suffix. Use `opensnoop-bpfcc` instead of `opensnoop`, `biolatency-bpfcc` instead of `biolatency`, etc.
-
-See [`docs/COMMANDS.md`](docs/COMMANDS.md) for every profiling command in one place.
-
----
-
-## Docker Environment
-
-### Prerequisites
-
-- NVIDIA GPU with driver ≥ 545 on the host
-- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
-- Docker 24+ or Docker Desktop with WSL2 backend
-- Free NVIDIA NGC account to pull the base image
-
-```bash
-docker login nvcr.io
-# Username: $oauthtoken
-# Password: <your NGC API key>
-```
-
-### Build
-
-```bash
-docker build -t gpu-llm-monitoring-nvcr .
-```
-
-Expected build time: **20–35 minutes** (the `vllm` pip step compiles CUDA kernels).  
-To skip vLLM during initial testing, comment out the pip line in the Dockerfile, verify the image, then restore and rebuild.
-
-### Run
-
-**Standard — with Learning folder mounted:**
-
-```bash
-docker run --gpus all -it --rm \
-  --privileged \
-  --pid=host \
-  --ipc=host \
-  -v /lib/modules:/lib/modules:ro \
-  -v /sys/kernel/debug:/sys/kernel/debug \
-  -v /mnt/d/Learning:/workspace/Learning \
-  --name gpu-llm-monitor \
-  gpu-llm-monitoring-nvcr
-```
-
-**Read-only mount (protect host files):**
-
-```bash
-docker run --gpus all -it --rm \
-  --privileged \
-  --pid=host \
-  --ipc=host \
-  -v /lib/modules:/lib/modules:ro \
-  -v /sys/kernel/debug:/sys/kernel/debug \
-  -v /mnt/d/Learning:/workspace/Learning:ro \
-  --name gpu-llm-monitor \
-  gpu-llm-monitoring-nvcr
-```
-
-**Docker Desktop for Windows (native Windows paths):**
-
-```bash
-docker run --gpus all -it --rm \
-  --privileged \
-  --pid=host \
-  --ipc=host \
-  -v /lib/modules:/lib/modules:ro \
-  -v /sys/kernel/debug:/sys/kernel/debug \
-  -v D:\Learning:/workspace/Learning \
-  --name gpu-llm-monitor \
-  gpu-llm-monitoring-nvcr
-```
-
-**Re-attach to a running container:**
-
-```bash
-docker exec -it gpu-llm-monitor bash
-```
-
-### Docker Flag Reference
-
-| Flag | Why it's required |
-|------|-------------------|
-| `--gpus all` | Expose all NVIDIA GPUs to the container |
-| `--privileged` | Required for `perf` and all eBPF / BCC tools |
-| `--pid=host` | Required for `py-spy` to attach to host processes |
-| `--ipc=host` | Required for vLLM shared memory (tensor parallel) |
-| `-v /lib/modules:ro` | `perf` needs host kernel module symbols |
-| `-v /sys/kernel/debug` | `bpftrace` needs tracefs access |
-| `-v /mnt/d/Learning` | Your roadmap scripts and learning materials |
-
----
-
-## Getting Started
-
-### 1. Local Setup
-
-```bash
-git clone https://github.com/YOUR_USERNAME/ai-perf-engineering-book.git
-cd ai-perf-engineering-book
-
-chmod +x scripts/setup_env.sh
-bash scripts/setup_env.sh
-
-source ~/capstone_venv/bin/activate
-```
-
-### 2. PyTorch Basics (2–3 days if new to PyTorch)
-
-```bash
-cd 00_pytorch_basics/exercises
-
-python exercise_01_tensors.py            # tensors, shapes, devices
-python exercise_02_autograd.py           # gradients, backward, no_grad
-python exercise_03_nn_modules.py         # building models
-python exercise_04_training_loop.py      # complete training loop + AMP
-python exercise_05_performance_basics.py # CUDA timing, profiler, memory
-```
-
-Each exercise has `TODO` blocks with hints at the bottom.
-
-### 3. Phase 2 — GPU Profiling (most important phase)
-
-```bash
-cd 02_phase2_gpu/module3_cuda_fundamentals
-
-python vector_add.py
-python occupancy_experiment.py
-python matmul_bench.py              # builds roofline intuition
-
-cd ../module4_profiling
-nsys profile --stats=true python train.py --task lm --steps 50
-python profile_pytorch_infer.py     # all profiling tools in one script
-
-cd ../module5_pytorch_perf
-python fp16_bf16_bench.py
-python llama_infer_optimize.py      # 5-step optimisation ladder
-```
-
-### 4. Capstone Projects (portfolio artifacts)
-
-```bash
-# Project 1: LLM Inference Optimisation
-cd 06_capstone_projects/project1_llm_opt
-python baseline_inference.py --model gpt2
-bash profile_nsys.sh gpt2
-python torch_compile_bench.py --model gpt2
-
-# Project 2: DataLoader I/O Bottleneck
-cd ../project2_dataloader
-python slow_dataloader.py &
-bash diagnose_io.sh
-python fast_dataloader.py
-```
-
----
-
-## Quick-Start Commands Inside the Container
-
-```bash
-# Verify GPU is visible
-python -c "import torch; print(torch.cuda.get_device_name(0))"
-
-# Real-time GPU dashboard
-nvitop
-
-# First GPU profile
-nsys profile --stats=true python /workspace/Learning/train.py --steps 20
-
-# Kernel deep dive
-ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed \
-    --kernel-name ".*sgemm.*" python /workspace/Learning/train.py
-
-# vLLM server
-python -m vllm.entrypoints.openai.api_server \
-    --model gpt2 --dtype float16 --gpu-memory-utilization 0.85 --port 8000
-
-# eBPF disk tracer (Ubuntu 24.04 suffix)
-opensnoop-bpfcc
-biolatency-bpfcc
-
-# Flamegraph
-perf record -g -F 99 python /workspace/Learning/train.py
-perf script | stackcollapse-perf.pl | flamegraph.pl > flame.svg
-```
+> **Ubuntu 24.04:** BCC tools use a `-bpfcc` suffix.
 
 ---
 
 ## Learning Path
 
-| Phase | Duration | Key Outcome |
-|-------|----------|-------------|
-| **00 PyTorch Basics** | 2–3 days | Write & time any PyTorch code |
-| **Phase 1** Foundation | 3 weeks | Hardware + Linux mental model |
-| **Phase 2** GPU Profiling | 5 weeks | Profile any GPU workload |
-| **Phase 3** Systems | 4 weeks | Flamegraph, perf, eBPF fluency |
-| **Phase 4** Inference | 4 weeks | LLM serving + distributed systems |
-| **Phase 5** Benchmarking | 4 weeks | Characterise and compare workloads |
-| **Capstone** Projects | 4 weeks | Portfolio-ready artifacts |
+| Part | Chapters | Duration | Key Outcome |
+|---|---|---|---|
+| I — Foundations | 0–3 | 2 weeks | Roofline model, PyTorch, hardware mental model |
+| II — GPU Profiling | 4–7 | 5 weeks | Profile any GPU workload end-to-end |
+| III — Linux Systems | 8–9 | 3 weeks | Flamegraphs, perf, eBPF, NUMA |
+| IV — LLM Inference | 10–13 | 4 weeks | KV cache, batching, distributed inference |
+| V — Benchmarking | 14–15 | 2 weeks | Repeatable methodology, T-L curves |
+| VI — Capstone | 16–19 | 4 weeks | Portfolio-ready optimisation projects |
+| VII — Hardware | 20–22 | 1 week | Blackwell, MI300X, custom silicon |
 
-**Total: ~5–6 months part-time**
+**Total: ~5 months part-time**
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the detailed plan.
+---
+
+## Docker Environment
+
+```bash
+docker build -t ai-perf-eng .
+
+docker run --gpus all -it --rm \
+  --privileged --pid=host --ipc=host \
+  -v /lib/modules:/lib/modules:ro \
+  -v /sys/kernel/debug:/sys/kernel/debug \
+  -v $(pwd):/workspace \
+  ai-perf-eng
+```
+
+See [`docs/HARDWARE_SETUP.md`](docs/HARDWARE_SETUP.md) for full setup including Windows/WSL2 and cloud instances.
 
 ---
 
 ## Troubleshooting
 
 | Error | Fix |
-|-------|-----|
-| `E: Unable to locate package bcc-tools` | Use `bpfcc-tools` — package renamed in Ubuntu 24.04 |
-| `perf: Permission denied` | Add `--privileged` to the `docker run` command |
+|---|---|
+| `bpfcc-tools` not found | Package renamed in Ubuntu 24.04 — use `-bpfcc` suffix |
+| `perf: Permission denied` | Add `--privileged` to `docker run` |
 | `bpftrace: Cannot open tracefs` | Mount `-v /sys/kernel/debug:/sys/kernel/debug` |
-| `py-spy: Permission denied (os error 1)` | Add `--pid=host` to the `docker run` command |
-| `torch.cuda.is_available() == False` | Install NVIDIA Container Toolkit on the host |
-| vLLM OOM on RTX 4060 8 GB | Use `--gpu-memory-utilization 0.85` and INT4 models |
+| `torch.cuda.is_available() == False` | Install NVIDIA Container Toolkit on host |
+| CUDA OOM on 8 GB GPU | Switch to FP8/INT4, reduce batch size, enable `torch.compile` |
 
 ---
-
-## Contributing
-
-This is a personal learning repository. PRs welcome for bugs or improvements.
 
 ## License
 

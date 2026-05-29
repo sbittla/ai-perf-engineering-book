@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-8.Perf_eBPF_and_Flamegraphs/8.4_lock_contention.py  ─  Chapter 8: Lock Contention
+8.Perf_eBPF_and_Flamegraphs/8.5_lock_contention.py  ─  Chapter 8: Lock Contention
 =======================================================================
 Covers book section 8.4:
   • The Python GIL (Global Interpreter Lock) and its impact
@@ -8,7 +8,7 @@ Covers book section 8.4:
   • DataLoader workers: multiprocessing vs threading for GIL bypass
   • Detecting lock contention with strace, vmstat, and bpftrace
 
-Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.4_lock_contention.py
+Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.5_lock_contention.py
 All sections must print ✓.
 """
 

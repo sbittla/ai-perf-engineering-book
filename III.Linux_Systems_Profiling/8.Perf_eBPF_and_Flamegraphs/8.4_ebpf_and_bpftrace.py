@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-8.Perf_eBPF_and_Flamegraphs/8.3_ebpf_and_bpftrace.py  ─  Chapter 8: eBPF and bpftrace
+8.Perf_eBPF_and_Flamegraphs/8.4_ebpf_and_bpftrace.py  ─  Chapter 8: eBPF and bpftrace
 =======================================================================
 Covers book section 8.3:
   • What eBPF is and why it is safe for production tracing
@@ -9,7 +9,7 @@ Covers book section 8.3:
   • Simulating biolatency I/O latency histograms
   • Essential bpftrace one-liners
 
-Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_ebpf_and_bpftrace.py
+Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.4_ebpf_and_bpftrace.py
 All sections must print ✓.
 """
 
@@ -373,5 +373,5 @@ print("  five key AI engineering eBPF tools, simulate file open")
 print("  patterns and I/O latency histograms, and write bpftrace")
 print("  one-liners for DataLoader diagnosis.")
 print()
-print("  Next: III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.4_lock_contention.py")
+print("  Next: III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.5_lock_contention.py")
 print("=" * 60)

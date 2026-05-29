@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.1_prefill_and_decode.py
+IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_prefill_and_decode.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 10: LLM Inference Fundamentals — Section 1: Prefill vs Decode Phases
 =======================================================================
@@ -11,7 +11,7 @@ Covers book section 10.1:
   • Measuring Time To First Token (TTFT) and Tokens Per Second (TPS)
   • Why decode is the hard optimisation target
 
-Run:  python IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.1_prefill_and_decode.py
+Run:  python IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_prefill_and_decode.py
 All sections must print ✓.
 """
 
@@ -334,5 +334,5 @@ print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 10.1 complete!")
 print("  You now understand why LLM inference has two phases,")
 print("  how TTFT and TPS are measured, and why decode is hard.")
-print("  Next: IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_kv_cache.py")
+print("  Next: IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_kv_cache.py")
 print("=" * 60)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.1_baseline_inference.py
+VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_baseline_inference.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 16: Capstone 1 — LLM Inference Optimisation Lab
 Section 1: Establishing the Baseline
@@ -12,7 +12,7 @@ Covers capstone section 16.1:
   • Measure peak GPU VRAM footprint
   • Save a structured baseline JSON as the "before" snapshot
 
-Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.1_baseline_inference.py
+Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_baseline_inference.py
 All sections must print ✓.
 """
 
@@ -366,5 +366,5 @@ print("  ✓ Section 4 passed — baseline snapshot saved")
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Capstone 16.1 complete!")
 print("  Baseline established: TTFT, TPS (FP32), VRAM footprint.")
-print("  Next: VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_precision_and_compile.py")
+print("  Next: VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py")
 print("=" * 60)

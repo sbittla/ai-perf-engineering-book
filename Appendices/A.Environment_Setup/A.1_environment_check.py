@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-A.1_environment_check.py  —  Appendix A: Environment Setup
+Appendices/A.Environment_Setup/A.1_environment_check.py  —  Appendix A: Environment Setup
 
 Verify every component required by this book:
   Python version, PyTorch, CUDA, profiling tools, and GPU capabilities.
 
-Run:  python A.1_environment_check.py
+Run:  python Appendices/A.Environment_Setup/A.1_environment_check.py
 """
 
 import sys
@@ -275,5 +275,5 @@ print("=" * 68)
 print("  ALL SECTIONS PASSED")
 print(f"  Environment ready for all book exercises (device={DEVICE})")
 print()
-print("  Next: Appendix B — B.1_profiling_cheatsheet.py")
+print("  Next: Appendices/B.Command_Reference/B.1_profiling_cheatsheet.py")
 print("=" * 68)

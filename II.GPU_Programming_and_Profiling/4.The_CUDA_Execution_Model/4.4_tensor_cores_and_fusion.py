@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-4.The_CUDA_Execution_Model/4.3_tensor_cores_and_fusion.py  ─  Chapter 4: Tensor Cores
+4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py  ─  Chapter 4: Tensor Cores
 =======================================================================
 Covers book section 4.3:
   • FP16/BF16 Tensor Core throughput vs FP32 CUDA cores
@@ -8,7 +8,7 @@ Covers book section 4.3:
   • BF16 vs FP16 comparison
   • Kernel fusion with torch.compile
 
-Run:  python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_tensor_cores_and_fusion.py
+Run:  python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py
 All sections must print ✓.
 """
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-4.The_CUDA_Execution_Model/4.1_execution_model.py  ─  Chapter 4: The GPU Execution Model
+4.The_CUDA_Execution_Model/4.2_execution_model.py  ─  Chapter 4: The GPU Execution Model
 =======================================================================
 Covers book section 4.1:
   • GPU thread hierarchy: threads → warps (32) → blocks → grids
@@ -8,7 +8,7 @@ Covers book section 4.1:
   • Why batch size matters for SM occupancy
   • Warp divergence cost
 
-Run:  python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.1_execution_model.py
+Run:  python II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_execution_model.py
 All sections must print ✓.
 """
 
@@ -210,5 +210,5 @@ print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 4.1 complete!")
 print("  You now understand threads → warps → blocks → grids,")
 print("  SIMT execution, occupancy, and warp divergence.")
-print("  Next: II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_memory_coalescing.py")
+print("  Next: II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_memory_coalescing.py")
 print("=" * 60)

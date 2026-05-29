@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_precision_and_compile.py
+VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 16: Capstone 1 — LLM Inference Optimisation Lab
 Section 2: Precision and torch.compile Optimisation Ladder
@@ -12,7 +12,7 @@ Covers capstone section 16.2:
   • Build a full optimisation ladder table with cumulative speedup
   • Save the optimised snapshot for final comparison
 
-Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_precision_and_compile.py
+Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py
 All sections must print ✓. Run 16.1 first to generate the baseline.
 """
 
@@ -393,5 +393,5 @@ print("  ✓ Section 4 passed — optimisation ladder built")
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Capstone 16.2 complete!")
 print(f"  Best result: {best_config} → {best_speedup:.2f}× over FP32 baseline")
-print("  Next: VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_profiling_audit.py")
+print("  Next: VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py")
 print("=" * 60)
