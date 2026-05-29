@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-C.1_interview_questions.py  —  Appendix C: Interview Preparation
+Appendices/C.Interview_Prep/C.1_interview_questions.py  —  Appendix C: Interview Preparation
 
 50 interview questions with model answers, across five categories:
   1. GPU Architecture         (Q1–10)
@@ -10,9 +10,9 @@ C.1_interview_questions.py  —  Appendix C: Interview Preparation
   5. Benchmarking             (Q41–50)
 
 Usage:
-  python C.1_interview_questions.py           # print all Q&A
-  python C.1_interview_questions.py --quiz    # self-quiz mode (no answers)
-  python C.1_interview_questions.py --cat 2   # category 2 only
+  python Appendices/C.Interview_Prep/C.1_interview_questions.py           # print all Q&A
+  python Appendices/C.Interview_Prep/C.1_interview_questions.py --quiz    # self-quiz mode (no answers)
+  python Appendices/C.Interview_Prep/C.1_interview_questions.py --cat 2   # category 2 only
 """
 
 import sys
