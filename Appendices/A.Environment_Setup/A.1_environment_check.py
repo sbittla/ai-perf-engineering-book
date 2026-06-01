@@ -78,39 +78,44 @@ print("Section 2 — GPU Capabilities")
 print("─" * 68)
 
 print("""
-CONCEPT: GPU spec determines which optimisations apply
+CONCEPT: GPU spec determines which optimizations apply
   • Compute capability 7.0+ → Tensor Cores (FP16)
   • Compute capability 8.0+ → BF16 Tensor Cores, TF32
   • Compute capability 8.9+ → FP8 (Ada Lovelace, e.g. RTX 4060)
 """)
 
 if CUDA_AVAILABLE:
-    props = torch.cuda.get_device_properties(0)
-    cc_major = props.major
-    cc_min   = props.minor
-    vram_gb  = props.total_memory / 1e9
+    try:
+        props = torch.cuda.get_device_properties(0)
+        cc_major = props.major
+        cc_min   = props.minor
+        vram_gb  = props.total_memory / 1e9
 
-    print(f"  GPU name       : {props.name}")
-    print(f"  VRAM           : {vram_gb:.1f} GB")
-    print(f"  Compute cap    : {cc_major}.{cc_min}")
-    print(f"  SM count       : {props.multi_processor_count}")
-    print(f"  Tensor Cores   : {'Yes (FP16)' if cc_major >= 7 else 'No'}")
-    print(f"  BF16 support   : {torch.cuda.is_bf16_supported()}")
-    print(f"  torch.compile  : {'Yes (requires CUDA 12+)' if cc_major >= 7 else 'Limited'}")
+        print(f"  GPU name       : {props.name}")
+        print(f"  VRAM           : {vram_gb:.1f} GB")
+        print(f"  Compute cap    : {cc_major}.{cc_min}")
+        print(f"  SM count       : {props.multi_processor_count}")
+        print(f"  Tensor Cores   : {'Yes (FP16)' if cc_major >= 7 else 'No'}")
+        print(f"  BF16 support   : {torch.cuda.is_bf16_supported()}")
+        print(f"  torch.compile  : {'Yes (requires CUDA 12+)' if cc_major >= 7 else 'Limited'}")
 
-    # LLM memory feasibility for this GPU
-    print(f"\n  LLM memory feasibility on {vram_gb:.0f}GB VRAM:")
-    models = [
-        ("GPT-2 (124M, FP16)",      0.25),
-        ("Llama-7B (FP16)",          14.0),
-        ("Llama-7B (INT8)",           7.0),
-        ("Llama-7B (INT4/GPTQ)",      3.5),
-        ("Llama-13B (FP16)",         26.0),
-        ("Llama-13B (INT4/GPTQ)",     6.5),
-    ]
-    for name, need_gb in models:
-        fits = "✓" if need_gb < vram_gb * 0.9 else "✗"
-        print(f"    {fits} {name:<28} needs {need_gb:.1f} GB")
+        # LLM memory feasibility for this GPU
+        print(f"\n  LLM memory feasibility on {vram_gb:.0f}GB VRAM:")
+        models = [
+            ("GPT-2 (124M, FP16)",      0.25),
+            ("Llama-7B (FP16)",          14.0),
+            ("Llama-7B (INT8)",           7.0),
+            ("Llama-7B (INT4/GPTQ)",      3.5),
+            ("Llama-13B (FP16)",         26.0),
+            ("Llama-13B (INT4/GPTQ)",     6.5),
+        ]
+        for name, need_gb in models:
+            fits = "✓" if need_gb < vram_gb * 0.9 else "✗"
+            print(f"    {fits} {name:<28} needs {need_gb:.1f} GB")
+    except Exception as e:
+        print(f"  [GPU probe failed: {e}]")
+        print("  This can happen on some virtualized or containerized environments.")
+        print("  The book exercises will still run in CPU fallback mode.")
 else:
     print("  [CPU mode] GPU capability checks skipped.")
     print("  To enable: install PyTorch with CUDA support.")

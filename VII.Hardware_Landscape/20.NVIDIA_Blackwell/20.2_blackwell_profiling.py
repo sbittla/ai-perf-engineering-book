@@ -5,7 +5,7 @@
 Covers book sections 20.5, 20.6:
   • Consumer Blackwell GPU comparison: RTX 4060 vs 4090 vs RTX 5090 (Table 20.4)
   • Computing the RTX 5090 roofline ridge point
-  • Updated ncu metric names for FP8 and FP4 Tensor Core utilisation
+  • Updated ncu metric names for FP8 and FP4 Tensor Core utilization
   • Three profiling adaptations required on Blackwell hardware
 
 Run:
@@ -108,7 +108,7 @@ print("  ✓ Section 2 passed")
 print("\n── Section 3: Updated ncu Metric Names for Blackwell ──")
 print("""
   Three ncu metrics needed for Blackwell profiling.
-  Use these to measure Tensor Core utilisation for each precision.
+  Use these to measure Tensor Core utilization for each precision.
 """)
 
 ncu_metrics = [

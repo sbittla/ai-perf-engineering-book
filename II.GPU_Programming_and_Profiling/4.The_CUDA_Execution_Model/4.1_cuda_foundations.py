@@ -79,7 +79,7 @@ The CUDA execution model organises work in four nested levels:
   Warp    — 32 threads that execute in LOCKSTEP (SIMT: Single Instruction,
              Multiple Threads). The GPU scheduler always issues instructions
              to a whole warp, never to individual threads.
-  Block   — a group of warps that share Shared Memory and can synchronise
+  Block   — a group of warps that share Shared Memory and can synchronize
              with __syncthreads(). Blocks run on a single SM.
   Grid    — the collection of all blocks launched by one kernel call.
              Blocks are scheduled across all SMs independently.
@@ -149,7 +149,7 @@ print("SECTION 4: The CUDA Library Stack")
 print("=" * 60)
 
 print("""
-Most PyTorch operations never touch raw CUDA — they call into optimised
+Most PyTorch operations never touch raw CUDA — they call into optimized
 libraries that NVIDIA ships with every GPU driver:
 
 ┌─────────────────────────────────────────────────────────┐
@@ -234,13 +234,13 @@ Shared memory per block: {shared_mem_per_block / 1024:.0f} KB
 
 Tiled matrix multiplication uses shared memory like this:
   1. Load a tile of A and B from global memory into shared memory.
-  2. Synchronise all threads in the block (__syncthreads).
+  2. synchronize all threads in the block (__syncthreads).
   3. Compute the partial dot products using shared memory reads.
   4. Repeat for the next tile.
 
 Without tiling: each element is loaded from global memory once per dot product.
 With tiling   : each element is loaded once, then reused {int(math.sqrt(256))} times from shared memory.
-                This is the key to achieving near-peak bandwidth utilisation.
+                This is the key to achieving near-peak bandwidth utilization.
 """)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -257,10 +257,10 @@ You will rarely write raw CUDA kernels. But understanding the model lets you:
      Kernel names like 'ampere_sgemm_128x64_nn' tell you:
        - ampere = architecture family
        - sgemm  = single-precision GEMM (FP32, not Tensor Core)
-       - 128x64 = tile shape (larger = better utilisation, usually)
+       - 128x64 = tile shape (larger = better utilization, usually)
        - nn     = no transpose on A or B
 
-  2. DIAGNOSE low GPU utilisation.
+  2. DIAGNOSE low GPU utilization.
      If SM occupancy is low, look for:
        - Too few warps per SM (block size too small)
        - Too much shared memory per block (limits concurrent blocks)

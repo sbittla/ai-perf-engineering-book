@@ -5,7 +5,7 @@ V.Workload_Benchmarking/15.Porting_a_Workload/15.3_dataloader_at_scale.py
 Chapter 15: Porting a Workload — Section 3: DataLoader at Scale
 =======================================================================
 Covers book section 15.3:
-  • Why the DataLoader becomes the bottleneck after GPU optimisation
+  • Why the DataLoader becomes the bottleneck after GPU optimization
   • num_workers sweep: finding the optimal worker count
   • pin_memory: why it speeds up CPU→GPU batch transfers
   • CPU affinity: binding workers to cores to reduce NUMA effects
@@ -38,7 +38,7 @@ print(f"  Device: {DEVICE}  |  CPUs: {N_CPUS}\n")
 print("── Section 1: The DataLoader Bottleneck ──")
 print("""
   After you port a model to GPU and apply FP16, you often find that
-  the GPU is still underutilised. The culprit: the DataLoader.
+  the GPU is still underutilized. The culprit: the DataLoader.
 
   GPU STARVATION PATTERN:
     Time →  [load batch][GPU compute]  [load batch][GPU compute]  ...

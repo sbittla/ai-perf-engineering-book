@@ -88,16 +88,16 @@ Problem 1: Vanishing Gradients
 Problem 2: Sequential Computation
   Step t cannot begin until step t-1 finishes.
   On a GPU with 6,912 CUDA cores, you are using ONE of them per step.
-  GPU utilisation during RNN training: typically 5-10%.
+  GPU utilization during RNN training: typically 5-10%.
 
   For a 1,000-token sequence with a 1,024-dim hidden state:
     RNN:         1,000 sequential matrix-vector multiplications
     Transformer: 1 parallel matrix-matrix multiplication (all tokens at once)
 """)
 
-# Show why sequential kills GPU utilisation
-print("Concrete GPU utilisation numbers:")
-print(f"  Typical RNN training GPU utilisation  :  5-10%")
+# Show why sequential kills GPU utilization
+print("Concrete GPU utilization numbers:")
+print(f"  Typical RNN training GPU utilization  :  5-10%")
 print(f"  Typical Transformer training GPU util : 40-90%")
 print(f"  Speedup from parallelism alone        : 5-18×")
 print()
@@ -282,7 +282,7 @@ print()
 print("Prefill is compute-bound (high arithmetic intensity, uses Tensor Cores).")
 print("Decode is memory-bandwidth-bound (low arithmetic intensity, HBM limited).")
 print("This is why Time-to-First-Token (TTFT) and tokens-per-second (TPS)")
-print("require different optimisation strategies.")
+print("require different optimization strategies.")
 print()
 print("Explore next: IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/")
 print("              IV.LLM_Inference_Systems/11.Batching_Strategies/")

@@ -85,7 +85,7 @@ cd 02_phase2_gpu/module3_cuda_fundamentals/
 python vector_add.py                  # threads, blocks, grids, streams
 python vector_add.py --exp block_size # how block size affects throughput
 python occupancy_experiment.py        # occupancy limiters
-python occupancy_experiment.py --exp wave_count   # wave quantisation
+python occupancy_experiment.py --exp wave_count   # wave quantization
 python matmul_bench.py                # roofline model
 python matmul_bench.py --size 1024    # specific size deep dive
 python cuda_kernels.py                # 6 experiments: coalescing, divergence, fusion...
@@ -95,10 +95,10 @@ python cuda_kernels.py                # 6 experiments: coalescing, divergence, f
 - CUDA C++ Programming Guide: https://docs.nvidia.com/cuda/cuda-c-programming-guide/
 - NVIDIA CUDA Samples: https://github.com/NVIDIA/cuda-samples
 
-### Module 4 — GPU Profiling & Optimisation
+### Module 4 — GPU Profiling & Optimization
 
 **Learn:**
-- SM utilisation, warp divergence, memory coalescing, tensor core utilisation
+- SM utilization, warp divergence, memory coalescing, tensor core utilization
 - Memory-bound vs compute-bound kernels, roofline model
 
 **Scripts:**
@@ -130,7 +130,7 @@ cd 02_phase2_gpu/module5_pytorch_perf/
 
 python fp16_bf16_bench.py             # FP32 vs FP16 vs BF16 comparison
 python quantization_bench.py          # INT8/INT4 memory + speed tradeoffs
-python llama_infer_optimize.py        # 5-step optimisation ladder
+python llama_infer_optimize.py        # 5-step optimization ladder
 ```
 
 **Resources:**
@@ -165,7 +165,7 @@ py-spy record -o flamegraph.svg -- python ../../02_phase2_gpu/module4_profiling/
 **Resources:**
 - Brendan Gregg Performance Resources: https://www.brendangregg.com/
 
-### Module 7 — Memory & NUMA Optimisation
+### Module 7 — Memory & NUMA Optimization
 
 **Scripts:**
 ```bash
@@ -261,10 +261,10 @@ cd 05_phase5_workload/module11_benchmarking/
 # Throughput-latency Pareto curve
 python throughput_latency_curve.py --plot
 
-# Full characterisation report (JSON output)
+# Full characterization report (JSON output)
 python workload_characterize.py --output report.json
 
-# Profile the characterisation itself
+# Profile the characterization itself
 nsys profile python workload_characterize.py --quick
 ```
 
@@ -274,7 +274,7 @@ nsys profile python workload_characterize.py --quick
 
 Four end-to-end projects that produce portfolio artifacts.
 
-### Project 1 — LLM Inference Optimisation Lab
+### Project 1 — LLM Inference Optimization Lab
 
 ```bash
 cd 06_capstone_projects/project1_llm_opt/
@@ -287,7 +287,7 @@ bash profile_nsys.sh gpt2
 bash profile_ncu.sh gpt2
 python torch_profiler_trace.py --model gpt2
 
-# Step 3: Optimise
+# Step 3: Optimize
 python torch_compile_bench.py --model gpt2
 bash vllm_server_start.sh gpt2 baseline
 bash vllm_benchmark.sh
@@ -310,7 +310,7 @@ bash diagnose_io.sh
 python fast_dataloader.py
 ```
 
-**Deliverable:** iostat/vmstat screenshots + GPU utilisation before/after
+**Deliverable:** iostat/vmstat screenshots + GPU utilization before/after
 
 ### Project 3 — KV Cache Memory Pressure
 
@@ -382,10 +382,10 @@ See [`docs/INTERVIEW_PREP.md`](INTERVIEW_PREP.md) for full question list.
 ## Priority Order (if time is limited)
 
 1. **GPU profiling** (`nsys`, `ncu`, `torch.profiler`) — highest ROI
-2. **PyTorch optimisation** (`torch.compile`, FP16, AMP) — critical
+2. **PyTorch optimization** (`torch.compile`, FP16, AMP) — critical
 3. **vLLM + TensorRT** — very high for inference roles
 4. **perf + eBPF + flamegraphs** — high for systems roles
 5. **Distributed inference** — NCCL, tensor parallelism
-6. **Workload characterisation** — benchmarking methodology
+6. **Workload characterization** — benchmarking methodology
 7. **CUDA programming** — kernels, occupancy
 8. **Compiler/runtime internals** — nice to have

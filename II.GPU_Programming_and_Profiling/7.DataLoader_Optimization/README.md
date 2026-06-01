@@ -1,4 +1,4 @@
-# Chapter 7 Exercises — DataLoader Optimisation
+# Chapter 7 Exercises — DataLoader Optimization
 
 Two exercises covering the most common source of GPU underutilisation in production training pipelines: a slow data pipeline.
 

@@ -8,7 +8,7 @@ Covers book sections 1.1, 1.2, 1.5, 1.6:
   • Classifying operations as compute-bound or memory-bound
   • The ridge point — where memory-bound becomes compute-bound
   • Applying the roofline to LLM inference (GPT-2 worked example)
-  • Measuring actual throughput and computing Model FLOPs Utilisation (MFU)
+  • Measuring actual throughput and computing Model FLOPs utilization (MFU)
 
 This exercise is conceptual + measurement.  It runs on CPU or GPU.
 All TODO blocks are calculations you fill in; assertions verify correctness.
@@ -188,10 +188,10 @@ print("  ✓ Section 3 passed")
 # ─────────────────────────────────────────────────────────────
 print("\n── Section 4: Measuring Throughput and MFU ──")
 print("""
-  Model FLOPs Utilisation (MFU) = observed FLOP/s / peak FLOP/s.
+  Model FLOPs utilization (MFU) = observed FLOP/s / peak FLOP/s.
   MFU tells you how efficiently you are using the hardware.
     MFU < 30%  → fixable bottleneck (DataLoader, FP32, GPU idle)
-    MFU 40-60% → typical well-optimised training
+    MFU 40-60% → typical well-optimized training
     MFU > 60%  → excellent (hard to achieve for full training loops)
 """)
 
@@ -246,7 +246,7 @@ print(f"  FLOPs per call        : {flops_per_mm/1e9:.2f} GFLOP")
 print(f"  Observed throughput   : {observed_flops_per_sec/1e12:.2f} TFLOP/s")
 print(f"  Peak throughput       : {peak_flops/1e12:.1f} TFLOP/s")
 print(f"  MFU                   : {mfu_pct:.1f}%")
-print(f"  Interpretation: {'Good utilisation' if mfu_pct > 40 else 'Room for improvement'}")
+print(f"  Interpretation: {'Good utilization' if mfu_pct > 40 else 'Room for improvement'}")
 print("  ✓ Section 4 passed")
 
 # ─────────────────────────────────────────────────────────────
@@ -255,7 +255,7 @@ print("  ✓ Section 4 passed")
 print("\n── Section 5: Roofline Prediction vs Actual ──")
 print("""
   The roofline predicts the MAXIMUM achievable performance given AI.
-  If actual < roofline prediction: there is headroom to optimise.
+  If actual < roofline prediction: there is headroom to optimize.
   If actual ≈ roofline ceiling: you are hardware-limited.
 
   For a memory-bound op:  predicted_perf = mem_bw × AI

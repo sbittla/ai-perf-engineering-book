@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-7.DataLoader_Optimisation/7.1_dataloader_pipeline.py  ─  Chapter 7: DataLoader Tuning
+7.DataLoader_Optimization/7.1_dataloader_pipeline.py  ─  Chapter 7: DataLoader Tuning
 =======================================================================
 Covers book section 7.1:
   • num_workers=0 bottleneck and how to fix it
@@ -8,7 +8,7 @@ Covers book section 7.1:
   • prefetch_factor tuning
   • The .item() anti-pattern and GPU stalls
 
-Run:  python II.GPU_Programming_and_Profiling/7.DataLoader_Optimisation/7.1_dataloader_pipeline.py
+Run:  python II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.1_dataloader_pipeline.py
 All sections must print ✓.
 """
 
@@ -220,7 +220,7 @@ print("  ✓ Section 3 passed — prefetch_factor comparison complete")
 print("\n── Section 4: The .item() Anti-Pattern ──")
 print("""
   loss.item() does two things:
-    1. Forces the CPU to wait for the GPU to finish (GPU synchronisation)
+    1. Forces the CPU to wait for the GPU to finish (GPU synchronization)
     2. Copies the scalar value from GPU to CPU
 
   If called inside the inner training loop (every step), it serialises
@@ -283,5 +283,5 @@ print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 7.1 complete!")
 print("  You now know how to tune num_workers, use pin_memory,")
 print("  tune prefetch_factor, and avoid the .item() anti-pattern.")
-print("  Next: II.GPU_Programming_and_Profiling/7.DataLoader_Optimisation/7.2_io_bottleneck.py")
+print("  Next: II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.2_io_bottleneck.py")
 print("=" * 60)

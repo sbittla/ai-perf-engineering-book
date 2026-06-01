@@ -47,7 +47,7 @@ print("""
   a text report:
     nsys stats /tmp/5.1_nsys_output.nsys-rep
 
-  Look for: NVTX ranges appearing as coloured bands above the GPU kernels.
+  Look for: NVTX ranges appearing as colored bands above the GPU kernels.
   If the GPU row shows gaps between your NVTX ranges, the GPU was idle.
 """)
 
@@ -57,7 +57,7 @@ print("""
 print("── Section 1: NVTX Markers ──")
 print("""
   NVTX (NVIDIA Tools Extension) adds named ranges to the profiler timeline.
-  Range push/pop pairs appear as coloured bands labelled with your string.
+  Range push/pop pairs appear as colored bands labelled with your string.
 
   Pattern:
     torch.cuda.nvtx.range_push("phase_name")
@@ -165,7 +165,7 @@ print("""
   typically due to:
     - Slow DataLoader (disk/network I/O bound)
     - CPU-side preprocessing bottleneck
-    - Synchronisation barriers (e.g. loss.item() in the inner loop)
+    - synchronization barriers (e.g. loss.item() in the inner loop)
 
   A low idle fraction (<10%) means the GPU is the bottleneck —
   time to profile kernels with ncu (Exercise 5.2).

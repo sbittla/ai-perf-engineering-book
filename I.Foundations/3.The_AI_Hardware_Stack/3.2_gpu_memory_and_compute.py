@@ -6,7 +6,7 @@ Covers book section 3.3:
   • HBM bandwidth measurement (how fast can we saturate the memory bus?)
   • FP32 vs FP16 vs BF16 throughput — Tensor Core activation
   • Arithmetic intensity transition: when do Tensor Cores help?
-  • SM utilisation and occupancy concepts
+  • SM utilization and occupancy concepts
   • The GPU memory hierarchy: registers → shared → L2 → HBM
 
 Run:  python 3.2_gpu_memory_and_compute.py
@@ -274,7 +274,7 @@ else:
 # ─────────────────────────────────────────────────────────────
 # SECTION 5: SM occupancy — keeping the GPU busy
 # ─────────────────────────────────────────────────────────────
-print("\n── Section 5: SM Occupancy and GPU Utilisation ──")
+print("\n── Section 5: SM Occupancy and GPU utilization ──")
 print("""
   SM occupancy = active warps / maximum warps per SM.
   High occupancy → the SM can hide memory latency by switching warps.
@@ -284,7 +284,7 @@ print("""
     • Small batch size (few active warps)
     • High register usage per thread (limits warps per SM)
     • Large shared memory allocation (limits blocks per SM)
-    • Synchronisation barriers (all warps wait together)
+    • synchronization barriers (all warps wait together)
 
   Practical impact: running a model with batch_size=1 at inference
   typically results in SM occupancy of 5–20%.  Continuous batching
@@ -331,8 +331,8 @@ if DEVICE == "cuda":
         rel = throughput / throughputs[1] if 1 in throughputs else 1.0
         print(f"  {bs:>6}  {avg_ms:>13.3f}  {throughput:>12.0f}/s  {rel:>13.1f}×")
 
-    print(f"\n  At bs=1: GPU is under-utilised (low SM occupancy)")
-    print(f"  At bs=256: GPU approaches full utilisation")
+    print(f"\n  At bs=1: GPU is under-utilized (low SM occupancy)")
+    print(f"  At bs=256: GPU approaches full utilization")
     print(f"  This is why continuous batching exists for LLM inference")
     print("  ✓ Section 5 passed")
 else:

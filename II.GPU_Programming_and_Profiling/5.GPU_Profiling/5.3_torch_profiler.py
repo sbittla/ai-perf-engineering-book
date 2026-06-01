@@ -38,7 +38,7 @@ print("""
   PyTorch operator on both CPU and GPU.  The key output is the operator
   table sorted by cuda_time_total (or cpu_time_total on CPU-only machines).
 
-  The operator at the top of the table is your first optimisation target.
+  The operator at the top of the table is your first optimization target.
   Look for the Self CUDA column — this is the time spent ONLY in this op,
   not in its callees.  Ops with high total time but low self time are
   wrappers; the real work is in their children.
@@ -181,7 +181,7 @@ print("""
       aten::addmm  CUDA total = 0.9ms Self CUDA = 0.9ms
 
   aten::linear's total is 5ms but its self is nearly zero — the real work
-  is in aten::mm.  Optimising aten::linear as a whole is impossible; you
+  is in aten::mm.  optimizing aten::linear as a whole is impossible; you
   must look at its children.
 
   Always sort by self_cuda_time_total to find the true bottleneck kernel.
@@ -229,5 +229,5 @@ print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 5.3 complete!")
 print("  You now know how to use the profiler schedule, export Chrome")
 print("  traces, and interpret Self CUDA time to find true bottlenecks.")
-print("  Next: II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.1_precision_and_amp.py")
+print("  Next: II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.1_precision_and_amp.py")
 print("=" * 60)

@@ -1,6 +1,6 @@
 # Chapter 14 — Benchmarking Methodology
 
-Three exercises covering the full benchmarking toolkit: avoiding common mistakes, plotting throughput-latency curves, and producing structured workload characterisation reports.
+Three exercises covering the full benchmarking toolkit: avoiding common mistakes, plotting throughput-latency curves, and producing structured workload characterization reports.
 
 ## Exercises
 
@@ -8,7 +8,7 @@ Three exercises covering the full benchmarking toolkit: avoiding common mistakes
 |------|-------|---------------|
 | `14.1_benchmark_mistakes.py` | The five benchmarking mistakes and their fixes | `gather_timings()`, `burst_vs_sustained()` |
 | `14.2_throughput_latency_curve.py` | Throughput-latency curves, queuing theory, Pareto frontier | `tl_sweep()`, `find_knee()`, `md1_latency_ms()`, `benchmark_report()` |
-| `14.3_workload_characterization.py` | 8-point characterisation checklist, roofline position, JSON reports | `arithmetic_intensity()`, `measure_peak_bandwidth_gbs()`, `add_summary()` |
+| `14.3_workload_characterization.py` | 8-point characterization checklist, roofline position, JSON reports | `arithmetic_intensity()`, `measure_peak_bandwidth_gbs()`, `add_summary()` |
 
 ## Quick Start
 
@@ -34,7 +34,7 @@ python 14.3_workload_characterization.py
 
 - **Knee**: the batch size where P99/mean > threshold (2.0×); beyond it, latency diverges
 - **Pareto frontier**: for each latency budget, the highest-throughput configuration
-- **M/D/1 queueing**: `W = S + ρ·S / (2·(1-ρ))` where `ρ = λ·S` (utilisation)
+- **M/D/1 queueing**: `W = S + ρ·S / (2·(1-ρ))` where `ρ = λ·S` (utilization)
 - At ρ → 1: latency → ∞; keep ρ < 0.8 for production systems
 
 ### Workload Characterisation (14.3)
@@ -51,13 +51,13 @@ AI    = FLOPs / Bytes
 - batch=128 with large d_model can be compute-bound
 
 **The 8-Point Checklist:**
-1. Peak memory bandwidth utilisation (DRAM%)
-2. Peak compute utilisation (SM%)
+1. Peak memory bandwidth utilization (DRAM%)
+2. Peak compute utilization (SM%)
 3. Roofline position
 4. Throughput at max sustained load
 5. Latency P50/P99 per config
 6. GPU memory footprint
-7. CPU utilisation during GPU work
+7. CPU utilization during GPU work
 8. Thermal throttling check
 
 ## Comparing Reports

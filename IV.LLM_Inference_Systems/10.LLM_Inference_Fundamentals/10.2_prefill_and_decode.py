@@ -9,7 +9,7 @@ Covers book section 10.1:
   • Prefill: compute-bound, processes the entire prompt in one pass
   • Decode: memory-bandwidth bound, generates one token per step
   • Measuring Time To First Token (TTFT) and Tokens Per Second (TPS)
-  • Why decode is the hard optimisation target
+  • Why decode is the hard optimization target
 
 Run:  python IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_prefill_and_decode.py
 All sections must print ✓.
@@ -285,7 +285,7 @@ print("  ✓ Section 4 passed — TPS is the decode throughput metric")
 
 
 # ─────────────────────────────────────────────────────────────
-# SECTION 5: Why decode is harder to optimise than prefill
+# SECTION 5: Why decode is harder to optimize than prefill
 # ─────────────────────────────────────────────────────────────
 print("\n── Section 5: Decode Bottleneck Analysis ──")
 print("""

@@ -233,7 +233,7 @@ print("""
   "We switched from FP32 to FP16 AND increased batch size AND enabled
   torch.compile. The result is 5× faster!" — which change caused what?
 
-  You cannot attribute speedup to a specific optimisation if you change
+  You cannot attribute speedup to a specific optimization if you change
   multiple things simultaneously. The correct approach: change ONE variable
   at a time, measure, and then combine.
 
@@ -245,7 +245,7 @@ print("""
     Run 4:    FP16, batch=32, compile     → combined (cross-check)
 
   If Run4 < Run1 × Run2 × Run3 / Baseline², there is interaction between
-  the optimisations (e.g. compile benefits more from FP16 than FP32).
+  the optimizations (e.g. compile benefits more from FP16 than FP32).
 """)
 
 # Demonstrate isolation: measure each variable individually

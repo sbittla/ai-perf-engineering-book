@@ -39,12 +39,12 @@ print("""
 
   Stride-1 (sequential):
     arr[0], arr[1], …, arr[15] → 1 cache line loaded, 16 values used
-    100% cache line utilisation.  The hardware prefetcher detects the
+    100% cache line utilization.  The hardware prefetcher detects the
     sequential pattern and pre-fetches the next line before you ask.
 
   Stride-16 (one float per cache line):
     arr[0], arr[16], arr[32], … → 1 cache line per float
-    Only 1 of 16 values per cache line is used. 6.25% utilisation.
+    Only 1 of 16 values per cache line is used. 6.25% utilization.
     No spatial locality — prefetcher cannot help.
     Effective bandwidth is 16× lower than stride-1.
 

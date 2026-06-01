@@ -1,6 +1,6 @@
 # Chapter 10 — LLM Inference Fundamentals
 
-Three exercises covering the core concepts every inference engineer must know before optimising anything.
+Three exercises covering the core concepts every inference engineer must know before optimizing anything.
 
 ## Exercises
 

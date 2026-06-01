@@ -7,13 +7,13 @@ A debugging challenge: find three hidden bottlenecks in a slow training loop usi
 | File | Topic | Key Functions |
 |------|-------|---------------|
 | `19.1_slow_training_analysis.py` | Three bugs, isolation protocol, what flamegraphs show | `slow_training_step()`, `fixed_step_no_item()`, `measure_eval_overhead()` |
-| `19.2_optimised_training.py` | Apply all fixes; final before/after comparison | `fast_step_no_item()`, `fast_step_nonblocking()`, `fast_step_all()`, `evaluate_fast()` |
+| `19.2_optimized_training.py` | Apply all fixes; final before/after comparison | `fast_step_no_item()`, `fast_step_nonblocking()`, `fast_step_all()`, `evaluate_fast()` |
 
 ## Workflow
 
 ```bash
 python 19.1_slow_training_analysis.py   # saves /tmp/capstone19_diagnosis.json
-python 19.2_optimised_training.py        # saves /tmp/capstone19_report.json
+python 19.2_optimized_training.py        # saves /tmp/capstone19_report.json
 ```
 
 ## The Three Bottlenecks
@@ -54,7 +54,7 @@ def evaluate(model, x):
         return model(x).mean()
 ```
 
-**Note:** `model.eval()` changes BatchNorm/Dropout behaviour but does NOT disable gradients. You need both.
+**Note:** `model.eval()` changes BatchNorm/Dropout behavior but does NOT disable gradients. You need both.
 
 ## Flamegraph Evidence
 
@@ -69,6 +69,6 @@ def evaluate(model, x):
 ```bash
 pip install py-spy
 py-spy record -o before.svg -- python 19.1_slow_training_analysis.py
-py-spy record -o after.svg  -- python 19.2_optimised_training.py
+py-spy record -o after.svg  -- python 19.2_optimized_training.py
 # Open SVGs in browser; compare wide stacks
 ```

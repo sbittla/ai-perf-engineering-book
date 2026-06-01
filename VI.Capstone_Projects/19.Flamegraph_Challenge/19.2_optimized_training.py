@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimised_training.py
+VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimized_training.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Chapter 19: Capstone 4 — CPU-to-GPU Pipeline Flamegraph Challenge
 Section 2: Applying All Fixes and Comparing Results
@@ -12,7 +12,7 @@ Covers capstone section 19.2:
   • Reflect on the differential flamegraph workflow
   • Complete the Part VI capstone challenge
 
-Run:  python VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimised_training.py
+Run:  python VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimized_training.py
 All sections must print ✓.
 """
 
@@ -104,7 +104,7 @@ print("""
         running_loss += loss.detach()   # no sync — stays on GPU
     epoch_loss = running_loss.item() / n_steps   # ONE sync per epoch
 
-  This reduces GPU synchronisations from N_STEPS per epoch to 1 per epoch.
+  This reduces GPU synchronizations from N_STEPS per epoch to 1 per epoch.
   On a 10,000-step epoch, that is 9,999 fewer sync calls.
 
   TODO 1: Implement fast_step_no_item(model, optimizer, x_cpu, y_cpu)
@@ -218,7 +218,7 @@ print("""
     graph is pure waste: memory and CPU/GPU overhead with no benefit.
 
   RULE: model.eval() is NOT enough. eval() changes BatchNorm and
-  Dropout behaviour, but does NOT disable gradient computation.
+  Dropout behavior, but does NOT disable gradient computation.
   You need BOTH: model.eval() + torch.no_grad().
 
   TODO 3: Implement evaluate_fast(model, x_cpu) with torch.no_grad().
@@ -331,8 +331,8 @@ report = {
     "d_model": D_MODEL,
     "baseline_mean_ms":  round(slow_mean, 3),
     "baseline_p99_ms":   round(slow_p99, 3),
-    "optimised_mean_ms": round(fast_mean, 3),
-    "optimised_p99_ms":  round(fast_p99, 3),
+    "optimized_mean_ms": round(fast_mean, 3),
+    "optimized_p99_ms":  round(fast_p99, 3),
     "total_speedup":     round(total_sp, 2),
     "fix_contributions": {
         "fix1_no_item_sp":     round(fix1_sp, 2),

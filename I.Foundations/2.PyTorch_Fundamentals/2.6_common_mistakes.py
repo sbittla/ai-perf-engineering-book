@@ -5,8 +5,8 @@ I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py  ─  Chapter 2: The
 Covers book section 2.6.
 
 Each section demonstrates a real mistake and has you:
-  (a) observe the wrong behaviour (the bug is pre-coded so you can see it)
-  (b) fix it and verify the correct behaviour
+  (a) observe the wrong behavior (the bug is pre-coded so you can see it)
+  (b) fix it and verify the correct behavior
 
 Run:  python I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py
 All sections must print ✓.
@@ -135,9 +135,9 @@ print("  ✓ Mistake 3 fixed")
 # ─────────────────────────────────────────────────────────────
 # MISTAKE 4: Calling .item() inside the training loop
 # ─────────────────────────────────────────────────────────────
-print("\n── Mistake 4: Synchronising GPU Inside the Training Loop ──")
+print("\n── Mistake 4: synchronizing GPU Inside the Training Loop ──")
 print("""
-  loss.item() and tensor.cpu() both SYNCHRONISE the CPU with the GPU
+  loss.item() and tensor.cpu() both synchronize the CPU with the GPU
   — the CPU blocks until all pending GPU work finishes.  In a tight
   inner loop this serialises the pipeline and can cut throughput by 50%+.
 

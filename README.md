@@ -1,6 +1,6 @@
 # AI Systems Performance Engineering — Companion Repository
 
-**Hands-on exercises for GPU profiling, LLM inference optimisation, and Linux systems performance.**
+**Hands-on exercises for GPU profiling, LLM inference optimization, and Linux systems performance.**
 
 Companion repository for the book *AI Performance Engineering: From GPU Kernels to LLM Inference* by Srinivasa Rao Bittla.
 
@@ -26,8 +26,8 @@ ai-perf-engineering-book/
 ├── II.GPU_Programming_and_Profiling/  ← Part II: Chapters 4–7
 │   ├── 4.The_CUDA_Execution_Model/    ← Ch 4: Warps, coalescing, Tensor Cores
 │   ├── 5.GPU_Profiling/               ← Ch 5: nsys, ncu, torch.profiler
-│   ├── 6.PyTorch_Optimisation/        ← Ch 6: AMP, quantization, torch.compile
-│   └── 7.DataLoader_Optimisation/     ← Ch 7: Pipeline tuning, I/O bottlenecks
+│   ├── 6.PyTorch_Optimization/        ← Ch 6: AMP, quantization, torch.compile
+│   └── 7.DataLoader_Optimization/     ← Ch 7: Pipeline tuning, I/O bottlenecks
 │
 ├── III.Linux_Systems_Profiling/       ← Part III: Chapters 8–9
 │   ├── 8.Perf_eBPF_and_Flamegraphs/  ← Ch 8: perf, flamegraphs, bpftrace, locks
@@ -44,12 +44,14 @@ ai-perf-engineering-book/
 │   └── 15.Porting_a_Workload/         ← Ch 15: Checklist, bottleneck shift
 │
 ├── VI.Capstone_Projects/              ← Part VI: Chapters 16–19
-│   ├── 16.LLM_Inference_Optimisation/ ← Ch 16: Full optimisation lab
+│   ├── 16.LLM_Inference_Optimization/ ← Ch 16: Full optimization lab
 │   ├── 17.DataLoader_Bottleneck_Hunt/ ← Ch 17: Diagnose + fix I/O starvation
 │   ├── 18.KV_Cache_Memory_Pressure/   ← Ch 18: Scaling + budget planning
 │   └── 19.Flamegraph_Challenge/       ← Ch 19: CPU-to-GPU pipeline diagnosis
 │
-├── VII.Hardware_Landscape/            ← Part VII: Chapters 20–22
+├── VII.Hardware_Landscape/            ← Part VII: Chapters 20–23
+├── VIII.Advanced_Performance/         ← Part VIII: Chapters 24–27
+├── IX.Production_Capstones/           ← Part IX: Chapters 28–30
 │   ├── 20.NVIDIA_Blackwell/           ← Ch 20: Blackwell architecture + profiling
 │   ├── 21.AMD_MI300X_ROCm/            ← Ch 21: MI300X, ROCm, vendor comparison
 │   └── 22.Custom_Silicon/             ← Ch 22: Gaudi 3, Trainium, AMX, CXL
@@ -136,20 +138,20 @@ python II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.1_nsys_profiling.py
 python II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.2_ncu_profiling.py
 python II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.3_torch_profiler.py
 
-# Chapter 6: Optimisation
-python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.1_precision_and_amp.py
-python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.2_quantization.py
-python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.3_torch_compile.py
+# Chapter 6: Optimization
+python II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.1_precision_and_amp.py
+python II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.2_quantization.py
+python II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.3_torch_compile.py
 ```
 
 ### 4. Part VI — Capstone Projects (portfolio artifacts)
 
 ```bash
-# Chapter 16: LLM inference optimisation lab
-python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.1_production_readiness.py
-python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_baseline_inference.py
-python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py
-python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py
+# Chapter 16: LLM inference optimization lab
+python VI.Capstone_Projects/16.LLM_Inference_Optimization/16.1_production_readiness.py
+python VI.Capstone_Projects/16.LLM_Inference_Optimization/16.2_baseline_inference.py
+python VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py
+python VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py
 
 # Chapter 17: DataLoader bottleneck hunt
 python VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.1_slow_dataloader.py
@@ -212,8 +214,10 @@ Every exercise file:
 | III — Linux Systems | 8–9 | 3 weeks | Flamegraphs, perf, eBPF, NUMA |
 | IV — LLM Inference | 10–13 | 4 weeks | KV cache, batching, distributed inference |
 | V — Benchmarking | 14–15 | 2 weeks | Repeatable methodology, T-L curves |
-| VI — Capstone | 16–19 | 4 weeks | Portfolio-ready optimisation projects |
-| VII — Hardware | 20–22 | 1 week | Blackwell, MI300X, custom silicon |
+| VI — Capstone | 16–19 | 4 weeks | Portfolio-ready optimization projects |
+| VII — Hardware | 20–23 | 1 week | Blackwell, MI300X, custom silicon, accelerator spectrum |
+| VIII — Advanced | 24–27 | 1 week | Triton, FlashAttention, distributed training, observability |
+| IX — Capstones | 28–30 | 1 week | vLLM serving, multi-GPU scaling, cloud cost |
 
 **Total: ~5 months part-time**
 

@@ -239,7 +239,7 @@ print("""
 
   When to use CPU inference instead of GPU:
     • Batch size = 1, latency-sensitive, GPU startup overhead > serving time
-    • Cost-optimised deployment using existing on-prem Xeon fleet
+    • Cost-optimized deployment using existing on-prem Xeon fleet
     • Models small enough to fit in L3 cache (< ~96 MB for hot weights)
 """)
 print("  ✓ Section 4 passed")

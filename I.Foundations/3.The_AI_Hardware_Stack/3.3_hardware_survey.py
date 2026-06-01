@@ -140,16 +140,16 @@ else:
 # ─────────────────────────────────────────────────────────────
 # SECTION 3: Measure your GPU's actual MFU
 # ─────────────────────────────────────────────────────────────
-print("\n── Section 3: Measuring MFU (Model FLOPs Utilisation) ──")
+print("\n── Section 3: Measuring MFU (Model FLOPs utilization) ──")
 print("""
   MFU = observed FLOP/s  /  peak FLOP/s.
 
   We measure a large FP16 GEMM that is well into compute-bound territory
   (high arithmetic intensity), then compute how close we are to peak.
 
-  On a well-utilised GPU with properly aligned dimensions:
+  On a well-utilized GPU with properly aligned dimensions:
     MFU > 70%  → excellent
-    MFU 40–70% → typical optimised code
+    MFU 40–70% → typical optimized code
     MFU < 30%  → investigate (small batch? FP32? wrong dtype?)
 """)
 
@@ -203,7 +203,7 @@ print(f"  Observed        : {observed_flops_per_sec/1e12:.1f} TFLOP/s")
 print(f"  Peak            : {peak_flops/1e12:.1f} TFLOP/s")
 print(f"  MFU             : {mfu:.1f}%")
 if mfu > 60:
-    print(f"  Result: excellent utilisation")
+    print(f"  Result: excellent utilization")
 elif mfu > 35:
     print(f"  Result: good — typical for real workloads (not just bare GEMM)")
 else:
@@ -248,7 +248,7 @@ if DEVICE == "cuda":
                 print(f"  Clock throttle   : {throttle_pct:.1f}%  "
                       f"({'OK — not throttling' if throttle_pct < 5 else 'WARNING: throttling detected'})")
                 print(f"  Power draw       : {pwr.strip()} W  / {pwr_lim.strip()} W")
-                print(f"  GPU utilisation  : {util.strip()}%")
+                print(f"  GPU utilization  : {util.strip()}%")
                 print(f"  Memory used      : {mem_used.strip()} / {mem_tot.strip()} MB")
         else:
             print("  (nvidia-smi not available or returned an error)")

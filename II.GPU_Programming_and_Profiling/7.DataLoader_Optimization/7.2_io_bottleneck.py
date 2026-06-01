@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-7.DataLoader_Optimisation/7.2_io_bottleneck.py  ─  Chapter 7: I/O Bottleneck Diagnosis
+7.DataLoader_Optimization/7.2_io_bottleneck.py  ─  Chapter 7: I/O Bottleneck Diagnosis
 =======================================================================
 Covers book section 7.2:
   • Simulating GPU starvation with a slow DataLoader
@@ -8,7 +8,7 @@ Covers book section 7.2:
   • Diagnosing with nvidia-smi dmon
   • The fix checklist based on idle_pct thresholds
 
-Run:  python II.GPU_Programming_and_Profiling/7.DataLoader_Optimisation/7.2_io_bottleneck.py
+Run:  python II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.2_io_bottleneck.py
 All sections must print ✓.
 """
 
@@ -117,9 +117,9 @@ assert idle_pct_slow > 50, (
 print("  ✓ Section 1 passed — GPU starvation detected (idle_pct > 50%)")
 
 # ─────────────────────────────────────────────────────────────
-# SECTION 2: Measuring GPU Utilisation with Fast DataLoader
+# SECTION 2: Measuring GPU utilization with Fast DataLoader
 # ─────────────────────────────────────────────────────────────
-print("\n── Section 2: Measuring GPU Utilisation ──")
+print("\n── Section 2: Measuring GPU utilization ──")
 print("""
   A fast DataLoader (SSD or in-memory data) should keep the GPU fed.
   When idle_pct < 30%, the GPU is the bottleneck, not the DataLoader.
@@ -187,7 +187,7 @@ print("""
 
             nvidia-smi dmon -s u -d 1
 
-          This prints GPU utilisation metrics every second.
+          This prints GPU utilization metrics every second.
           The columns are:
             sm%  : fraction of SMs active (0-100)
             mem% : fraction of memory bandwidth in use (0-100)

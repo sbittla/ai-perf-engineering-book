@@ -207,7 +207,7 @@ print("  ✓ Section 3 passed — row-major access is faster due to coalescing")
 print("\n── Section 4: Layout Implication — contiguous() for matmul ──")
 print("""
   When a tensor is non-contiguous (e.g. after .t() or .permute()), the
-  CUDA matmul kernels may not be able to use their most optimised paths.
+  CUDA matmul kernels may not be able to use their most optimized paths.
   Calling .contiguous() copies the data into a new contiguous buffer.
   This copy has a cost, but the subsequent matmul may be faster enough
   to justify it.
@@ -277,6 +277,6 @@ print("  ✓ Section 4 passed — .contiguous() produces a contiguous tensor")
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 4.2 complete!")
 print("  You now understand memory coalescing, cache tiers, layout access")
-print("  patterns, and the contiguous() API for matmul optimisation.")
+print("  patterns, and the contiguous() API for matmul optimization.")
 print("  Next: II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py")
 print("=" * 60)

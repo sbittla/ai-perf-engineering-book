@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-6.PyTorch_Optimisation/6.1_precision_and_amp.py  ─  Chapter 6: Precision and AMP
+6.PyTorch_Optimization/6.1_precision_and_amp.py  ─  Chapter 6: Precision and AMP
 =======================================================================
 Covers book section 6.1:
   • FP32 vs FP16 vs BF16 memory cost and throughput
@@ -8,7 +8,7 @@ Covers book section 6.1:
   • GradScaler for training stability
   • When to use each dtype
 
-Run:  python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.1_precision_and_amp.py
+Run:  python II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.1_precision_and_amp.py
 All sections must print ✓.
 """
 
@@ -286,5 +286,5 @@ print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 6.1 complete!")
 print("  You now understand FP16/BF16 memory savings, throughput gains,")
 print("  torch.autocast usage, and the GradScaler training pattern.")
-print("  Next: II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.2_quantization.py")
+print("  Next: II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.2_quantization.py")
 print("=" * 60)

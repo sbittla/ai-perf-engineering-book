@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-6.PyTorch_Optimisation/6.2_quantization.py  ─  Chapter 6: Quantization
+6.PyTorch_Optimization/6.2_quantization.py  ─  Chapter 6: Quantization
 =======================================================================
 Covers book section 6.2:
   • INT8 dynamic quantization with torch.quantization
@@ -8,7 +8,7 @@ Covers book section 6.2:
   • Accuracy impact measurement
   • Static quantization and INT4 concepts for LLM deployment
 
-Run:  python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.2_quantization.py
+Run:  python II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.2_quantization.py
 Note: quantization runs on CPU (torch.quantization.quantize_dynamic does
       not support CUDA directly; this is by design).
 All sections must print ✓.
@@ -237,5 +237,5 @@ print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 6.2 complete!")
 print("  You now understand dynamic quantization, memory footprint,")
 print("  accuracy impact, and INT4 for LLM deployment.")
-print("  Next: II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.3_torch_compile.py")
+print("  Next: II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.3_torch_compile.py")
 print("=" * 60)

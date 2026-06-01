@@ -34,7 +34,7 @@ print("""
   Nsight Compute profiles individual GPU kernels with hardware counters:
     - Memory throughput as % of peak HBM bandwidth
     - SM occupancy (% of theoretical maximum warps)
-    - Tensor Core utilisation (% of peak)
+    - Tensor Core utilization (% of peak)
     - L1/L2 cache hit rates
     - Warp divergence cost
 
@@ -54,7 +54,7 @@ print("""
     l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum.pct_of_peak_sustained_elapsed
       → Fraction of peak HBM bandwidth achieved (high = memory-bound)
     sm__pipe_tensor_op_hmma_cycles_active.avg.pct_of_peak_sustained_active
-      → Tensor Core utilisation
+      → Tensor Core utilization
     sm__warps_active.avg.pct_of_peak_sustained_active
       → SM occupancy
 """)
@@ -156,7 +156,7 @@ print("""
      How to use: if >80%, you are hitting the memory wall; the only fix
      is to reduce bytes transferred (kernel fusion, quantisation).
 
-  2. Tensor Core utilisation (sm__pipe_tensor_op_hmma...pct_of_peak)
+  2. Tensor Core utilization (sm__pipe_tensor_op_hmma...pct_of_peak)
      What it means: fraction of cycles Tensor Cores were active.
      How to use: if <50% on a FP16 GEMM, check alignment (must be ×8).
 

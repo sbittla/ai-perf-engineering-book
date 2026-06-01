@@ -47,7 +47,7 @@ print("""
   SOLUTION: TENSOR PARALLELISM
     Split each weight matrix across N GPUs.
     Each GPU holds 1/N of each matrix.
-    A small all-reduce synchronisation after each layer reconstructs the output.
+    A small all-reduce synchronization after each layer reconstructs the output.
 
   KEY TRADE-OFF:
     More GPUs → less memory per GPU, but more all-reduce communication.

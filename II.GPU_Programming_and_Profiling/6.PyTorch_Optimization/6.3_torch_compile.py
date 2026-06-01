@@ -1,23 +1,36 @@
 #!/usr/bin/env python3
 """
-6.PyTorch_Optimisation/6.3_torch_compile.py  ─  Chapter 6: torch.compile
+6.PyTorch_Optimization/6.3_torch_compile.py  ─  Chapter 6: torch.compile
 =======================================================================
 Covers book section 6.3:
   • What torch.compile does: graph capture → TorchInductor → Triton
   • Compilation modes and their trade-offs
-  • Warmup behaviour (first calls are slow due to compilation)
+  • Warmup behavior (first calls are slow due to compilation)
   • Batch size sweep to find peak throughput
 
-Run:  python II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.3_torch_compile.py
+Run:  python II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.3_torch_compile.py
 All sections must print ✓.
 """
 
+import sys
 import time
 import torch
 import torch.nn as nn
 
+# torch.compile requires the Triton/TorchInductor backend which is not
+# supported on Windows without a complex MSVC toolchain setup.
+# On Windows we run the exercise in eager mode with a clear warning.
+_COMPILE_SUPPORTED = sys.platform != "win32"
+if not _COMPILE_SUPPORTED:
+    print(
+        "NOTE: torch.compile optimization is skipped on Windows — "
+        "TorchInductor requires a Linux or macOS environment. "
+        "The exercise runs in eager mode so all assertions still pass. "
+        "Use WSL2 or a Linux container to test compiled performance."
+    )
+
 print("=" * 60)
-print("  Exercise 6.3 — torch.compile and Batch Size Optimisation")
+print("  Exercise 6.3 — torch.compile and Batch Size Optimization")
 print("=" * 60)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -31,11 +44,11 @@ print("""
   torch.compile was introduced in PyTorch 2.0 as the successor to
   torch.jit.script.  It captures the computation graph by tracing the
   Python code with TorchDynamo, then passes the graph to TorchInductor,
-  which generates optimised Triton or C++ kernels.
+  which generates optimized Triton or C++ kernels.
 
   Key differences from eager mode:
     - Kernel fusion: multiple PyTorch ops become one Triton kernel
-    - Memory layout optimisation: rearranges tensors for cache efficiency
+    - Memory layout optimization: rearranges tensors for cache efficiency
     - Operator fusion: reduces HBM round-trips for elementwise chains
 
   Compilation modes:
@@ -63,7 +76,8 @@ with torch.no_grad():
 
 # TODO 1: Call torch.compile(mlp, mode="default") to create compiled_mlp.
 #   Then run 5 warmup iterations with dummy input to trigger compilation.
-compiled_mlp = None  # YOUR CODE HERE → torch.compile(mlp, mode="default")
+#   On Windows, _COMPILE_SUPPORTED is False — assign mlp directly instead.
+compiled_mlp = None  # YOUR CODE HERE → torch.compile(mlp, mode="default") if _COMPILE_SUPPORTED else mlp
 
 assert compiled_mlp is not None, "compiled_mlp must not be None"
 
@@ -85,9 +99,9 @@ print(f"  Compiled shape: {compiled_out.shape}")
 print("  ✓ Section 1 passed — torch.compile produces correct output shape")
 
 # ─────────────────────────────────────────────────────────────
-# SECTION 2: Compilation Warmup Behaviour
+# SECTION 2: Compilation Warmup behavior
 # ─────────────────────────────────────────────────────────────
-print("\n── Section 2: Compilation Warmup Behaviour ──")
+print("\n── Section 2: Compilation Warmup behavior ──")
 print("""
   The first time the compiled model is called, TorchDynamo captures the
   computation graph and TorchInductor generates the kernel code.
@@ -217,14 +231,14 @@ print("  ✓ Section 3 passed — compiled mode not slower than eager after warm
 print("\n── Section 4: Batch Size Sweep ──")
 print("""
   Throughput (samples/second) does not scale linearly with batch size.
-  At small batch sizes, GPU utilisation is low and the hardware is mostly
+  At small batch sizes, GPU utilization is low and the hardware is mostly
   idle.  As batch size increases, more SMs are active and throughput rises.
   Eventually the GPU is fully occupied and throughput plateaus.
 
   Finding the batch size that maximises throughput is important for:
     - Inference serving: maximise tokens/second for a given SLA
     - Training: maximise samples/second for a given memory budget
-    - Cost optimisation: find the cheapest batch size per sample
+    - Cost optimization: find the cheapest batch size per sample
 
   We sweep batch sizes [1, 2, 4, 8, 16, 32, 64] on a 512→512 linear
   layer and report throughput in samples/second.
@@ -271,7 +285,7 @@ print("  ✓ Section 4 passed — batch size sweep complete, peak batch identifi
 
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 6.3 complete!")
-print("  You now understand torch.compile modes, warmup behaviour,")
+print("  You now understand torch.compile modes, warmup behavior,")
 print("  mode trade-offs, and batch size throughput sweeps.")
-print("  Next: II.GPU_Programming_and_Profiling/7.DataLoader_Optimisation/7.1_dataloader_pipeline.py")
+print("  Next: II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.1_dataloader_pipeline.py")
 print("=" * 60)

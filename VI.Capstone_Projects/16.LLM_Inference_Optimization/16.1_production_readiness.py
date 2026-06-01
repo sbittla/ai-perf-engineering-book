@@ -187,7 +187,7 @@ dimensions = [
     ]),
     ("Observability", [
         ("TTFT, TPS, P50/P99 latency exported to metrics system",),
-        ("GPU utilisation and memory tracked per-request",),
+        ("GPU utilization and memory tracked per-request",),
         ("Alerting configured for P99 > 2× P50 (tail anomaly)",),
         ("Flamegraph capture path tested (py-spy or Nsight available)",),
     ]),
@@ -219,7 +219,7 @@ print("SECTION 5: How the Four Capstones Map to Production Skills")
 print("=" * 60)
 
 capstones = [
-    ("Chapter 16", "LLM Inference Optimisation",
+    ("Chapter 16", "LLM Inference optimization",
      "OOM on large sequences",
      "FlashAttention, KV cache tuning, quantisation",
      "Latency, Memory, Precision"),
@@ -280,7 +280,7 @@ print("For LLaMA-70B at batch=32: KV cache alone needs ~32+ GB.")
 print("On an 80 GB H100, that leaves ~48 GB for the 140 GB model weights —")
 print("meaning LLaMA-70B requires tensor parallelism across 2+ GPUs in production.")
 print()
-print("Explore next: VI.Capstone_Projects/16.LLM_Inference_Optimisation/")
+print("Explore next: VI.Capstone_Projects/16.LLM_Inference_Optimization/")
 print("              VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/")
 print("              VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/")
 print("              VI.Capstone_Projects/19.Flamegraph_Challenge/")

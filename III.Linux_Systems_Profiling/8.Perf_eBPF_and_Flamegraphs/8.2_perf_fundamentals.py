@@ -56,7 +56,7 @@ def measure_access_time(arr: np.ndarray, indices: np.ndarray) -> float:
     """
     TODO 1: Implement this function.
     Sum arr[indices] using a Python loop (not numpy vectorisation).
-    This exposes the per-access cost because Python cannot batch-optimise it.
+    This exposes the per-access cost because Python cannot batch-optimize it.
     Return elapsed time in milliseconds.
 
     Steps:

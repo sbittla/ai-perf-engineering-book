@@ -184,7 +184,7 @@ if local_fp32:
     print(f"    → AlexNet trained in ~6 days on 2× GTX 580s.")
     days_equiv = 6 * 2 / speedup_alexnet
     print(f"    → On your single GPU, the same training would take "
-          f"~{days_equiv*24:.1f} hours (FP32, no other optimisations).")
+          f"~{days_equiv*24:.1f} hours (FP32, no other optimizations).")
     print()
 
     # Speedup vs V100 baseline (Tensor Core era start)

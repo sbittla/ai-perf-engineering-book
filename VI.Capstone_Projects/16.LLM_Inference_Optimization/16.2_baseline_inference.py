@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_baseline_inference.py
+VI.Capstone_Projects/16.LLM_Inference_Optimization/16.2_baseline_inference.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Chapter 16: Capstone 1 — LLM Inference Optimisation Lab
+Chapter 16: Capstone 1 — LLM Inference optimization Lab
 Section 1: Establishing the Baseline
 =======================================================================
 Covers capstone section 16.1:
@@ -12,7 +12,7 @@ Covers capstone section 16.1:
   • Measure peak GPU VRAM footprint
   • Save a structured baseline JSON as the "before" snapshot
 
-Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_baseline_inference.py
+Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimization/16.2_baseline_inference.py
 All sections must print ✓.
 """
 
@@ -305,13 +305,13 @@ print("  ✓ Section 3 passed — decode TPS and VRAM measured")
 print("\n── Section 4: Saving the Baseline Snapshot ──")
 print("""
   The baseline snapshot is the "before" record for this capstone.
-  Every subsequent optimisation will be compared against it.
+  Every subsequent optimization will be compared against it.
 
   BASELINE SNAPSHOT SCHEMA:
     model_config  : architecture hyperparameters
     hardware      : device, VRAM capacity
     ttft_by_len   : TTFT mean/P99 at each prompt length
-    tps_fp32      : decode TPS without optimisation
+    tps_fp32      : decode TPS without optimization
     vram_mb       : peak memory during inference
     dtype         : "float32" (will become float16 in 16.2)
 
@@ -357,7 +357,7 @@ print(f"  TTFT (256):   {ttft_results.get(256, {}).get('mean_ms', 'N/A')} ms")
 print(f"  VRAM peak:    {baseline['vram_mb']} MB")
 print(f"""
   NEXT STEP:
-    Run 16.2_precision_and_compile.py to apply the optimisation ladder.
+    Run 16.2_precision_and_compile.py to apply the optimization ladder.
     The baseline JSON will be loaded for before/after comparison.
 """)
 print("  ✓ Section 4 passed — baseline snapshot saved")
@@ -366,5 +366,5 @@ print("  ✓ Section 4 passed — baseline snapshot saved")
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Capstone 16.1 complete!")
 print("  Baseline established: TTFT, TPS (FP32), VRAM footprint.")
-print("  Next: VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py")
+print("  Next: VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py")
 print("=" * 60)

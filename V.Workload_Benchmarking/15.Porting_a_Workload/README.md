@@ -1,13 +1,13 @@
 # Chapter 15 — Porting a Workload
 
-Three exercises covering the full process of moving a workload from CPU to GPU: the porting checklist, understanding how the bottleneck shifts at each optimisation rung, and tuning the DataLoader to prevent GPU starvation.
+Three exercises covering the full process of moving a workload from CPU to GPU: the porting checklist, understanding how the bottleneck shifts at each optimization rung, and tuning the DataLoader to prevent GPU starvation.
 
 ## Exercises
 
 | File | Topic | Key Functions |
 |------|-------|---------------|
 | `15.1_porting_checklist.py` | 6-step porting checklist, dtype traps, H2D transfer cost, output validation | `safe_from_numpy()`, `measure_h2d_bandwidth_gbs()`, `validate_port()` |
-| `15.2_bottleneck_shift.py` | Optimisation ladder, bottleneck diagnosis, Python overhead floor | `benchmark_config()`, `throughput_scaling_ratio()`, `measure_overhead_ms()` |
+| `15.2_bottleneck_shift.py` | Optimization ladder, bottleneck diagnosis, Python overhead floor | `benchmark_config()`, `throughput_scaling_ratio()`, `measure_overhead_ms()` |
 | `15.3_dataloader_at_scale.py` | DataLoader throughput, num_workers sweep, GPU idle time, CPU affinity | `measure_loader_throughput()`, `sweep_num_workers()`, `measure_idle_pct()` |
 
 ## Quick Start
@@ -42,7 +42,7 @@ t = t.to("cuda")
 |------|--------------|------------|-------------------|
 | 1 | CPU FP32 | Compute (100 GFLOPS) | baseline |
 | 2 | GPU FP32 | Memory bandwidth | 10–50× |
-| 3 | GPU FP16 | Tensor Core utilisation | 1.5–2× |
+| 3 | GPU FP16 | Tensor Core utilization | 1.5–2× |
 | 4 | + torch.compile | Python overhead / kernel fusion | 1.2–1.8× |
 | 5 | + INT8 quant | Cache I/O pattern | 1.5–3× |
 
@@ -53,7 +53,7 @@ overhead_ms = wall_clock_ms - gpu_kernel_ms_from_cuda_events
 If overhead > 30% of wall time → use `torch.compile` or CUDA Graphs.
 
 **Throughput scaling ratio:**
-- > 30×: strong compute scaling (well utilised GPU)
+- > 30×: strong compute scaling (well utilized GPU)
 - 5–30×: moderate (approaching bandwidth ceiling)
 - < 5×: memory-bound or overhead-dominated
 

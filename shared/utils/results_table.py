@@ -47,7 +47,7 @@ RESULTS = {
     # ── PROJECT 2: DataLoader I/O Bottleneck Hunt ───────────────────────────
     "project2": {
         "title": "Project 2 — DataLoader I/O Bottleneck Hunt (ResNet18/50)",
-        "metric": "GPU Utilisation % (higher=better)",
+        "metric": "GPU utilization % (higher=better)",
         "rows": [
             # (Configuration, steps/sec, avg_step_ms, gpu_util_pct, notes)
             ("num_workers=0, no pin_memory",   "??", "??",  "??%",  "← baseline"),
@@ -78,7 +78,7 @@ RESULTS = {
 
     # ── PROJECT 4: CPU-to-GPU Pipeline Flamegraph ───────────────────────────
     "project4": {
-        "title": "Project 4 — CPU-to-GPU Pipeline Optimisation (ResNet18)",
+        "title": "Project 4 — CPU-to-GPU Pipeline optimization (ResNet18)",
         "metric": "Steps/second (higher=better)",
         "rows": [
             # (Config, steps/sec, avg_step_ms, cpu_util_pct, notes)
@@ -157,13 +157,13 @@ def print_summary():
   Tools: nsys timeline, ncu roofline, torch.profiler, nvidia-smi
 
   PROJECT 2 — DataLoader I/O Bottleneck Hunt
-  ┌─ Baseline (num_workers=0)    : ??% GPU utilisation
-  └─ Optimised (workers+NUMA)    : ??% GPU utilisation
+  ┌─ Baseline (num_workers=0)    : ??% GPU utilization
+  └─ optimized (workers+NUMA)    : ??% GPU utilization
   Tools: iostat, vmstat, opensnoop, biolatency, nsys
 
   PROJECT 3 — KV Cache Memory Pressure
   ┌─ Constrained (util=0.60)     : ?? tok/s, TTFT_P99=??ms
-  └─ Optimised (prefix+quant)    : ?? tok/s, TTFT_P99=??ms
+  └─ optimized (prefix+quant)    : ?? tok/s, TTFT_P99=??ms
   Tools: nvidia-smi dmon, torch.cuda.memory_summary, vLLM flags
 
   PROJECT 4 — CPU-to-GPU Pipeline Flamegraph

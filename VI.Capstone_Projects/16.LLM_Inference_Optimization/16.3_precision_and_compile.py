@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py
+VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Chapter 16: Capstone 1 — LLM Inference Optimisation Lab
-Section 2: Precision and torch.compile Optimisation Ladder
+Chapter 16: Capstone 1 — LLM Inference optimization Lab
+Section 2: Precision and torch.compile optimization Ladder
 =======================================================================
 Covers capstone section 16.2:
   • Load the baseline from 16.1 for before/after comparison
   • Apply FP16 / BF16 and measure the speedup over FP32
   • Apply torch.compile and measure compile overhead vs steady-state gain
-  • Build a full optimisation ladder table with cumulative speedup
-  • Save the optimised snapshot for final comparison
+  • Build a full optimization ladder table with cumulative speedup
+  • Save the optimized snapshot for final comparison
 
-Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py
+Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py
 All sections must print ✓. Run 16.1 first to generate the baseline.
 """
 
@@ -131,7 +131,7 @@ def bench_ttft(model, prompt_len=256, warmup=5, iters=30):
 print("── Section 1: Load the Baseline Snapshot ──")
 print("""
   The baseline from 16.1 provides the FP32 reference numbers.
-  Every optimisation rung will compute its speedup relative to FP32.
+  Every optimization rung will compute its speedup relative to FP32.
   If the baseline file doesn't exist, we establish it here.
 """)
 
@@ -324,9 +324,9 @@ print("  ✓ Section 3 passed — compile overhead and speedup measured")
 
 
 # ─────────────────────────────────────────────────────────────
-# SECTION 4: Full optimisation ladder table
+# SECTION 4: Full optimization ladder table
 # ─────────────────────────────────────────────────────────────
-print("\n── Section 4: Full Optimisation Ladder ──")
+print("\n── Section 4: Full optimization Ladder ──")
 print("""
   We now assemble the complete before/after table. Each rung shows
   the cumulative improvement from the previous rung.
@@ -375,23 +375,42 @@ best_speedup = max(sp for _, _, _, sp in ladder)
 best_config  = [c for _, c, _, sp in ladder if sp == best_speedup][0]
 print(f"\n  Best configuration: {best_config}  ({best_speedup:.2f}× over FP32 eager)")
 
-# Save optimised snapshot
-optimised = {
-    "ladder": [{"rung": r, "config": c, "ttft_ms": round(ms, 3), "speedup": round(sp, 2)}
-               for r, c, ms, sp in ladder],
-    "best_config": best_config,
-    "best_speedup": round(best_speedup, 2),
+# ── Hypothesis logging ───────────────────────────────────────────
+# Before each run, write your expected speedup below.
+# After measuring, compare: if prediction is off by >2x, that gap
+# reveals a flaw in your mental model — the most valuable learning.
+HYPOTHESES = {
+    # Format: "config_name": expected_speedup_vs_fp32
+    # Fill these in BEFORE running the script, then compare with actuals.
+    "fp16_hypothesis":          None,   # YOUR ESTIMATE: e.g. 2.0 for 2x
+    "fp32_compile_hypothesis":  None,   # YOUR ESTIMATE
+    "fp16_compile_hypothesis":  None,   # YOUR ESTIMATE
 }
-with open("/tmp/capstone16_optimised.json", "w") as f:
-    json.dump(optimised, f, indent=2)
+
+# Save optimized snapshot with both hypotheses and actuals
+optimized = {
+    "ladder": [{"rung": r, "config": c, "ttft_ms": round(ms, 3),
+                "actual_speedup": round(sp, 2),
+                "hypothesis_speedup": HYPOTHESES.get(
+                    c.lower().replace(" ", "_").replace("+", "") + "_hypothesis")}
+               for r, c, ms, sp in ladder],
+    "best_config":  best_config,
+    "best_speedup": round(best_speedup, 2),
+    "hypotheses":   HYPOTHESES,
+}
+import tempfile, os as _os
+_snap = _os.path.join(tempfile.gettempdir(), "capstone16_optimized.json")
+with open(_snap, "w") as f:
+    json.dump(optimized, f, indent=2)
+print(f"\n  Snapshot saved to: {_snap}")
 
 assert len(ladder) >= 1, "At least baseline should be in ladder"
 assert best_speedup >= 1.0, "Best speedup should be at least 1.0×"
-print("  ✓ Section 4 passed — optimisation ladder built")
+print("  ✓ Section 4 passed — optimization ladder built")
 
 
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Capstone 16.2 complete!")
 print(f"  Best result: {best_config} → {best_speedup:.2f}× over FP32 baseline")
-print("  Next: VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py")
+print("  Next: VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py")
 print("=" * 60)

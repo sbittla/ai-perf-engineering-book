@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py
+VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Chapter 16: Capstone 1 — LLM Inference Optimisation Lab
+Chapter 16: Capstone 1 — LLM Inference optimization Lab
 Section 3: Profiling Audit — Attributing Time to Operations
 =======================================================================
 Covers capstone section 16.3:
   • Using torch.profiler to record CPU/CUDA time per op
   • Reading the profiler table: Self CUDA % is the target metric
   • Attributing latency to attention, FFN, embedding, and head layers
-  • Computing the "3 top bottlenecks" and which optimisation fixed each
+  • Computing the "3 top bottlenecks" and which optimization fixed each
   • Comparing FP32 and FP16 op-level breakdowns
 
-Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py
+Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py
 All sections must print ✓.
 """
 
@@ -289,8 +289,8 @@ print("  ✓ Section 3 passed — FP16 vs FP32 breakdown compared")
 print("\n── Section 4: Diagnosis → Fix Attribution ──")
 print("""
   A complete profiling audit ends with a diagnosis-to-fix table:
-  which profiler finding pointed to which optimisation, and how much
-  speedup that optimisation produced.
+  which profiler finding pointed to which optimization, and how much
+  speedup that optimization produced.
 
   DIAGNOSIS-TO-FIX FRAMEWORK:
     Finding                        → Fix                  → Speedup (typical)
@@ -299,7 +299,7 @@ print("""
     Attention dominates (>40%)     → Flash Attention       → 1.5–3.0×
     LM head dominates (>20%)       → FP16 + weight sharing → 1.5–2.0×
     Embedding is slow (>10%)       → Reduce vocab size     → 1.2–1.5×
-    GPU utilisation < 50%          → Larger batch          → 2–5×
+    GPU utilization < 50%          → Larger batch          → 2–5×
     Compile shows many tiny ops    → torch.compile         → 1.2–1.8×
 
   This is the final output of the capstone: a structured audit report
@@ -331,8 +331,8 @@ for rank, (region, t_us) in enumerate(top3, start=1):
     })
     print(f"  Bottleneck #{rank}: {region:<20}  {t_us:.0f} µs  ({share:.1f}%)  → {fix}")
 
-# Load optimisation results if available
-opt_path = "/tmp/capstone16_optimised.json"
+# Load optimization results if available
+opt_path = "/tmp/capstone16_optimized.json"
 if __import__("os").path.exists(opt_path):
     with open(opt_path) as f:
         opt_data = json.load(f)
@@ -348,11 +348,11 @@ print(f"""
 
   CAPSTONE 16 COMPLETE SUMMARY:
     1. Establish baseline (16.1)  → TTFT, TPS, VRAM snapshot
-    2. Optimise (16.2)            → FP16 + torch.compile ladder
+    2. optimize (16.2)            → FP16 + torch.compile ladder
     3. Audit (16.3)               → profiler attribution per region
 
   The audit links EVERY speedup back to a specific profiler finding.
-  That is the standard of evidence required for production optimisation.
+  That is the standard of evidence required for production optimization.
 """)
 assert len(audit["top_bottlenecks"]) > 0, "Audit should have bottleneck data"
 print("  ✓ Section 4 passed — diagnosis-to-fix audit complete")
@@ -360,6 +360,6 @@ print("  ✓ Section 4 passed — diagnosis-to-fix audit complete")
 
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Capstone 16.3 complete!")
-print("  Capstone 16 (LLM Inference Optimisation) is finished.")
+print("  Capstone 16 (LLM Inference optimization) is finished.")
 print("  Next: VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.1_slow_dataloader.py")
 print("=" * 60)

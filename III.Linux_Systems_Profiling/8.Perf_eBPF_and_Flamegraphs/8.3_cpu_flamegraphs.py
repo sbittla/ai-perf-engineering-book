@@ -6,7 +6,7 @@ Covers book section 8.2:
   • What a flamegraph shows — x-axis = time, y-axis = call depth
   • Identifying hotspots: wide frames at the top of a stack
   • Generating flamegraphs with perf+FlameGraph and py-spy
-  • Differential flamegraphs for verifying optimisations
+  • Differential flamegraphs for verifying optimizations
   • Classifying flamegraph frames by width percentage
 
 Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py
@@ -55,8 +55,8 @@ print("""
     the time is distributed among many callee functions — investigate
     each sub-frame individually.
 
-  COLOUR is usually arbitrary (not meaningful) in standard flamegraphs.
-  Some tools colour-code by library (kernel = orange, user = yellow, JIT = green).
+  color is usually arbitrary (not meaningful) in standard flamegraphs.
+  Some tools color-code by library (kernel = orange, user = yellow, JIT = green).
 
   Example: ASCII flamegraph of a PyTorch training pipeline:
   ─────────────────────────────────────────────────────────────
@@ -207,16 +207,16 @@ print("  ✓ Section 2 passed — cProfile ran successfully on mixed workload")
 print("\n── Section 3: Differential Flamegraph ──")
 print("""
   A differential flamegraph overlays two profiles captured before and
-  after an optimisation.  It shows which functions got faster (blue)
+  after an optimization.  It shows which functions got faster (blue)
   and which got slower (red).
 
-  This is critically important for verifying optimisations:
-    1. You optimise a specific function, e.g., remove a sleep.
+  This is critically important for verifying optimizations:
+    1. You optimize a specific function, e.g., remove a sleep.
     2. You take a new profile.
     3. The differential flamegraph shows that only the target function
        changed (blue), while everything else stayed the same (grey).
 
-  A common pitfall: optimising function A shifts CPU time to function B,
+  A common pitfall: optimizing function A shifts CPU time to function B,
   making B appear red.  Without a differential flamegraph, you might
   conclude B got slower.  The differential shows the shift is relative —
   B's absolute time did not change, but its fraction grew.
@@ -341,7 +341,7 @@ def classify_frame(width_pct: float) -> str:
     Classify a flamegraph frame by its width percentage:
       width_pct > 20  → "hotspot"     (major consumer of CPU time)
       width_pct > 5   → "contributing" (notable but not dominant)
-      else            → "noise"        (< 5% — too small to optimise)
+      else            → "noise"        (< 5% — too small to optimize)
     """
     pass  # YOUR CODE HERE → return classification string
 

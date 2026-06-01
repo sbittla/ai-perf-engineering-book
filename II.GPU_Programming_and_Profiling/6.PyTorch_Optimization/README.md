@@ -1,6 +1,6 @@
-# Chapter 6 Exercises — PyTorch Optimisation
+# Chapter 6 Exercises — PyTorch Optimization
 
-Three exercises covering the three highest-leverage PyTorch optimisation techniques: precision, quantization, and compilation.
+Three exercises covering the three highest-leverage PyTorch optimization techniques: precision, quantization, and compilation.
 
 | File | Section | Topics | Estimated Time |
 |---|---|---|---|
@@ -14,6 +14,6 @@ Three exercises covering the three highest-leverage PyTorch optimisation techniq
 
 **6.2** (quantization): Runs entirely on CPU. `torch.quantization.quantize_dynamic` is CPU-only by design. No GPU required.
 
-**6.3** (torch.compile): Runs on both CPU and CUDA. Compilation is faster on GPU; on CPU, torch.compile may not show speedups for the models used here but the API behaviour is the same.
+**6.3** (torch.compile): Runs on both CPU and CUDA. Compilation is faster on GPU; on CPU, torch.compile may not show speedups for the models used here but the API behavior is the same.
 
 Complete all three before moving to Chapter 7.

@@ -190,7 +190,7 @@ print("""
   Output: a table sorted by the metric you choose.
 
   Use sort_by='cuda_time_total' on GPU, 'cpu_time_total' on CPU.
-  The operator at the top of the table is your first optimisation target.
+  The operator at the top of the table is your first optimization target.
 """)
 
 model2 = nn.Sequential(
@@ -213,7 +213,7 @@ with profile(activities=activities, record_shapes=True) as prof:
 sort_by = "cuda_time_total" if DEVICE == "cuda" else "cpu_time_total"
 print(prof.key_averages().table(sort_by=sort_by, row_limit=8))
 assert activities is not None, "set the activities list"
-print("  ✓ Section 4 passed — identify slow ops before optimising")
+print("  ✓ Section 4 passed — identify slow ops before optimizing")
 
 # ─────────────────────────────────────────────────────────────
 # SECTION 5: GPU Memory tracking
@@ -265,7 +265,7 @@ print("\n── Section 6: NVTX Markers ──")
 print("""
   NVTX (NVIDIA Tools Extension) adds named annotations to the Nsight
   Systems timeline.  Each range_push/range_pop pair appears as a
-  coloured band labelled with your string.
+  colored band labelled with your string.
 
   To see the markers in Nsight Systems:
     nsys profile --trace=cuda,nvtx python I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py
