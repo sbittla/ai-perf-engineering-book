@@ -1,0 +1,124 @@
+# II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.2_io_bottleneck.py
+# status=PASS rc=0 duration=6.7s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 7.2 — Diagnosing and Fixing I/O Bottlenecks
+============================================================
+  Device: cuda
+
+── Section 1: Simulating GPU Starvation ──
+
+  A GPU-starved training pipeline looks like this in nsys:
+    CPU: [=====DataLoader 20ms=====][GPU launch]
+    GPU:                             [==compute 5ms==]    [waiting...]
+
+  The GPU is idle for most of the wall time because it must wait for
+  the CPU to finish loading the next batch.
+
+  We quantify this with:
+    idle_pct = (total_wall_ms - gpu_compute_ms) / total_wall_ms * 100
+
+  A healthy pipeline has idle_pct < 10%.
+  A DataLoader-bottlenecked pipeline has idle_pct > 50%.
+
+  SlowDataset (10 batches):
+    Total wall time  : 4046 ms
+    GPU compute time : 372.9 ms
+    Idle %           : 90.8%
+  ✓ Section 1 passed — GPU starvation detected (idle_pct > 50%)
+
+── Section 2: Measuring GPU utilization ──
+
+  A fast DataLoader (SSD or in-memory data) should keep the GPU fed.
+  When idle_pct < 30%, the GPU is the bottleneck, not the DataLoader.
+  This is when it is worth profiling the GPU kernels with ncu.
+
+  We repeat the measurement with FastDataset (no sleep) to see the
+  healthy baseline.
+
+  FastDataset (10 batches):
+    Total wall time  : 149 ms
+    GPU compute time : 126.8 ms
+    Idle %           : 14.8%
+  ✓ Section 2 passed — FastDataset keeps GPU busy (idle_pct < 30%)
+
+── Section 3: Diagnosing with nvidia-smi ──
+
+  ── Step-by-step diagnosis guide ──
+
+  Step 1: Launch nvidia-smi dmon in a SEPARATE terminal while your
+          training script is running:
+
+            nvidia-smi dmon -s u -d 1
+
+          This prints GPU utilization metrics every second.
+          The columns are:
+            sm%  : fraction of SMs active (0-100)
+            mem% : fraction of memory bandwidth in use (0-100)
+            enc%/dec%: video encoder/decoder (usually 0 for AI workloads)
+
+  Step 2: Look at the "sm%" column during the main training phase.
+          If sm% is consistently below 60%, the GPU is being starved.
+          Common causes and their idle_pct signatures:
+
+            sm% < 20%: severely I/O bound
+                       → check disk speed (hdparm -t), increase num_workers
+            sm% 20-60%: moderately I/O bound
+                        → add pin_memory, increase prefetch_factor
+            sm% > 80%: GPU is the bottleneck
+                       → profile kernels with ncu (Exercise 5.2)
+
+  Step 3: Run your script under nsys to see the GPU timeline:
+            nsys profile --trace=cuda,nvtx python train.py --steps 50
+
+  Step 4: Look for gaps between CUDA kernels in the nsys timeline.
+          Each gap is GPU idle time. If gaps > 10ms, the DataLoader
+          is the bottleneck.
+
+  Step 5: Check DataLoader worker count:
+            import torch
+            print(torch.get_num_threads())   # CPU threads available
+
+          Set num_workers = min(cpu_count // 2, 8).
+
+  ✓ Section 3 passed — nvidia-smi diagnosis guide reviewed
+
+── Section 4: The Fix Checklist ──
+
+  Based on measured idle_pct, apply fixes in priority order:
+
+  idle_pct > 70%: DataLoader is severely bottlenecked
+    → Increase num_workers (try 4, 8, 16)
+    → Check disk speed: hdparm -t /dev/nvme0
+    → Move dataset to faster storage (NVMe SSD, tmpfs, or RAM disk)
+    → Cache preprocessed data as .pt tensors to skip per-epoch decoding
+
+  idle_pct 40-70%: DataLoader is moderately bottlenecked
+    → Add pin_memory=True to DataLoader
+    → Use non_blocking=True in .to(device) calls
+    → Increase prefetch_factor (try 4 or 8)
+    → Reduce preprocessing compute in __getitem__
+
+  idle_pct < 40%: DataLoader is NOT the bottleneck
+    → Profile GPU kernels with ncu (Exercise 5.2)
+    → Check if model is memory-bound or compute-bound
+    → Consider torch.compile or mixed precision (Exercises 6.1, 6.3)
+
+  idle_pct=80%:  ['add num_workers, check disk speed', 'move dataset to faster storage']
+  idle_pct=55%:  ['add pin_memory, increase prefetch_factor', 'use non_blocking=True']
+  idle_pct=20%:  ['DataLoader is not the bottleneck — profile GPU kernels']
+  ✓ Section 4 passed — fix checklist function implemented
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 7.2 complete!
+
+  You have now completed all exercises in Part II —
+  GPU Programming & Profiling.
+
+  Part II covered:
+    Chapter 4: CUDA execution model, coalescing, Tensor Cores
+    Chapter 5: nsys, ncu, torch.profiler
+    Chapter 6: AMP, quantization, torch.compile
+    Chapter 7: DataLoader tuning, I/O bottleneck diagnosis
+============================================================

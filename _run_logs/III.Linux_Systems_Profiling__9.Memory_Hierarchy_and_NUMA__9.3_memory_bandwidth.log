@@ -1,0 +1,190 @@
+# III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.3_memory_bandwidth.py
+# status=PASS rc=0 duration=5.0s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 9.3 — Memory Bandwidth as a Bottleneck
+============================================================
+  Device: cuda
+
+── Section 1: CPU DRAM Bandwidth ──
+
+  CPU DRAM bandwidth is the maximum rate at which a single CPU can
+  read or write main memory.  This is the hard ceiling for any
+  memory-bandwidth-limited operation that runs on the CPU.
+
+  TYPICAL VALUES:
+    DDR4 dual-channel:  ~50 GB/s  (common workstations, 2021 era)
+    DDR5 dual-channel:  ~80 GB/s  (modern workstations, 2022+)
+    DDR5 8-channel:     ~300 GB/s (high-end server, 4th-gen Xeon)
+    HBM2e on-package:   ~1 TB/s   (some AI accelerators)
+
+  WHY IT IS A HARD LIMIT:
+    If your DataLoader preprocessing reads 256 MB per batch and your
+    CPU DRAM bandwidth is 50 GB/s, the minimum possible preprocessing
+    time is 256 MB / 50 GB/s = 5.1 ms per batch regardless of how
+    many CPU cores you use.  Adding more workers does not help once
+    you saturate the memory bus.
+
+  MEASURING IT:
+    The most accurate method is a streaming copy benchmark:
+    allocate two large arrays (>> L3 cache), copy src to dst,
+    measure bytes / time.
+    Bytes transferred = 2× array size (one read + one write).
+
+    torch.Tensor.clone() performs this copy.  The operation reads all
+    bytes from src and writes all bytes to dst — a pure memory bandwidth
+    benchmark with no compute overhead.
+
+  CHECKING AGAINST THE LIMIT:
+    After measuring, compare to your DRAM spec.
+    Typical achievement ratio: 70–90% of theoretical peak.
+    If you see < 50%, check for NUMA effects (wrong node) or
+    that the array is large enough to overflow L3.
+
+  CPU DRAM bandwidth (256 MB clone): 26.6 GB/s
+  (Typical: 30–100 GB/s depending on DDR generation)
+  ✓ Section 1 passed — CPU DRAM bandwidth > 5 GB/s measured
+
+── Section 2: PCIe Bandwidth Measurement ──
+
+  The PCIe bus connects CPU RAM to GPU VRAM.  Every DataLoader batch
+  crosses this bus when you call tensor.to(device) or tensor.cuda().
+
+  PCIe THEORETICAL BANDWIDTH:
+    PCIe 3.0 x16: 16 GB/s  (older systems, GTX/RTX 20xx era)
+    PCIe 4.0 x16: 32 GB/s  (current mainstream, RTX 30xx/A100)
+    PCIe 5.0 x16: 64 GB/s  (enterprise, H100 NVL, 2023+)
+
+  PRACTICAL BANDWIDTH:
+    Practical rates are lower than theoretical due to protocol overhead
+    (8b/10b encoding, TLPs, credit management):
+    PCIe 3.0 x16 practical: ~12–14 GB/s
+    PCIe 4.0 x16 practical: ~18–26 GB/s
+
+  PINNED vs PAGEABLE MEMORY:
+    Pinned (page-locked) memory achieves the practical maximum because
+    the GPU DMA engine can read it directly without a staging copy.
+    Pageable memory requires the OS to first copy to a pinned buffer
+    before DMA can proceed — this roughly halves the effective rate.
+
+  DETECTING A PCIe BOTTLENECK:
+    Symptom: GPU sm% stays low even with many DataLoader workers.
+    Diagnosis: nsys trace shows a large HtoD (host-to-device) memcpy
+    bar between each batch of kernels.
+    Fix: pin_memory=True in DataLoader, non_blocking=True in .to(device),
+    pre-load batches asynchronously with a background thread.
+
+  Pageable H2D (256 MB): 10.8 GB/s
+  Pinned   H2D (256 MB): 12.9 GB/s
+  Pinned speedup:        1.19×
+  ✓ Section 2 passed — PCIe bandwidth measurement complete
+
+── Section 3: The Full Bandwidth Hierarchy ──
+
+  The complete memory bandwidth hierarchy for a modern AI server,
+  from fastest to slowest:
+
+  ┌────────────────────────────────┬──────────────┬──────────────────────────────┐
+  │ Level                          │ Bandwidth    │ Notes                        │
+  ├────────────────────────────────┼──────────────┼──────────────────────────────┤
+  │ GPU registers                  │ >> 10 TB/s   │ Unlimited — per-SM local     │
+  │ GPU L1 / shared memory         │ ~20 TB/s     │ Per-SM, 100–128 KB           │
+  │ GPU L2 cache                   │ ~5–10 TB/s   │ A100: 40 MB shared           │
+  │ GPU HBM (VRAM)                 │ ~1–3.5 TB/s  │ A100: 2 TB/s; H100: 3.35 TB/s│
+  │ NVLink (GPU-to-GPU)            │ ~300–900 GB/s│ DGX A100: 600 GB/s bidirec.  │
+  │ PCIe 4.0 x16 (CPU↔GPU)        │ ~20–26 GB/s  │ DataLoader H2D bottleneck    │
+  │ CPU DRAM (DDR5 dual-ch.)       │ ~50–100 GB/s │ DataLoader preprocessing cap │
+  │ CPU L3 cache                   │ ~100–500 GB/s│ Fits small working sets      │
+  │ NVMe SSD (PCIe 4.0)            │ ~3–7 GB/s    │ Sequential reads             │
+  │ SATA SSD                       │ ~0.5–0.6 GB/s│ Older systems                │
+  │ HDD (7200 RPM)                 │ ~0.1–0.2 GB/s│ Avoid for DataLoader         │
+  │ Network storage (NFS 10 GbE)   │ ~1.0–1.25 GB/s│ Subject to congestion       │
+  │ S3 / object storage            │ ~0.1–2 GB/s  │ Per-file open overhead       │
+  └────────────────────────────────┴──────────────┴──────────────────────────────┘
+
+  WHICH BOTTLENECK DOES EACH AI STAGE HIT?
+
+    DataLoader (SSD → DRAM):       Bottleneck is SSD read speed (3–7 GB/s).
+                                    Fix: NVMe SSD, tmpfs RAM disk, or cache .pt files.
+
+    DataLoader (DRAM → CPU):       Bottleneck is CPU DRAM bandwidth (~50 GB/s).
+                                    Fix: reduce preprocessing bytes, use uint8 not float32.
+
+    Batch transfer (CPU → GPU):    Bottleneck is PCIe bandwidth (~20 GB/s).
+                                    Fix: pin_memory=True, non_blocking=True, smaller dtype.
+
+    LLM decode inference:          Bottleneck is GPU HBM bandwidth (~2 TB/s).
+                                    KV cache size × model layers must stream each step.
+                                    Fix: quantise KV cache, reduce sequence length.
+
+    Training matmul (large batch): Bottleneck is Tensor Core compute.
+                                    The matmul is compute-bound above the ridge point.
+                                    Fix: FP16/BF16, torch.compile, increase batch size.
+
+  Bottleneck map:
+    dataloader_ssd                : SSD (3–7 GB/s)
+    dataloader_dram               : CPU DRAM (~50 GB/s)
+    pcie_transfer                 : PCIe (~20 GB/s)
+    llm_decode                    : GPU HBM (~2 TB/s)
+    training_matmul_large_batch   : Compute (Tensor Cores)
+  ✓ Section 3 passed — bottleneck identification correct
+
+── Section 4: Applying the Roofline with Measured Bandwidth ──
+
+  Chapter 5 introduced the roofline model with THEORETICAL peak values
+  from GPU spec sheets.  Section 9.3 adds an important refinement:
+  use your MEASURED bandwidth instead of the theoretical maximum.
+
+  WHY MEASURED BANDWIDTH MATTERS:
+    The A100 spec says 2,000 GB/s HBM bandwidth.  Under real workloads,
+    achieved bandwidth is typically 1,400–1,800 GB/s (70–90% efficiency).
+    Using 2,000 GB/s in your roofline gives an optimistic ridge point.
+    Using your measured value (say 1,600 GB/s) gives a more realistic
+    ridge point — one that better predicts when a real kernel will be
+    memory-bound vs compute-bound.
+
+  THE RIDGE POINT WITH MEASURED BANDWIDTH:
+    ridge_point = peak_tflops * 1e12 / (measured_bandwidth_gbs * 1e9)
+                = FLOPs/byte
+
+  INTERPRETATION:
+    A kernel with arithmetic intensity BELOW the ridge point is
+    memory-bound — it cannot use all available compute because it
+    runs out of memory bandwidth first.
+    A kernel ABOVE the ridge point is compute-bound.
+
+  LOWER BANDWIDTH → HIGHER RIDGE POINT:
+    If your HBM bandwidth degrades (due to bank conflicts, strided
+    access, or ECC overhead), the ridge point rises.  Kernels that
+    were previously compute-bound become memory-bound.
+    This is why ECC-on vs ECC-off can shift kernel classification.
+
+  EXAMPLE:
+    A100 spec:      312 TFLOP/s FP16, 2000 GB/s HBM  → ridge = 156 FLOPs/byte
+    A100 measured:  312 TFLOP/s FP16, 1600 GB/s HBM  → ridge = 195 FLOPs/byte
+    Kernel AI = 160 FLOPs/byte:
+      With spec ridge   (156): compute-bound
+      With measured ridge (195): memory-bound
+    The measured ridge gives the honest answer.
+
+  A100 with spec bandwidth (2000 GB/s):     ridge = 156.0 FLOPs/byte
+  A100 with measured bw   (1600 GB/s):      ridge = 195.0 FLOPs/byte
+  H100 with spec bandwidth (3350 GB/s):     ridge = 295.2 FLOPs/byte
+
+  Kernel with AI = 160.0 FLOPs/byte:
+    A100 spec           : ridge=156  → compute-bound
+    A100 measured       : ridge=195  → memory-bound
+    H100 spec           : ridge=295  → memory-bound
+  ✓ Section 4 passed — ridge point calculation correct and inverse-BW relationship holds
+
+============================================================
+  ALL SECTIONS PASSED — Part III Exercise 9.3 complete!
+
+  You have completed all exercises in Part III —
+  Linux Systems Profiling.
+
+  Part III covered:
+    Chapter 8: perf stat, CPU flamegraphs, eBPF/bpftrace, lock contention
+    Chapter 9: Memory hierarchy, NUMA topology, memory bandwidth & roofline
+============================================================

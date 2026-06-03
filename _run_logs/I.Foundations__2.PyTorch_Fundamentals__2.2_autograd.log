@@ -1,0 +1,35 @@
+# I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py
+# status=PASS rc=0 duration=5.2s
+======================================================================
+--- STDOUT ---
+=======================================================
+  Exercise 02 — Autograd & Gradients
+=======================================================
+
+── Section 1: requires_grad ──
+  ✓ Section 1 passed
+
+── Section 2: torch.no_grad() ──
+  ✓ Section 2 passed
+  → Always use torch.no_grad() during inference — saves memory + time
+
+── Section 3: Gradient Accumulation ──
+  PyTorch ACCUMULATES gradients — you must zero them each step!
+  ✓ Section 3 passed
+  → optimizer.zero_grad(set_to_none=True) before every backward!
+
+── Section 4: Complete Training Step ──
+  loss = 0.2500  W.grad exists: True
+  ✓ Section 4 passed
+
+── Section 5: .detach() ──
+  .detach() creates a new tensor that shares data but has NO grad_fn.
+  Use it to: log loss values, compute metrics, stop gradient flow.
+
+  ✓ Section 5 passed
+  → loss.item() implicitly detaches — safe for logging, wrong for backprop
+
+=======================================================
+  ALL SECTIONS PASSED — Exercise 02 complete!
+  Next: I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py
+=======================================================

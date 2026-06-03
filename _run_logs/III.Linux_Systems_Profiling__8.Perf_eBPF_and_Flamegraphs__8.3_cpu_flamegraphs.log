@@ -1,0 +1,207 @@
+# III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py
+# status=PASS rc=0 duration=0.5s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 8.2 — CPU Flamegraphs
+============================================================
+  Device: cpu
+
+── Section 1: Reading a Flamegraph ──
+
+  A flamegraph is a visualisation of sampled call stacks.
+  The profiler interrupts the program thousands of times per second
+  and records the full call stack at each sample.  After collecting
+  all samples, they are sorted, merged, and drawn as stacked bars.
+
+  HOW TO READ A FLAMEGRAPH:
+    X-axis: alphabetical order within each level (NOT time order).
+             Width of a frame = fraction of total samples where
+             this function appeared in the call stack.
+    Y-axis: call depth.  The bottom bar is the entry point.
+             Each bar above is one level deeper in the call stack.
+
+  FINDING HOTSPOTS:
+    Wide frames at the TOP of their stack = this function is where
+    the CPU actually spends time.  It owns CPU cycles.
+
+    Tall thin stacks with no wide frames at the top = deep call
+    chains where all the work happens further down.  The depth
+    itself is not a problem — only wide tops are hotspots.
+
+    A wide frame near the BOTTOM with nothing wide above it means
+    the time is distributed among many callee functions — investigate
+    each sub-frame individually.
+
+  color is usually arbitrary (not meaningful) in standard flamegraphs.
+  Some tools color-code by library (kernel = orange, user = yellow, JIT = green).
+
+  Example: ASCII flamegraph of a PyTorch training pipeline:
+  ─────────────────────────────────────────────────────────────
+  [==========forward_pass (45%)=========][===backward (35%)===][dataload (20%)]
+  [linear_1 ][attention][linear_2]        [grad_linear][grad_attn]
+  [matmul   ][softmax  ]                  [matmul_grad]
+  ─────────────────────────────────────────────────────────────
+
+  Hotspot: forward_pass owns 45% of CPU samples.
+  Within forward_pass: matmul is the deepest frame under linear_1
+  — that is where cycles are actually spent.
+  Action: profile with ncu to see whether this matmul is memory-bound
+  or compute-bound (see Exercise 5.2).
+
+  find_hotspot({'forward': 45, 'backward': 35, 'dataload': 20}) = 'forward'
+  ✓ Section 1 passed — hotspot identification function correct
+
+── Section 2: Generating a Flamegraph with py-spy and cProfile ──
+
+  py-spy is a Python profiler that samples the call stack without
+  modifying your code.  It attaches to a running process or wraps
+  a command and generates an SVG flamegraph.
+
+  KEY ADVANTAGE over cProfile:
+    py-spy uses OS-level sampling — it does NOT require you to add
+    instrumentation to your code.  It works with any Python program,
+    including ones that call into C extensions (numpy, PyTorch).
+    It also works without sudo on most systems (no kernel privileges).
+
+  py-spy commands:
+    # Record a flamegraph while running a script:
+    py-spy record -o flamegraph.svg -- python train.py
+
+    # Attach to a running process by PID:
+    py-spy record -o live_flame.svg --pid 12345
+
+    # Top-like live view (no file, just terminal):
+    py-spy top --pid 12345
+
+  For this exercise, we use cProfile (built-in, always available)
+  to profile a workload with a deliberate hotspot.  cProfile uses
+  instrumentation rather than sampling — it counts every function
+  call entry and exit.  It cannot profile C extension time (numpy
+  and PyTorch show as single opaque calls), but it works everywhere.
+
+  HOW TO RUN UNDER cProfile:
+    python -m cProfile -s cumtime train.py | head -30
+
+  The output table shows:
+    ncalls  — how many times this function was called
+    tottime — time in this function only (excluding callees)
+    cumtime — total time including all functions this one called
+    percall — time per call
+
+  cProfile output (top 5 functions by cumulative time):
+             4376 function calls (4233 primitive calls) in 0.199 seconds
+       Ordered by: cumulative time
+       List reduced from 240 to 5 due to restriction <5>
+       ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+            1    0.000    0.000    0.199    0.199 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py:165(mixed_workload)
+            1    0.168    0.168    0.198    0.198 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py:146(slow_matmul)
+            1    0.000    0.000    0.022    0.022 /usr/local/lib/python3.12/dist-packages/numpy/__init__.py:707(__getattr__)
+         18/1    0.000    0.000    0.022    0.022 <frozen importlib._bootstrap>:1349(_find_and_load)
+         18/1    0.000    0.000    0.022    0.022 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+  ✓ Section 2 passed — cProfile ran successfully on mixed workload
+
+── Section 3: Differential Flamegraph ──
+
+  A differential flamegraph overlays two profiles captured before and
+  after an optimization.  It shows which functions got faster (blue)
+  and which got slower (red).
+
+  This is critically important for verifying optimizations:
+    1. You optimize a specific function, e.g., remove a sleep.
+    2. You take a new profile.
+    3. The differential flamegraph shows that only the target function
+       changed (blue), while everything else stayed the same (grey).
+
+  A common pitfall: optimizing function A shifts CPU time to function B,
+  making B appear red.  Without a differential flamegraph, you might
+  conclude B got slower.  The differential shows the shift is relative —
+  B's absolute time did not change, but its fraction grew.
+
+  TOOLS:
+    # Using FlameGraph perl scripts:
+    perf script -i slow.perf.data | stackcollapse-perf.pl > slow.folded
+    perf script -i fast.perf.data | stackcollapse-perf.pl > fast.folded
+    difffolded.pl slow.folded fast.folded | flamegraph.pl > diff.svg
+
+    # Using py-spy differential:
+    py-spy record -o slow.svg -- python slow_train.py
+    py-spy record -o fast.svg -- python fast_train.py
+    # (Open both SVGs — py-spy does not generate diffs natively)
+
+  For this exercise, we profile a slow version (with sleep) and a fast
+  version (no sleep) using cProfile, then compute the improvement.
+
+  slow_fn profile time: 25.4 ms
+  fast_fn profile time: 0.014 ms
+  Improvement:          100%
+  ✓ Section 3 passed — differential profiling implemented
+
+── Section 4: Flamegraph Command Reference ──
+
+  THREE TOOLS FOR GENERATING PYTHON FLAMEGRAPHS:
+
+  ── Method 1: perf + FlameGraph (most detailed, requires sudo) ──
+    # Install FlameGraph scripts:
+    git clone https://github.com/brendangregg/FlameGraph /opt/FlameGraph
+
+    # Record 30 seconds of call stack samples at 99 Hz:
+    sudo perf record -F 99 -g -- python train.py --steps 200
+    sudo perf record -F 99 -g -p $(pgrep python) sleep 30
+
+    # Convert to flamegraph:
+    sudo perf script | /opt/FlameGraph/stackcollapse-perf.pl > out.folded
+    /opt/FlameGraph/flamegraph.pl out.folded > flamegraph.svg
+
+    # Open in browser:
+    xdg-open flamegraph.svg
+
+    # For CPU-specific flamegraphs with correct Python symbols,
+    # install: sudo apt install python3-dbg  (adds Python debug info)
+
+  ── Method 2: py-spy (Python, no sudo) ──
+    pip install py-spy
+
+    # Record flamegraph of a full run:
+    py-spy record -o flamegraph.svg -- python train.py
+
+    # Record a sample at 100 Hz for 30 seconds:
+    py-spy record --rate 100 --duration 30 -o flamegraph.svg -- python train.py
+
+    # Attach to running process (no restart needed):
+    py-spy record -o live.svg --pid $(pgrep -f train.py)
+
+    # Top-like live view in terminal:
+    py-spy top -- python train.py
+
+  ── Method 3: torch.profiler Chrome trace (no sudo, PyTorch-integrated) ──
+    from torch.profiler import profile, ProfilerActivity, schedule
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+                 on_trace_ready=torch.profiler.tensorboard_trace_handler('/tmp/tb'),
+                 schedule=schedule(wait=1, warmup=1, active=3)) as prof:
+        for step, (xb, yb) in enumerate(loader):
+            # ... training step ...
+            prof.step()
+
+    # Open the Chrome trace at: chrome://tracing  →  Load  →  /tmp/tb/*.json
+    # See Exercise 5.3 for full torch.profiler workflow.
+
+  WHEN TO USE WHICH:
+    perf flamegraph   → most accurate (hardware PMU), sees C extension internals
+    py-spy flamegraph → easiest to use, Python-level visibility, no sudo
+    torch.profiler    → PyTorch operator attribution, Chrome trace, Tensor Core info
+
+  classify_frame(35) = 'hotspot'
+  classify_frame(10) = 'contributing'
+  classify_frame(3)  = 'noise'
+  ✓ Section 4 passed — frame classification function correct
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 8.2 complete!
+
+  You can now read flamegraphs, identify hotspots, profile
+  Python code with cProfile, and compute improvement ratios
+  between slow and fast versions.
+
+  Next: III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.4_ebpf_and_bpftrace.py
+============================================================

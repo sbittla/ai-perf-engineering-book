@@ -1,0 +1,45 @@
+# IX.Production_Capstones/29.MultiGPU_Scaling/29.1_scaling_challenge.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 29.1 - Capstone 6: Multi-GPU Scaling Challenge
+======================================================================
+
+-- Section 1: Scaling Efficiency --
+
+  Run a fixed per-GPU workload at 1/2/4/8 GPUs. Efficiency = speedup / N.
+  Ideal is a straight line (eff 1.0); the gap is communication overhead.
+
+   GPUs    tok/s   speedup  efficiency
+      1      100     1.00x       1.00
+      2      191     1.91x       0.95
+      4      364     3.64x       0.91
+      8      656     6.56x       0.82
+  [check] 8-GPU efficiency >= 0.80
+
+-- Section 2: NCCL Communication Cost --
+
+  The scaling curve usually bends at the node boundary because intra-node NVLink
+  is ~10x faster than inter-node InfiniBand for the same collective.
+
+  AllReduce 1.3GB across 8 GPUs:
+    NVLink ~600 GB/s :    3.79 ms
+    InfiniBand ~50   :   45.50 ms  (12x slower)
+  [check] inter-node collective is the likely 4->8 GPU efficiency drop
+
+-- Section 3: Amdahl Speedup Ceiling --
+
+  Non-overlapped communication is a serial fraction s. Amdahl caps speedup at
+  1 / (s + (1-s)/N), no matter how many GPUs you add.
+
+  serial fraction 2%: 8-GPU ceiling = 7.02x, infinite-GPU ceiling = 50.0x
+  serial fraction 5%: 8-GPU ceiling = 5.93x, infinite-GPU ceiling = 20.0x
+  serial fraction 10%: 8-GPU ceiling = 4.71x, infinite-GPU ceiling = 10.0x
+  [check] smaller serial fraction => higher achievable speedup
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise 29.1 complete
+  You computed scaling efficiency, attributed the gap to NCCL cost, and
+  bounded the speedup with Amdahl's law.
+======================================================================

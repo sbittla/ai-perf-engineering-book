@@ -1,0 +1,177 @@
+# II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.1_cuda_foundations.py
+# status=PASS rc=0 duration=2.4s
+======================================================================
+--- STDOUT ---
+============================================================
+SECTION 1: GPU Detection
+============================================================
+GPU               : NVIDIA GeForce RTX 4060 Laptop GPU
+Streaming Multiprocessors (SMs): 24
+Warp size         : 32 threads
+Shared memory/block: 48 KB
+Compute capability: 8.9
+
+============================================================
+SECTION 2: Thread Hierarchy
+============================================================
+
+The CUDA execution model organises work in four nested levels:
+
+  Thread  — the smallest unit of execution. Runs one instruction at a time.
+  Warp    — 32 threads that execute in LOCKSTEP (SIMT: Single Instruction,
+             Multiple Threads). The GPU scheduler always issues instructions
+             to a whole warp, never to individual threads.
+  Block   — a group of warps that share Shared Memory and can synchronize
+             with __syncthreads(). Blocks run on a single SM.
+  Grid    — the collection of all blocks launched by one kernel call.
+             Blocks are scheduled across all SMs independently.
+
+Example kernel launch: 1,048,576 threads
+  threads_per_block = 256
+  warps_per_block   = 256 / 32 = 8
+  total_blocks      = 4,096
+  total_warps       = 32,768
+  SMs available     = 24
+  blocks/SM (avg)   = 171
+
+Key insight: the GPU hides memory latency by switching between warps.
+While one warp waits for a memory load (400-800 cycles), another warp
+runs. This is called LATENCY HIDING and it is the GPU's core trick.
+
+============================================================
+SECTION 3: Warp Divergence
+============================================================
+
+All 32 threads in a warp execute the SAME instruction at the same time.
+If threads inside a warp take different paths through an if/else, the GPU
+must run BOTH paths with some threads masked off — wasted work.
+
+  // BAD: threads in the same warp will diverge
+  if (thread_id % 2 == 0) {
+      result = heavy_computation_A(data);   // even threads do this
+  } else {
+      result = heavy_computation_B(data);   // odd threads do this
+  }
+  // Cost: 2× the work of the longer branch
+
+  // GOOD: divergence only across blocks, not within a warp
+  if (block_id % 2 == 0) {
+      result = heavy_computation_A(data);
+  } else {
+      result = heavy_computation_B(data);
+  }
+  // Cost: one branch per block — no serialisation within a warp
+
+A kernel with 50% divergent warps runs ~1.5× slower
+in the divergent sections compared to a fully uniform kernel.
+
+============================================================
+SECTION 4: The CUDA Library Stack
+============================================================
+
+Most PyTorch operations never touch raw CUDA — they call into optimized
+libraries that NVIDIA ships with every GPU driver:
+
+┌─────────────────────────────────────────────────────────┐
+│ Level          Library      What it does                 │
+├─────────────────────────────────────────────────────────┤
+│ Python         PyTorch      torch.mm, torch.conv2d, ...  │
+│ C++ dispatch   ATen         aten::mm → mm_cuda           │
+│ Math           cuBLAS       General matrix multiply       │
+│ Deep learning  cuDNN        Fused conv/BN/ReLU, attn     │
+│ Multi-GPU      NCCL         AllReduce, Broadcast          │
+│ Custom kernels Triton       Python → PTX (FlashAttention) │
+└─────────────────────────────────────────────────────────┘
+
+What this means for profiling:
+  When you see 'volta_sgemm_128x64_nn' in Nsight Systems, that is
+  cuBLAS choosing a tiled GEMM kernel for your matrix shape.
+  When you see 'cudnn_infer_ampere_...' that is cuDNN's fused
+  convolution+bias+activation kernel for the Ampere architecture.
+  You did not write these — but you need to recognise them.
+
+============================================================
+SECTION 5: The PyTorch Dispatch Chain
+============================================================
+
+  torch.mm(A, B)                     ← you write this
+      │
+      ▼
+  Python dispatcher → selects backend (CUDA / CPU / MPS)
+      │
+      ▼
+  aten::mm (C++ ATen operator)        ← defined in aten/src/ATen/native/
+      │
+      ▼
+  at::native::mm_cuda(A, B)           ← CUDA-specific implementation
+      │
+      ▼
+  cublasGemmEx(handle, ...)           ← cuBLAS call with tensor core flags
+      │
+      ▼
+  GPU kernel: volta_sgemm_128x64_nn   ← chosen at runtime for your shape
+
+The chain means: a slowdown can occur at ANY level.
+  - Wrong dtype  → cuBLAS falls back from FP16 Tensor Core to FP32
+  - Wrong shape  → cuBLAS picks a suboptimal tiling (padding waste)
+  - Tiny batch   → kernel launch overhead dominates compute time
+
+Your GPU (CC 8.9):
+  Tensor Cores : YES — Volta+ (CC 7.0+)
+  BF16         : YES — Ampere+ (CC 8.0+)
+  FP8          : YES — Ada/Hopper (CC 8.9+)
+
+============================================================
+SECTION 6: Shared Memory vs Global Memory
+============================================================
+
+Memory hierarchy on your GPU (NVIDIA GeForce RTX 4060 Laptop GPU):
+
+  Register file  : ~0 cycles  — per-thread, compiler-managed
+  Shared memory  : ~30 cycles — per-block, programmer-managed scratchpad
+  L2 cache       : ~200 cycles — on-chip, automatic
+  Global (HBM)   : ~400-800 cycles — off-chip DRAM (the bandwidth bottleneck)
+
+Shared memory per block: 48 KB
+
+Tiled matrix multiplication uses shared memory like this:
+  1. Load a tile of A and B from global memory into shared memory.
+  2. synchronize all threads in the block (__syncthreads).
+  3. Compute the partial dot products using shared memory reads.
+  4. Repeat for the next tile.
+
+Without tiling: each element is loaded from global memory once per dot product.
+With tiling   : each element is loaded once, then reused 16 times from shared memory.
+                This is the key to achieving near-peak bandwidth utilization.
+
+============================================================
+SECTION 7: What This Means in Practice
+============================================================
+
+You will rarely write raw CUDA kernels. But understanding the model lets you:
+
+  1. READ profiler output accurately.
+     Kernel names like 'ampere_sgemm_128x64_nn' tell you:
+       - ampere = architecture family
+       - sgemm  = single-precision GEMM (FP32, not Tensor Core)
+       - 128x64 = tile shape (larger = better utilization, usually)
+       - nn     = no transpose on A or B
+
+  2. DIAGNOSE low GPU utilization.
+     If SM occupancy is low, look for:
+       - Too few warps per SM (block size too small)
+       - Too much shared memory per block (limits concurrent blocks)
+       - Register pressure spilling to local memory
+
+  3. SPOT precision regressions.
+     If you see 'sgemm' (FP32) where you expected 'hgemm' (FP16), your
+     model has FP32 weights or activations that need .half() or autocast.
+
+  4. UNDERSTAND Triton kernels.
+     FlashAttention is implemented in Triton. When you see
+     'triton__0d1d2d3...' in the profiler, it is a JIT-compiled Triton
+     kernel. The number of registers and shared memory it uses determines
+     how many blocks can run concurrently on each SM.
+
+Explore next: II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/
+              II.GPU_Programming_and_Profiling/5.GPU_Profiling/

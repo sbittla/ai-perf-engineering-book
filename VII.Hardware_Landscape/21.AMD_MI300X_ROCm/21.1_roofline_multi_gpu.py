@@ -128,7 +128,7 @@ for gpu_name, spec in GPU_SPECS.items():
 
     # TODO 1: Compute ridge point in FLOP/byte.
     #   ridge = bf16_tflops * 1000 / bw_gbs
-    ridge = None  # YOUR CODE HERE
+    ridge = bf16_tflops * 1000 / bw_gbs
 
     assert ridge is not None, f"compute ridge for {gpu_name}"
     ridge_points[gpu_name] = ridge
@@ -174,9 +174,9 @@ print(f"  {'─'*38}  {'─'*8}  {'─'*10}  {'─'*10}  {'─'*10}")
 for op_name, ai in OPS:
     # TODO 2: For each GPU, classify the operation.
     #   bound = "compute" if ai > ridge_points[gpu] else "memory"
-    mi300x_bound = None  # YOUR CODE HERE
-    h100_bound   = None  # YOUR CODE HERE
-    b200_bound   = None  # YOUR CODE HERE
+    mi300x_bound = "compute" if ai > ridge_points["AMD MI300X"] else "memory"
+    h100_bound   = "compute" if ai > ridge_points["NVIDIA H100"] else "memory"
+    b200_bound   = "compute" if ai > ridge_points["NVIDIA B200"] else "memory"
 
     assert mi300x_bound is not None, f"classify {op_name} on MI300X"
     assert h100_bound   is not None, f"classify {op_name} on H100"

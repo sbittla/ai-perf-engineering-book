@@ -1,0 +1,119 @@
+# VI.Capstone_Projects/19.Flamegraph_Challenge/19.1_slow_training_analysis.py
+# status=PASS rc=0 duration=3.8s
+======================================================================
+--- STDOUT ---
+============================================================
+  Capstone 19.1 — Flamegraph Challenge: Find the Bottlenecks
+============================================================
+  Device: cuda
+
+── Section 1: The Three Hidden Bottlenecks ──
+
+  A flamegraph challenge presents you with a slow implementation and
+  asks you to find the bottlenecks by profiling, then fix them.
+
+  THE THREE BUGS IN THIS TRAINING LOOP:
+
+  Bug 1: loss.item() called inside the training step
+    loss.item() calls torch.Tensor.item() which:
+      - Forces synchronization between CPU and GPU
+      - Means the CPU must wait for the GPU to finish the forward/backward
+      - Introduces ~50–200 µs CPU-GPU sync overhead PER STEP
+      - In a tight training loop: adds up to seconds over many batches
+
+  Bug 2: No non_blocking=True on .to(device)
+    data.to(device) without non_blocking=True blocks the CPU until
+    the DMA transfer is complete. This prevents the CPU from preparing
+    the next batch while the GPU is computing.
+    Fix: data.to(device, non_blocking=True)
+
+  Bug 3: Validation runs with gradients enabled
+    During validation, running without torch.no_grad() means PyTorch
+    builds the computation graph (autograd) even though we never call
+    .backward(). This wastes ~30% of memory and adds overhead to every op.
+    Fix: wrap validation in "with torch.no_grad():"
+
+  YOUR TASK (in 19.2): Fix each bug independently and measure its speedup.
+
+  ✓ Section 1 passed — understand the three bottlenecks
+
+── Section 2: The Slow Training Loop ──
+
+  The slow_training_step() function has all three bugs.
+  We measure its per-step latency as the baseline.
+
+  TODO 1: Implement slow_training_step(model, optimizer, x, y)
+  that has all three bugs:
+    1. Calls loss.item() to log the loss (forces GPU sync)
+    2. Transfers x,y to device without non_blocking
+    3. Calls evaluate() which does NOT use torch.no_grad()
+  Return (step_time_ms, logged_loss).
+
+  SLOW training step:  mean=1.321 ms  P99=1.560 ms
+  ✓ Section 2 passed — slow baseline measured
+
+── Section 3: Isolating Each Bug's Cost ──
+
+  To measure each bug's cost, we fix ONE bug at a time and compare
+  to the baseline. This is the isolation protocol from Chapter 14.
+
+  TODO 2: Implement fixed_step_no_item() that fixes ONLY Bug 1
+  (remove the loss.item() call inside the step; accumulate loss as
+  a tensor instead). Measure and compare to slow baseline.
+
+  SLOW (all bugs):         1.321 ms
+  Fix 1 (no .item()):      1.258 ms  (saved 0.063 ms, 4.7%)
+  Fix 2 (non_blocking):    1.265 ms  (saved 0.056 ms, 4.3%)
+  Fix 3 (no_grad eval):    slow=1.602ms  fast=0.365ms  (4.39× speedup)
+  ✓ Section 3 passed — each bug's cost isolated
+
+── Section 4: Reading the Flamegraph ──
+
+  A CPU flamegraph of the slow training loop would show:
+
+  WIDE FLAT TOP STACKS (hotspots):
+    1. cudaDeviceSynchronize  ← caused by loss.item()
+       Width proportional to sync overhead
+       Fix: remove .item() from the inner loop
+
+    2. cudaMemcpy (host→device)  ← blocking H2D transfer
+       Appears as a wide band below the forward/backward stack
+       Fix: non_blocking=True + pin_memory
+
+    3. autograd engine nodes during eval  ← unnecessary graph building
+       Appears as extra stack depth on eval calls
+       Fix: torch.no_grad()
+
+  HOW TO GENERATE A REAL FLAMEGRAPH:
+    1. Install py-spy: pip install py-spy
+    2. Run: py-spy record -o slow_flame.svg -- python 19.1_slow_training_analysis.py
+    3. Open slow_flame.svg in a browser
+    4. Look for wide stacks at the top — those are your bottlenecks
+
+  DIFFERENTIAL FLAMEGRAPH (before vs after):
+    py-spy record -o before.json -- python 19.1_slow_training_analysis.py
+    py-spy record -o after.json  -- python 19.2_optimized_training.py
+    Use speedscope or brendangregg/FlameGraph to diff them
+
+  Top 5 ops in slow loop (CUDA time):
+    aten::linear                         138 µs/iter
+    aten::addmm                          138 µs/iter
+    void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4::Params)  125 µs/iter
+    void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align1>(cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align1::Params)  6 µs/iter
+    Activity Buffer Request              5 µs/iter
+
+  Diagnosis saved: /tmp/capstone19_diagnosis.json
+  ✓ Section 4 passed — flamegraph interpretation and profiler output shown
+
+============================================================
+  ALL SECTIONS PASSED — Capstone 19.1 complete!
+  Three bottlenecks found:
+    Bug 1 (.item() sync)    : 0.063 ms overhead/step
+    Bug 2 (blocking H2D)    : 0.056 ms overhead/step
+    Bug 3 (grad in eval)    : 1.238 ms overhead/eval call
+  Next: VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimized_training.py
+============================================================
+
+--- STDERR ---
+/usr/local/lib/python3.12/dist-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(

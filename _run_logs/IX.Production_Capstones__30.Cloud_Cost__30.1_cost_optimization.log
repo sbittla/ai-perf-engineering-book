@@ -1,0 +1,43 @@
+# IX.Production_Capstones/30.Cloud_Cost/30.1_cost_optimization.py
+# status=PASS rc=0 duration=0.5s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 30.1 - Capstone 7: Cloud Cost Optimization
+======================================================================
+
+-- Section 1: Accelerator Cost Matrix --
+
+  Rank by cost per million tokens (= $/hr / tokens-per-hour), not peak FLOPs.
+
+  GPU        $/1M tok   VRAM
+  RTX4090      0.035    24 GB
+  MI300X       0.047   192 GB
+  L40S         0.053    48 GB
+  H100         0.060    80 GB
+  A100         0.085    80 GB
+  [check] cheapest tokens/$ on the 8B model: RTX4090
+
+-- Section 2: Workload -> Hardware --
+
+  Memory is a hard gate: if the model + KV cache do not fit, throughput is zero.
+  Among GPUs that fit, pick the cheapest per token.
+
+  8B model  (~16 GB): recommend RTX4090
+  70B model (~140 GB): recommend MI300X
+  [check] memory gate then cost decides the recommendation
+
+-- Section 3: Mixed Fleet Beats Single SKU --
+
+  Serve the bulk of small-model traffic on cheap GPUs and reserve premium,
+  high-memory GPUs for the large models that need them.
+
+  mixed fleet (RTX4090 + MI300X): $183/day
+  single SKU (H100 only):         $310/day
+  [check] mixed fleet lowers total daily cost
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise 30.1 complete
+  You ranked GPUs by cost/token, matched workloads to hardware by the
+  memory gate, and showed a mixed fleet beats a single premium SKU.
+======================================================================

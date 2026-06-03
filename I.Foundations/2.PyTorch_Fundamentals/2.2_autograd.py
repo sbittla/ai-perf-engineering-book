@@ -17,19 +17,19 @@ print("=" * 55)
 print("\n── Section 1: requires_grad ──")
 
 # TODO 1: Create a tensor x = [2.0, 3.0] that TRACKS gradients
-x = None  # YOUR CODE HERE
+x = torch.tensor([2.0, 3.0], requires_grad=True)
 
 # TODO 2: Compute y = x[0]^2 + 3*x[1]   →   y = 4 + 9 = 13
-y = None  # YOUR CODE HERE
+y = x[0] ** 2 + 3 * x[1]
 
 # TODO 3: Call backward on y
-pass  # YOUR CODE HERE
+y.backward()
 
 # TODO 4: What is the gradient of y w.r.t. x?
 #   dy/dx[0] = 2*x[0] = 4
 #   dy/dx[1] = 3
 # Assign x.grad to grad_x
-grad_x = None  # YOUR CODE HERE
+grad_x = x.grad
 
 assert x   is not None and x.requires_grad,        "x must require grad"
 assert y   is not None and y.item() == 13.0,        "y should be 13"
@@ -47,10 +47,10 @@ model_weight = torch.tensor([2.0], requires_grad=True)
 # TODO 5: Inside torch.no_grad(), compute z = model_weight * 5.0
 # z should NOT have a grad_fn (no graph built)
 with torch.no_grad():
-    z = None  # YOUR CODE HERE
+    z = model_weight * 5.0
 
 # TODO 6: Does z have requires_grad?
-z_requires_grad = None  # YOUR CODE HERE
+z_requires_grad = z.requires_grad
 
 assert z is not None and z.item() == 10.0,          "z should be 10"
 assert z_requires_grad == False,                    "inside no_grad, output has no grad"
@@ -77,14 +77,14 @@ loss2.backward()
 grad_after_step2_no_zero = w.grad.item()   # WRONG: accumulated = 6.0
 
 # TODO 7: Zero the gradient, then do step 2 again
-pass  # YOUR CODE HERE
+w.grad.zero_()
 
 # TODO 8: Compute loss3 = (w * 3).sum() and call backward
-loss3 = None  # YOUR CODE HERE
+loss3 = (w * 3).sum()
 loss3.backward()
 
 # TODO 9: What is w.grad now?
-grad_after_zero = None  # YOUR CODE HERE
+grad_after_zero = w.grad.item()
 
 assert grad_after_step1 == 3.0,   "first backward should give 3.0"
 assert grad_after_step2_no_zero == 6.0,  "without zeroing, grad accumulates to 6.0"
@@ -108,15 +108,15 @@ y_target = torch.tensor([3.0, 7.0])
 optimizer = torch.optim.SGD([W, b], lr=0.01)
 
 # TODO 10: Zero gradients
-pass  # YOUR CODE HERE
+optimizer.zero_grad()
 # TODO 11: Compute prediction: pred = x_input @ W.T + b  (matrix-vector multiply)
-pred = None  # YOUR CODE HERE
+pred = x_input @ W.T + b
 # TODO 12: Compute MSE loss: loss = mean((pred - y_target)^2)
-loss = None  # YOUR CODE HERE
+loss = ((pred - y_target) ** 2).mean()
 # TODO 13: Backpropagate
-pass  # YOUR CODE HERE
+loss.backward()
 # TODO 14: Optimizer step
-pass  # YOUR CODE HERE
+optimizer.step()
 
 W_grad_exists    = W.grad is not None
 b_grad_exists    = b.grad is not None
@@ -140,10 +140,10 @@ w2 = torch.tensor([3.0], requires_grad=True)
 result = w2 * w2 * 5   # result has grad_fn
 
 # TODO 15: Detach result from the computation graph
-result_detached = None  # YOUR CODE HERE
+result_detached = result.detach()
 
 # TODO 16: Does result_detached require grad?
-detached_req_grad = None  # YOUR CODE HERE
+detached_req_grad = result_detached.requires_grad
 
 assert result_detached is not None,                    "detach result"
 assert result_detached.item() == 45.0,                "value should still be 45"

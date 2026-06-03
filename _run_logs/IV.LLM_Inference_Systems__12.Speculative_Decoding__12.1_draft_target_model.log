@@ -1,0 +1,143 @@
+# IV.LLM_Inference_Systems/12.Speculative_Decoding/12.1_draft_target_model.py
+# status=PASS rc=0 duration=2.9s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 12.1 — Speculative Decoding: Draft + Target
+============================================================
+  Device: cuda
+
+── Section 1: The Memory-Bandwidth Bottleneck ──
+
+  Standard autoregressive decode:
+    Each step reads ALL model weights from DRAM to produce ONE token.
+    Arithmetic intensity ≈ 1 FLOPs/byte — always memory-bandwidth bound.
+    Doubling GPU memory bandwidth → halves decode latency.
+    Adding more FLOPs (Tensor Cores) → no improvement for small batches.
+
+  The speculative decoding insight:
+    One target-model forward pass with seq_len+K tokens costs almost
+    the same memory bandwidth as a pass with seq_len tokens.
+    (The extra K tokens just add compute — but we are NOT compute-bound.)
+
+    Therefore:
+      Run DRAFT model (5–20× smaller) K times to get K candidate tokens.
+      Run TARGET model ONCE to verify all K candidates in parallel.
+      If all K accepted: 1 verify pass → K tokens (vs 1 token in standard decode)
+
+  Best case (all accepted): K× throughput improvement.
+  With acceptance rate α:   E[tokens/step] = (1 - α^(K+1)) / (1 - α)
+
+  ✓ Section 1 passed — speculative decoding exploits bandwidth vs compute asymmetry
+
+── Section 2: Expected Speedup Formula ──
+
+  If the draft model accepts each token with probability α (acceptance rate):
+
+  Expected tokens per target-model step:
+      E[tok] = (1 - α^(K+1)) / (1 - α)
+
+  This comes from the geometric series: each accepted draft token has
+  probability α^k, and we stop at the first rejection.
+
+  TODO 1: Implement expected_tokens_per_step(alpha, K) below.
+
+     K     α=0.3     α=0.5     α=0.7     α=0.9     α=1.0
+  ────  ────────  ────────  ────────  ────────  ────────
+     1      1.30      1.50      1.70      1.90      2.00
+     3      1.42      1.88      2.53      3.44      4.00
+     5      1.43      1.97      2.94      4.69      6.00
+     8      1.43      2.00      3.20      6.13      9.00
+    12      1.43      2.00      3.30      7.46     13.00
+
+  At α=0.8, K=5: E[tok] = 3.69  (3.6× speedup over standard decode)
+  ✓ Section 2 passed — speedup formula working
+
+── Section 3: Draft + Target Model Simulation ──
+
+  We simulate draft and target models as probability distributions.
+  The draft model generates K tokens; the target model verifies them.
+  Rejection sampling ensures the final distribution matches the target.
+
+  REJECTION SAMPLING RULE (per token k):
+    Let p_d = P_draft[token_k]   (draft probability for this token)
+        p_t = P_target[token_k]  (target probability for this token)
+    Accept token_k with probability min(1, p_t / p_d).
+    On rejection: sample a correction from max(0, p_target - p_draft).
+
+  This is unbiased: the output distribution is EXACTLY the target distribution,
+  regardless of the acceptance rate.
+
+  Simulated 1000 speculative decode steps (K=5)
+  Acceptance rate α : 0.887
+  Avg tok/step      : 4.55  (measured)
+  Theoretical       : 4.54  (formula)
+  ✓ Section 3 passed — rejection sampling matches theoretical formula
+
+── Section 4: When It Helps and When It Doesn't ──
+
+  HELPS when:
+    • Target model is large and memory-bandwidth bound during decode
+    • Draft model is 5–20× smaller (fast to run K times)
+    • Content is "easy" for draft (code, structured text, repetitive output)
+      → high α (0.7–0.9) → large speedup multiplier
+    • Batch size is small (decode is BW-bound, not compute-bound)
+
+  HURTS or gives no gain when:
+    • Draft model is too large (draft K steps costs more than target saves)
+    • Batch size is large (target verify is already compute-bound)
+    • Content is creative/random (α ≈ 0.1–0.3) → barely better than 1 tok/step
+    • Draft and target have very different distributions (many rejections)
+
+  PRACTICAL RULE OF THUMB:
+    Worthwhile if: (draft_size / target_size) < 0.1 AND α > 0.6
+
+  TODO 2: Fill in the table of net speedup at various (α, K) combinations.
+  Net speedup accounts for draft overhead: assume draft_cost = 0.1 × target_cost.
+
+  Draft cost = 10% of target.  Net speedup (>1.0 = win):
+
+     K     α=0.3     α=0.5     α=0.7     α=0.9
+  ────  ────────  ────────  ────────  ────────
+     1     1.18×     1.36×     1.55×     1.73×
+     3     1.09×     1.44×     1.95×     2.65×
+     5     0.95×     1.31×     1.96×     3.12×
+     8     0.79×     1.11×     1.78×     3.40×
+
+  At α=0.9, K=5: net speedup = 3.12×
+  ✓ Section 4 passed — net speedup accounts for draft model cost
+
+── Section 5: Enabling Speculative Decoding in vLLM ──
+
+  vLLM supports speculative decoding via:
+
+    vllm serve meta-llama/Llama-2-7b-chat-hf \
+        --speculative-model meta-llama/Llama-68M-v1 \
+        --num-speculative-tokens 5 \
+        --use-v2-block-manager
+
+  Key parameters:
+    --speculative-model   : the draft model (must share vocabulary with target)
+    --num-speculative-tokens : K draft tokens per step (typically 3–8)
+    --use-v2-block-manager   : required for speculative decoding in vLLM
+
+  Measuring acceptance rate in production:
+    vllm exposes Prometheus metrics including:
+      vllm:spec_decode_draft_acceptance_rate   (rolling average α)
+      vllm:spec_decode_efficiency              (effective tok/step)
+    If α drops below 0.5, consider reducing K or switching draft models.
+
+  ngram speculative decoding (no separate draft model):
+    --speculative-model [ngram] \
+    --num-speculative-tokens 5 \
+    --ngram-prompt-lookup-max 4
+    Works well for tasks with high self-repetition (code, structured output).
+
+  ✓ Section 5 passed — vLLM speculative decoding parameters understood
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 12.1 complete!
+  You understand the draft-verify loop, rejection sampling,
+  the speedup formula, and when speculative decoding helps.
+  Next: IV.LLM_Inference_Systems/12.Speculative_Decoding/12.2_acceptance_rate.py
+============================================================

@@ -81,7 +81,7 @@ def parse_numa_nodes(numactl_output: str) -> int:
       Use re.findall(r"^node (\\d+) cpus:", numactl_output, re.MULTILINE)
       The length of the match list is the node count.
     """
-    pass  # YOUR CODE HERE → return int (number of NUMA nodes)
+    return len(re.findall(r"^node (\d+) cpus:", numactl_output, re.MULTILINE))
 
 
 # Test with synthetic numactl output
@@ -188,7 +188,9 @@ def get_available_cores() -> list:
     If os.sched_getaffinity is not available (some OS configurations),
     fall back to list(range(os.cpu_count() or 1)).
     """
-    pass  # YOUR CODE HERE → return sorted list of core IDs
+    if hasattr(os, "sched_getaffinity"):
+        return sorted(os.sched_getaffinity(0))
+    return list(range(os.cpu_count() or 1))
 
 
 cores = get_available_cores()
@@ -255,7 +257,7 @@ def build_numactl_command(numa_node: int, script: str) -> str:
     Return:
       f"numactl --cpunodebind={numa_node} --membind={numa_node} python {script}"
     """
-    pass  # YOUR CODE HERE → return command string
+    return f"numactl --cpunodebind={numa_node} --membind={numa_node} python {script}"
 
 
 cmd0 = build_numactl_command(0, "train.py")
@@ -321,7 +323,15 @@ def simulate_local_access(n: int) -> float:
     and return the bandwidth in GB/s = (n * 4) / min_time / 1e9.
     Run 3 warmup iterations first.
     """
-    pass  # YOUR CODE HERE → return bandwidth_gbs
+    arr = np.ones(n, dtype=np.float32)
+    for _ in range(3):          # warmup
+        _ = arr.sum()
+    min_time = float("inf")
+    for _ in range(5):
+        t0 = time.perf_counter()
+        _ = arr.sum()
+        min_time = min(min_time, time.perf_counter() - t0)
+    return (n * 4) / min_time / 1e9
 
 
 def simulate_remote_access(n: int, penalty_us: float) -> float:
@@ -341,7 +351,17 @@ def simulate_remote_access(n: int, penalty_us: float) -> float:
       5. Return bandwidth = (n * 4) / min_time / 1e9
          where min_time includes both the sleep and the sum.
     """
-    pass  # YOUR CODE HERE → return bandwidth_gbs
+    arr = np.ones(n, dtype=np.float32)
+    chunk_size = 64 * 1024 // 4          # elements per 64 KB
+    n_chunks = max(1, n // chunk_size)
+    total_sleep = n_chunks * penalty_us / 1e6
+    min_time = float("inf")
+    for _ in range(3):
+        t0 = time.perf_counter()
+        time.sleep(total_sleep)          # simulate remote latency overhead
+        _ = arr.sum()                    # the actual memory access
+        min_time = min(min_time, time.perf_counter() - t0)
+    return (n * 4) / min_time / 1e9
 
 
 local_bw = simulate_local_access(10_000_000)

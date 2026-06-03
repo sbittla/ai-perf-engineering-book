@@ -1,0 +1,149 @@
+# V.Workload_Benchmarking/14.Benchmarking_Methodology/14.2_benchmark_mistakes.py
+# status=PASS rc=0 duration=6.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 14.1 — The Five Benchmarking Mistakes
+============================================================
+  Device: cuda
+
+── Section 1: Mistake 1 — Missing Warmup ──
+
+  The first GPU forward pass is always slow because:
+    • CUDA context initialisation (one-time, ~50ms)
+    • Kernel JIT compilation (first use of each op, ~5–50ms per op)
+    • cuBLAS auto-tuning (first use of each matrix size)
+    • CPU→GPU weight transfer if model not fully on GPU yet
+
+  If you measure the first run, you report the cold-start latency,
+  not the steady-state latency your users will actually experience.
+
+  Rule: discard at least 5 runs before measuring. For torch.compile,
+  discard at least 3 full forward passes to allow compilation to complete.
+
+   Run        ms
+     0    92.590 ← cold (DISCARD)
+     1     0.308 ← cold (DISCARD)
+     2     0.158 ← cold (DISCARD)
+     3     0.125 ← cold (DISCARD)
+     4     0.118 ← cold (DISCARD)
+     5     0.115
+     6     0.132
+     7     0.116
+     8     0.220
+     9     0.181
+    10     0.240
+    11     0.158
+    12     0.163
+    13     0.170
+    14     0.141
+
+  First run  : 92.590 ms  ← inflated by init
+  Steady mean: 0.164 ms  ← what users see
+  ✓ Section 1 passed — always warm up; discard first N runs
+
+── Section 2: Mistake 2 — Using time.time() for GPU Code ──
+
+  GPU operations are ASYNCHRONOUS. torch.nn.Linear().to("cuda") returns
+  to Python immediately — the kernel may not have started yet.
+
+  time.time() after a GPU op measures CPU dispatch latency, which is
+  typically 0.05–0.5 ms. The actual GPU kernel may take 5–50 ms.
+  You will consistently underreport latency by 10–100×.
+
+  The correct approach: use CUDA Events.
+    s = torch.cuda.Event(enable_timing=True)
+    e = torch.cuda.Event(enable_timing=True)
+    s.record()  # timestamp on GPU timeline
+    <GPU work>
+    e.record()
+    torch.cuda.synchronize()
+    ms = s.elapsed_time(e)
+
+  WRONG (no sync)    : 0.1240 ms  ← GPU still running!
+  BETTER (w/sync)    : 0.1357 ms  ← includes Python overhead
+  CORRECT (events)   : 0.1590 ms  ← true GPU kernel time
+  ✓ Section 2 passed — use CUDA events on GPU; perf_counter on CPU
+
+── Section 3: Mistake 3 — Single Sample, No Variance ──
+
+  A single timing measurement is meaningless for two reasons:
+    1. GPU and OS scheduling add random jitter (typically ±1–5%)
+    2. A single measurement cannot detect P99 outliers
+
+  MINIMUM REQUIREMENTS:
+    • 20+ iterations for mean/std estimate
+    • 50+ iterations for stable P99
+    • Report mean ± std, plus P99 (not just mean)
+
+  The P99 / mean ratio > 1.5 is a warning sign: you have occasional
+  slow outliers that will affect real users under load.
+
+  TODO 1: Implement gather_timings() that collects N timing measurements
+  (using CUDA events on GPU, perf_counter on CPU) after a warmup phase.
+
+  50 iterations collected:
+    Mean  : 0.161 ms
+    Std   : 0.031 ms  (19.6% of mean)
+    P50   : 0.155 ms
+    P99   : 0.325 ms
+    P99/mean ratio: 2.03×
+  ✓ Section 3 passed — always collect 20+ samples and report P99
+
+── Section 4: Mistake 4 — Changing Multiple Variables ──
+
+  "We switched from FP32 to FP16 AND increased batch size AND enabled
+  torch.compile. The result is 5× faster!" — which change caused what?
+
+  You cannot attribute speedup to a specific optimization if you change
+  multiple things simultaneously. The correct approach: change ONE variable
+  at a time, measure, and then combine.
+
+  CORRECT EXPERIMENTAL DESIGN:
+    Baseline: FP32, batch=8, no compile
+    Run 1:    FP16, batch=8, no compile   → FP16 contribution
+    Run 2:    FP32, batch=32, no compile  → batching contribution
+    Run 3:    FP32, batch=8, compile      → compile contribution
+    Run 4:    FP16, batch=32, compile     → combined (cross-check)
+
+  If Run4 < Run1 × Run2 × Run3 / Baseline², there is interaction between
+  the optimizations (e.g. compile benefits more from FP16 than FP32).
+
+  Config                   Mean (ms)     Speedup
+  ──────────────────────  ──────────  ──────────
+  Baseline FP32 b=8            0.189       1.00×
+  FP16 only   b=8              0.149       1.27×
+  Batch=32 FP32                0.163       1.16×
+  ✓ Section 4 passed — isolate one variable at a time
+
+── Section 5: Mistake 5 — Reporting Peak, Not Steady State ──
+
+  GPU clocks boost above their base frequency for short bursts (boost clock).
+  After 10–30 seconds under full load, the GPU throttles to its sustained clock
+  to stay within thermal limits. The first 5 seconds can be 5–15% faster than
+  sustained performance.
+
+  In vendor benchmarks, peak throughput often comes from the first 30-second
+  window. In production, your model runs for hours. You must measure both:
+    burst_tps      = throughput during first 5 seconds
+    sustained_tps  = throughput during seconds 20–30
+
+  If sustained < burst × 0.90, the GPU is thermally throttling.
+
+  TODO 2: Implement burst_vs_sustained() that returns (burst_mean, steady_mean).
+  Run fn() for duration_burst_s seconds, then duration_steady_s more seconds.
+  Return mean latency (ms) from each phase separately.
+
+  Burst mean   : 0.157 ms
+  Steady mean  : 0.159 ms
+  Difference   : 1.2%  ← OK (< 10%)
+  Note: significant throttling only appears after 10–30s on a loaded GPU
+  ✓ Section 5 passed — always report sustained, not peak burst performance
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 14.1 complete!
+  You have seen all five benchmarking mistakes and their fixes.
+  The gather_timings() helper from Section 3 is the foundation
+  for every measurement in the rest of this chapter.
+  Next: V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_throughput_latency_curve.py
+============================================================

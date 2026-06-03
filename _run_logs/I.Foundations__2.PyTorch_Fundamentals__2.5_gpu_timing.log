@@ -1,0 +1,126 @@
+# I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py
+# status=PASS rc=0 duration=3.7s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 05 — GPU Timing & Profiling Basics
+============================================================
+  Device: cuda
+
+── Section 1: Timing GPU Operations Correctly ──
+
+  GPU operations are ASYNCHRONOUS.  The CPU submits work to a queue
+  and returns immediately — the GPU may not have started yet.
+
+  time.time() after a GPU op measures CPU submission latency, NOT
+  GPU execution time.  Use CUDA Events: they record timestamps
+  directly on the GPU timeline, bypassing CPU overhead entirely.
+
+  WRONG (no sync)  : 129.081 ms  ← GPU not done yet
+  Better (w/ sync) : 0.288 ms  ← includes Python overhead
+  CORRECT (events) : 0.119 ms  ← true GPU execution time
+  ✓ Section 1 passed — always use CUDA events for GPU timing
+
+── Section 2: Warmup Runs ──
+
+  First GPU call triggers: CUDA context init, kernel JIT compilation,
+  cuBLAS autotuning.  These happen ONCE but inflate the first measurement.
+  Always discard the first N runs before benchmarking (minimum: 5).
+  With torch.compile, discard at least 3 runs for compilation to complete.
+
+   Run   Time (ms)
+     0      90.465 ← WARMUP (discard)
+     1       0.175 ← WARMUP (discard)
+     2       0.089 ← WARMUP (discard)
+     3       0.065
+     4       0.098
+     5       0.096
+     6       0.130
+     7       0.134
+     8       0.123
+     9       0.106
+
+  First run : 90.465 ms   Steady state: 0.118 ms
+  ✓ Section 2 passed — always warm up before benchmarking
+
+── Section 3: Reusable benchmark() Helper ──
+
+  A correct benchmark function:
+    1. Runs fn() `warmup` times (discards results)
+    2. Synchronizes after warmup (so queued GPU work doesn't bleed in)
+    3. Times `iters` runs with CUDA events (GPU) or perf_counter (CPU)
+    4. Returns average time in milliseconds
+
+  [256×256 matmul] 0.053 ms / iter
+  Verified: benchmark() returned 0.053 ms
+  ✓ Section 3 passed
+
+── Section 4: torch.profiler ──
+
+  torch.profiler wraps your code and records CPU + CUDA time for every op.
+  Output: a table sorted by the metric you choose.
+
+  Use sort_by='cuda_time_total' on GPU, 'cpu_time_total' on CPU.
+  The operator at the top of the table is your first optimization target.
+
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                           aten::linear         0.72%      31.237us         8.23%     356.618us     178.309us       0.000us         0.00%      15.175us       7.587us             2  
+                                            aten::addmm         4.28%     185.654us         6.50%     281.768us     140.884us       9.712us        77.30%      15.175us       7.587us             2  
+                                  Lazy Function Loading         1.63%      70.719us         1.63%      70.719us      35.360us       6.980us        55.56%       6.980us       3.490us             2  
+                                        aten::embedding         1.78%      77.083us        82.71%       3.584ms       3.584ms       0.000us         0.00%       4.551us       4.551us             1  
+                                     aten::index_select         1.81%      78.296us        80.33%       3.481ms       3.481ms       0.000us         0.00%       4.551us       4.551us             1  
+                                           aten::gather         4.10%     177.552us        77.65%       3.365ms       3.365ms       1.517us        12.07%       4.551us       4.551us             1  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       4.249us        33.82%       4.249us       4.249us             1  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       3.824us        30.44%       3.824us       3.824us             1  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 4.333ms
+Self CUDA time total: 12.564us
+
+  ✓ Section 4 passed — identify slow ops before optimizing
+
+── Section 5: GPU Memory Tracking ──
+
+  Three memory quantities:
+    allocated : tensors PyTorch actively holds right now
+    reserved  : total memory the allocator holds (may be > allocated)
+    peak      : maximum allocated since last reset_peak_memory_stats()
+
+  OOM errors often occur when fragmentation causes reserved > available
+  even though allocated is low.  torch.cuda.empty_cache() returns reserved
+  memory to the OS pool.
+
+  Before allocation : 18.7 MB
+  After  allocation : 119.3 MB
+  After  del+empty  : 18.7 MB
+  Peak allocated    : 119.3 MB
+  ✓ Section 5 passed — track memory to avoid OOM
+
+── Section 6: NVTX Markers ──
+
+  NVTX (NVIDIA Tools Extension) adds named annotations to the Nsight
+  Systems timeline.  Each range_push/range_pop pair appears as a
+  colored band labelled with your string.
+
+  To see the markers in Nsight Systems:
+    nsys profile --trace=cuda,nvtx python I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py
+
+  Pattern:
+    torch.cuda.nvtx.range_push("phase_name")
+    ... do work ...
+    torch.cuda.nvtx.range_pop()
+
+  loss = 2.3211
+  ✓ Section 6 passed — run under nsys to see NVTX ranges in timeline
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 05 complete!
+  You now know how to time, profile, and track memory for GPU code.
+  This is the foundation for every profiling chapter that follows.
+  Next: I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py
+============================================================
+
+--- STDERR ---
+/usr/local/lib/python3.12/dist-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(

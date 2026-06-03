@@ -55,7 +55,7 @@ for prec, b200_str, h100_str, b200, h100, use in TENSOR_CORE_SPECS:
 #   Compute the ratio B200/H100 for FP16/BF16 Tensor Core throughput.
 fp16_b200 = 5_000
 fp16_h100 = 1_979
-fp16_ratio = None  # YOUR CODE HERE → fp16_b200 / fp16_h100
+fp16_ratio = fp16_b200 / fp16_h100
 
 assert fp16_ratio is not None, "compute fp16_ratio"
 assert 2.0 < fp16_ratio < 3.0, f"FP16 ratio should be ~2.5x, got {fp16_ratio:.2f}"
@@ -95,7 +95,7 @@ ridge_points = {}
 for name, fp16, bw in GPU_ROOFLINE_DATA:
     # TODO 2: Compute ridge_point = fp16_tflops * 1e12 / (bw * 1e9)
     #   = fp16_tflops * 1000 / bw   (simplifies to TFLOP/s * 1000 / GB/s = FLOP/byte)
-    ridge = None  # YOUR CODE HERE → fp16 * 1000 / bw
+    ridge = fp16 * 1000 / bw
 
     assert ridge is not None, f"compute ridge point for {name}"
     ridge_points[name] = ridge
@@ -145,7 +145,7 @@ for model_name, params in MODELS:
     for prec_name, bytes_per_param in PRECISIONS:
         # TODO 3: Compute model size in GB.
         #   size_gb = params * bytes_per_param / 1e9
-        size_gb = None  # YOUR CODE HERE
+        size_gb = params * bytes_per_param / 1e9
 
         assert size_gb is not None, f"compute size_gb for {model_name} {prec_name}"
         fits_b200 = size_gb <= B200_VRAM_GB
@@ -194,7 +194,7 @@ for cluster, bw in NVLINK.items():
     # TODO 4: Compute ring AllReduce time in milliseconds.
     #   t_s = 2 * (N_GPUS - 1) / N_GPUS * tensor_bytes / bw
     #   t_ms = t_s * 1000
-    t_ms = None  # YOUR CODE HERE
+    t_ms = (2 * (N_GPUS - 1) / N_GPUS * tensor_bytes / bw) * 1000
 
     assert t_ms is not None, f"compute AllReduce time for {cluster}"
     ar_times[cluster] = t_ms

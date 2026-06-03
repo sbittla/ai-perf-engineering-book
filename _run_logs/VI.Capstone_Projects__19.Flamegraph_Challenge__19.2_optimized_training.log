@@ -1,0 +1,121 @@
+# VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimized_training.py
+# status=PASS rc=0 duration=3.8s
+======================================================================
+--- STDOUT ---
+============================================================
+  Capstone 19.2 — Applying the Fixes
+============================================================
+  Device: cuda
+
+── Section 1: Re-establish the Buggy Baseline ──
+  Buggy baseline:  mean=1.360 ms  P99=1.868 ms
+  ✓ Section 1 passed — baseline re-established
+
+── Section 2: Fix 1 — Remove .item() from the hot path ──
+
+  THE FIX: Accumulate loss as a Python float (using tensor.detach()) only
+  at the end of each epoch — not every step.
+
+  PATTERN (correct):
+    running_loss = torch.tensor(0.0, device=DEVICE)
+    for x, y in loader:
+        ...
+        running_loss += loss.detach()   # no sync — stays on GPU
+    epoch_loss = running_loss.item() / n_steps   # ONE sync per epoch
+
+  This reduces GPU synchronizations from N_STEPS per epoch to 1 per epoch.
+  On a 10,000-step epoch, that is 9,999 fewer sync calls.
+
+  TODO 1: Implement fast_step_no_item(model, optimizer, x_cpu, y_cpu)
+  that replaces loss.item() with loss.detach().float().  Return step_time_ms.
+
+  Fix 1 (no .item()):  mean=1.265 ms  speedup=1.08×  saved=0.095 ms/step
+  ✓ Section 2 passed — Fix 1 applied (1.08×)
+
+── Section 3: Fix 2 — non_blocking=True H2D Transfer ──
+
+  THE FIX: Use .to(device, non_blocking=True).
+  This returns immediately; the DMA engine handles the copy in the background.
+  The GPU kernel will not start until the copy finishes (hardware dependency),
+  but the CPU thread is free to prepare the NEXT batch or issue other calls.
+
+  PATTERN (correct):
+    DataLoader(dataset, pin_memory=True, ...)   # MUST pin to use non_blocking
+    for x, y in loader:
+        x = x.to(device, non_blocking=True)
+        y = y.to(device, non_blocking=True)
+
+  Non-blocking is most effective when combined with:
+    - pin_memory=True in DataLoader (avoids staging copy)
+    - Prefetch: overlap next batch load with current GPU compute
+
+  TODO 2: Implement fast_step_nonblocking(model, optimizer, x_cpu, y_cpu)
+  that applies Fix 1 + Fix 2. Return step_time_ms.
+
+  Fix 1+2 (no .item + nonblocking):  mean=1.224 ms  speedup=1.11×
+  Isolated Fix 2 gain: 0.041 ms/step
+  ✓ Section 3 passed — Fix 2 applied (cumulative 1.11×)
+
+── Section 4: Fix 3 — torch.no_grad() in Evaluation ──
+
+  THE FIX: Wrap all validation (evaluation-only) code in:
+    with torch.no_grad():
+        ...
+
+  WHY IT MATTERS:
+    Without no_grad, PyTorch builds a computation graph at every op.
+    Each intermediate tensor stores its grad_fn and retains a reference
+    to its inputs — doubling peak memory usage during a forward pass.
+
+    For inference or validation, you NEVER call .backward(), so this
+    graph is pure waste: memory and CPU/GPU overhead with no benefit.
+
+  RULE: model.eval() is NOT enough. eval() changes BatchNorm and
+  Dropout behavior, but does NOT disable gradient computation.
+  You need BOTH: model.eval() + torch.no_grad().
+
+  TODO 3: Implement evaluate_fast(model, x_cpu) with torch.no_grad().
+  Measure speedup vs evaluate_slow (no no_grad).
+
+  evaluate_slow (no no_grad): 0.376 ms
+  evaluate_fast (no_grad)   : 0.357 ms
+  Speedup: 1.05×  saved 0.019 ms/eval call
+  ✓ Section 4 passed — Fix 3 applied (1.05× eval speedup)
+
+── Section 5: All Fixes — Final Comparison ──
+
+  Config                           Mean (ms)    P99 (ms)    Speedup
+  ──────────────────────────────  ──────────  ──────────  ─────────
+  Buggy baseline (all 3 bugs)          1.360       1.868      1.00×
+  Fix 1 (no .item())                   1.265           —      1.08×
+  Fix 1+2 (+non_blocking)              1.224           —      1.11×
+  All fixes (1+2+3)                    1.172       1.428      1.16×
+
+  TOTAL TRAINING STEP SPEEDUP: 1.16×
+  Eval speedup from no_grad:   1.05×
+  Report saved: /tmp/capstone19_report.json
+
+  LESSON SUMMARY:
+    Bug 1 (.item() per step)   : forces GPU-CPU sync every step
+                                  → remove from inner loop; call once/epoch
+    Bug 2 (blocking H2D)       : CPU blocks during each tensor transfer
+                                  → non_blocking=True + pin_memory
+    Bug 3 (no no_grad in eval) : builds unused computation graph
+                                  → always use no_grad + model.eval() in validation
+
+  FLAMEGRAPH EVIDENCE:
+    Bug 1 shows as:  wide "cudaDeviceSynchronize" bands in GPU trace
+    Bug 2 shows as:  wide "cudaMemcpyAsync" blocking in CPU trace
+    Bug 3 shows as:  extra stack depth in eval (autograd engine nodes)
+
+  These are the three most common training loop bugs in production.
+  The flamegraph makes them immediately visible; the profiler confirms cost.
+
+  ✓ Section 5 passed — all fixes applied, final comparison complete
+
+============================================================
+  ALL SECTIONS PASSED — Capstone 19.2 complete!
+  Total speedup: 1.16× from three targeted fixes.
+  Capstone 19 (Flamegraph Challenge) complete.
+  Part VI — Capstone Projects complete!
+============================================================

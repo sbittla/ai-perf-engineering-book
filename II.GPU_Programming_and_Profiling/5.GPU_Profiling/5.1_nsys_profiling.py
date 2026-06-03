@@ -144,8 +144,12 @@ if DEVICE == "cuda":
 
         s = torch.cuda.Event(enable_timing=True)
         e = torch.cuda.Event(enable_timing=True)
-        # YOUR CODE HERE: s.record(); forward pass; e.record(); synchronize; accumulate
-        pass  # remove this and implement the above
+        s.record()
+        with torch.no_grad():
+            mlp(x)
+        e.record()
+        torch.cuda.synchronize()
+        gpu_ms_total += s.elapsed_time(e)
 
 wall_end = time.perf_counter()
 wall_ms  = (wall_end - wall_start) * 1000
@@ -173,7 +177,7 @@ print("""
 
 # TODO 3: Compute idle_fraction = (wall_ms - gpu_ms_total) / wall_ms.
 #   Handle the edge case where wall_ms = 0 (set idle_fraction = 0.0).
-idle_fraction = None  # YOUR CODE HERE
+idle_fraction = (wall_ms - gpu_ms_total) / wall_ms if wall_ms > 0 else 0.0
 
 if idle_fraction is None:
     idle_fraction = 0.0  # fallback for CPU-only

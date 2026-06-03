@@ -1,0 +1,94 @@
+# II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_execution_model.py
+# status=PASS rc=0 duration=3.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 4.1 — The GPU Execution Model
+============================================================
+  Device: cuda
+
+── Section 1: GPU Thread Hierarchy ──
+
+  A GPU executes work through a four-level hierarchy:
+    Thread  — one CUDA lane executing a single instruction
+    Warp    — 32 threads that execute the SAME instruction in lockstep (SIMT)
+    Block   — a group of warps sharing L1 cache / shared memory
+    Grid    — all blocks launched for one kernel dispatch
+
+  The number of concurrently resident warps determines how well the GPU
+  hides memory latency.  Each Streaming Multiprocessor (SM) can schedule
+  hundreds of warps; while one warp stalls on a memory request, the SM
+  immediately switches to another.  This is the GPU's primary latency
+  hiding mechanism.
+
+  Theoretical max warps = SMs × max_threads_per_SM / warp_size
+  On an A100 (108 SMs, 2048 threads/SM, 32 warp_size): 108*2048/32 = 6912
+
+  GPU: NVIDIA GeForce RTX 4060 Laptop GPU
+  SMs: 24
+  Max threads per SM: 1536
+  Warp size: 32
+  Theoretical max warps in flight: 1152
+  ✓ Section 1 passed — GPU thread hierarchy understood
+
+── Section 2: SIMT and Warp Size ──
+
+  SIMT (Single Instruction, Multiple Threads) means all 32 threads in a
+  warp execute the same instruction simultaneously.  At batch_size=1, a
+  matmul may only occupy a handful of warps — most SMs sit idle.
+  At batch_size=256, hundreds of warps are active, the GPU pipeline is
+  full, and throughput per unit time is far higher.
+
+  We measure FP16 matmul TFLOP/s = 2 * M * K * N / (time_s * 1e12)
+  using M=K=N=512.  A 512×512 FP16 matmul needs 2*512^3 ≈ 268M FLOPs.
+
+  batch=   1  13.420 TFLOP/s
+  batch=   2  17.218 TFLOP/s
+  batch=   4  21.380 TFLOP/s
+  batch=   8  22.087 TFLOP/s
+  batch=  16  24.701 TFLOP/s
+  batch=  32  25.108 TFLOP/s
+  batch=  64  25.965 TFLOP/s
+  batch= 128  25.996 TFLOP/s
+  batch= 256  25.294 TFLOP/s
+  ✓ Section 2 passed — SIMT throughput scales with batch size
+
+── Section 3: SM Occupancy Effect ──
+
+  As batch size increases, TFLOP/s rises steeply — each increment fills
+  more warps.  Eventually, all SMs are fully occupied and throughput
+  plateaus.  The 'knee' is the batch size where you first hit 80% of peak.
+
+  Beyond the knee, you are compute-bound.  Below the knee, you are
+  occupancy-limited (not enough warps to keep the GPU busy).
+  For production inference, target a batch size at or beyond the knee.
+
+  Peak TFLOP/s: 25.996
+  Knee (80% of peak) at batch size: 4
+  Below this batch size, you are occupancy-limited.
+  ✓ Section 3 passed — occupancy knee identified
+
+── Section 4: Warp Divergence Cost ──
+
+  Within a warp, all 32 threads execute the same instruction.  If threads
+  within a warp take different code paths (e.g. an if/else based on data
+  values), the GPU must execute BOTH branches sequentially, masking the
+  inactive threads on each pass.  This is warp divergence.
+
+  torch.relu(x): no divergence — same operation for every element
+  torch.where(x > 0, x * 2.0, x * 0.5): two-path — potential divergence
+
+  In practice, modern GPUs handle simple cases well, so the difference
+  may be small for this microbenchmark.  We verify both complete > 0 ms.
+
+  relu (no divergence)   : 0.039 ms / iter
+  where (two-path)       : 0.547 ms / iter
+  Ratio where/relu       : 13.98x
+  ✓ Section 4 passed — warp divergence measured
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 4.1 complete!
+  You now understand threads → warps → blocks → grids,
+  SIMT execution, occupancy, and warp divergence.
+  Next: II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_memory_coalescing.py
+============================================================

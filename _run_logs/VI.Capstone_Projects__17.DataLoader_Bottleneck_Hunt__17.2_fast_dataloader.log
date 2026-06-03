@@ -1,0 +1,113 @@
+# VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.2_fast_dataloader.py
+# status=PASS rc=0 duration=4.4s
+======================================================================
+--- STDOUT ---
+============================================================
+  Capstone 17.2 — Applying the Fixes
+============================================================
+  Device: cuda  |  CPUs: 24
+
+── Section 1: Buggy Baseline (fast dataset) ──
+
+  We re-measure the baseline using the fast dataset (no sleep)
+  so we can isolate bugs 1 and 2 without waiting for bug 3.
+  Bug 3 (slow augment) is measured separately at the end.
+
+  (sleep=1.0ms/sample, batch=64 → ~64ms theoretical load)
+  Buggy baseline:  12 batches/s  idle=99.3%  load=82.53ms  gpu=0.599ms
+  ✓ Section 1 passed — buggy baseline measured
+
+── Section 2: Fix 1 — num_workers ──
+
+  THE FIX: Change num_workers from 0 to 4.
+
+  WHY IT WORKS:
+    With num_workers=0, the main process loads data sequentially:
+      load batch → transfer → compute → load batch → ...
+    The GPU is idle during loading.
+
+    With num_workers=4, worker processes prefetch the next batch
+    while the GPU processes the current one (overlap):
+      [load B2][load B3][load B4]...  (workers, in parallel)
+               [GPU: B1]  [GPU: B2]   (main process)
+
+  TODO 1: Measure the isolated speedup from num_workers=4
+  (keep pin_memory=False to isolate this fix).
+
+  Fix 1 (4 workers):  38 batches/s  idle=98.0%  speedup=3.13×
+  ✓ Section 2 passed — Fix 1 applied (3.13× speedup)
+
+── Section 3: Fix 2 — pin_memory ──
+
+  THE FIX: Change pin_memory=False to pin_memory=True,
+  and use .to(device, non_blocking=True).
+
+  WHY IT WORKS:
+    Without pinning: CPU allocates pageable memory. Before DMA transfer,
+    the OS must copy to a pinned staging buffer (wasted copy).
+    With pinning: DataLoader allocates page-locked memory directly.
+    The DMA engine reads from it immediately. Eliminates the staging copy.
+
+  EFFECT ON BANDWIDTH:
+    PCIe 4.0 x16 theoretical: 32 GB/s
+    Non-pinned effective:      ~16 GB/s (staging copy halves it)
+    Pinned effective:          ~28–30 GB/s
+
+  non_blocking=True: overlaps the H2D transfer with CPU-side work.
+
+  TODO 2: Measure Fix 1 + Fix 2 combined.
+
+  Fix 1+2 (4w+pin):  39 batches/s  idle=97.5%  speedup=3.23×
+  Pin_memory isolated gain: 0.11×
+  ✓ Section 3 passed — Fix 2 applied (cumulative 3.23× speedup)
+
+── Section 4: Fix 3 — Remove Slow Augmentation ──
+
+  THE FIX: Replace the per-sample time.sleep(2ms) with no-op or
+  GPU-side augmentation (e.g. torchvision GPU transforms).
+
+  In production, this means:
+    - Pre-compute and cache augmented tensors to disk or mmap
+    - Move resize/normalize to GPU after the batch is transferred
+    - Use faster decode libraries (turbojpeg vs PIL)
+    - Reduce the number of augmentation operations
+
+  With all three fixes applied, the DataLoader should no longer
+  be the bottleneck for this workload.
+
+  TODO 3: Measure all three fixes combined (fast dataset = no sleep,
+  workers=BEST_WORKERS, pin_memory=True).
+
+  All fixes (4w+pin+no-sleep):  617 batches/s  idle=77.2%  speedup=51.30×
+  ✓ Section 4 passed — all three fixes applied
+
+── Section 5: Before/After Report ──
+
+  The complete before/after comparison shows the isolated contribution
+  of each fix and the total improvement.
+
+
+  Config                           Batches/s    Idle %    Speedup
+  ──────────────────────────────  ──────────  ────────  ─────────
+  Buggy (w=0, no pin, sleep=2ms)          12     99.3%      1.00×
+  + num_workers=4                         38     98.0%      3.13×
+  + pin_memory                            39     97.5%      3.23×
+  + no slow augment                      617     77.2%     51.30×
+
+  TOTAL SPEEDUP: 51.30× (from 12 to 617 batches/s)
+  FINAL idle_pct: 77.2%  (target: < 10%)
+  Report saved: /tmp/capstone17_report.json
+
+  LESSON: Each fix had diminishing returns:
+    Fix 1 (workers)     : 3.13× — biggest gain, addresses root cause
+    Fix 2 (pin_memory)  : 3.23× cumulative — moderate H2D gain
+    Fix 3 (augment)     : 51.30× cumulative — eliminates per-sample floor
+  The last fix is often the hardest: it requires redesigning the pipeline.
+
+  ✓ Section 5 passed — before/after report complete
+
+============================================================
+  ALL SECTIONS PASSED — Capstone 17.2 complete!
+  DataLoader hunt complete: 51.30× improvement documented.
+  Next: VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/18.1_kv_cache_scaling.py
+============================================================

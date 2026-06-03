@@ -1,0 +1,39 @@
+# VIII.Advanced_Performance/25.FlashAttention/25.1_flash_attention.py
+# status=PASS rc=0 duration=2.4s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 25.1 - FlashAttention: IO-Aware Attention
+======================================================================
+
+  GPU available: True
+
+-- Section 1: Attention HBM Traffic --
+
+  Standard attention materializes the N x N score matrix in HBM (write after
+  QK^T, read for softmax, write, read for the V multiply). FlashAttention tiles
+  Q,K,V into SRAM and never writes the N x N matrix - cutting HBM traffic from
+  O(N^2) toward compute-bound.
+
+  N=  512 d=64:  standard=   1,146,880  flash=   131,072  ratio=   8.8x
+  N= 2048 d=64:  standard=  17,170,432  flash=   524,288  ratio=  32.8x
+  N= 8192 d=64:  standard= 270,008,320  flash= 2,097,152  ratio= 128.8x
+  [check] flash HBM advantage grows with sequence length
+
+-- Section 2: Online Softmax (the trick that makes tiling correct) --
+
+  FlashAttention computes softmax block-by-block with a running max (m) and a
+  running sum (l), never seeing the full row at once. It must match the
+  standard full-row softmax exactly.
+
+  online=1.675915   full=1.675915
+  [check] streaming softmax matches full-row softmax exactly
+
+-- Section 3: scaled_dot_product_attention --
+  [check] SDPA produced correct output shape (2, 8, 512, 64) on GPU
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise 25.1 complete
+  You quantified attention HBM traffic, proved the online-softmax
+  identity, and exercised the FlashAttention entry point.
+======================================================================

@@ -1,0 +1,114 @@
+# IV.LLM_Inference_Systems/11.Batching_Strategies/11.2_continuous_batching.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 11.2 — Continuous Batching
+============================================================
+
+── Section 1: Continuous Batching — How It Works ──
+
+  STATIC BATCHING PROBLEM
+    A batch of 16 requests all run together. When the shortest finishes
+    at step 10, it sits idle for the remaining 190 steps (padding).
+    New requests cannot join until the ENTIRE batch completes.
+
+  CONTINUOUS BATCHING SOLUTION
+    The batch is a "slot pool" with a fixed maximum concurrency.
+    At every decode step:
+      1. Run one forward pass for all active sequences.
+      2. Any sequence that generates EOS (end of sequence) is marked done.
+      3. A waiting request immediately fills the freed slot.
+    → No padding. GPU always processes REAL work. Waiting requests join
+      at the very next step, not at the end of the batch.
+
+  EFFECT ON THROUGHPUT
+    Static batch B=16, avg output 50 tokens, max output 200:
+      GPU runs 16 × 200 = 3200 token-steps; only 800 are real → 75% waste.
+    Continuous batching, concurrency=16:
+      GPU always processes ~16 real tokens/step → near-zero waste.
+      Effective throughput improvement: up to 4× for this distribution.
+
+  ✓ Section 1 passed — continuous batching keeps GPU busy with real work
+
+── Section 2: Slot Scheduler Simulation ──
+
+  We simulate a continuous batching scheduler:
+    - max_concurrency slots available at all times
+    - Each decode step: run all active slots, decrement remaining_steps
+    - Any finished slot immediately admits a waiting request
+
+  TODO 1: Complete the scheduler loop body below.
+
+  Sanity check: 4 requests of len=10, concurrency=2 → 40 tokens
+  ✓ Section 2 passed — scheduler simulation working
+
+── Section 3: Static vs Continuous — Side-by-Side ──
+
+  128 requests, concurrency/batch=16
+  Metric                                Static    Continuous   Improvement
+  ──────────────────────────────  ────────────  ────────────  ────────────
+  Throughput (tok/s)                      2640          3581        1.36×
+  P50 Latency (ms)                         570           165        3.45×
+  P99 Latency (ms)                         570          2130        0.27×
+  Padding fraction                      78.1%          0.0%             ∞
+
+  Throughput gain: 1.36×  (continuous batching wins)
+  ✓ Section 3 passed — continuous batching improves both throughput and latency
+
+── Section 4: Optimal Concurrency Setting ──
+
+  More concurrency = more sequences decode in parallel.
+  Beyond a point, concurrency is limited by available KV cache VRAM.
+  vLLM's --max-num-seqs sets the maximum concurrency.
+
+  Too low: GPU underutilized (few real tokens per step)
+  Too high: KV cache OOM, requests can't start
+
+   Concurrency    Throughput   P99 Latency
+  ────────────  ────────────  ────────────
+             1        1359/s           250
+             2        2039/s           430
+             4        2726/s           670
+             8        3283/s          1230
+            16        3581/s          2130
+            32        3761/s          2310
+
+  Concurrency=32 is 2.8× faster than concurrency=1
+  ✓ Section 4 passed — higher concurrency improves GPU utilization
+
+── Section 5: Running Continuous Batching with vLLM ──
+
+  vLLM implements continuous batching with PagedAttention by default.
+  Key parameters:
+
+    vllm serve meta-llama/Llama-2-7b-chat-hf \
+        --max-num-seqs 64 \           # max concurrent sequences
+        --max-model-len 4096 \        # max context length
+        --gpu-memory-utilization 0.85  # fraction of VRAM for KV pool
+
+  Benchmark vLLM serving:
+    python benchmarks/benchmark_serving.py \
+        --backend vllm \
+        --request-rate 10 \           # requests/second arrival rate
+        --num-prompts 500 \
+        --model meta-llama/Llama-2-7b-chat-hf
+
+  Key metrics to watch in the output:
+    Throughput        (tok/s)  — want this as high as possible
+    TTFT P50/P99      (ms)     — want < 500ms P99 for interactive use
+    E2E P50/P99       (ms)     — total experience latency
+
+  Chunked prefill (advanced):
+    --enable-chunked-prefill  Splits long prefills into chunks
+    This prevents a long prefill from blocking decode steps,
+    reducing TTFT variance at the cost of slightly lower prefill throughput.
+
+  ✓ Section 5 passed — vLLM continuous batching parameters understood
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 11.2 complete!
+  You simulated continuous batching, measured its throughput
+  gain over static batching, and learned vLLM's key parameters.
+  Next: IV.LLM_Inference_Systems/11.Batching_Strategies/11.3_paged_attention.py
+============================================================

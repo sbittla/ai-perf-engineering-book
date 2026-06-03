@@ -1,0 +1,122 @@
+# VII.Hardware_Landscape/21.AMD_MI300X_ROCm/21.2_rocm_profiling.py
+# status=PASS rc=0 duration=2.2s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 21.2 — ROCm 6.x Profiling Stack and PyTorch Migration
+======================================================================
+
+── Section 1: Profiling Tool Mapping — NVIDIA → ROCm ──
+
+  ROCm 6.x brought the tool chain significantly closer to CUDA parity.
+  Most Chapter 5 profiling workflows translate directly.
+
+  NVIDIA Tool           Purpose                               ROCm Equivalent                   Parity
+  ────────────────────  ────────────────────────────────────  ────────────────────────────────  ────────
+  nsys profile          System timeline, API trace            rocprof --sys-trace               Good
+  ncu                   Per-kernel hardware counters          rocprofv3 --pmc                   Partial
+  torch.profiler        PyTorch op attribution                torch.profiler (same API)         Full
+  nvidia-smi            Live GPU utilization                  rocm-smi                          Full
+  nvitop                Rich TUI monitor                      amdgpu_top / rocm-smi watch       Partial
+  py-spy                CPU flamegraph (Python)               py-spy (identical)                Full
+  perf / eBPF           Linux systems profiling               perf / eBPF (identical)           Full
+  compute-sanitizer     Memory/race error detection           rocm-debug-agent / sanitizer      Partial
+
+  Where parity is 'Partial': rocprofv3 has fewer built-in metric presets
+  than ncu; you must specify explicit counter names (see Section 2).
+
+  ✓ Section 1 passed
+
+── Section 2: rocprofv3 — Kernel Counter Collection ──
+
+  rocprofv3 is the ROCm equivalent of ncu. Unlike ncu's named metric
+  sets (--set basic, --set full), rocprofv3 uses explicit counter names.
+
+
+  # Basic kernel stats (≈ ncu --set basic)
+  rocprofv3 --stats python train.py
+
+  # HBM memory throughput (≈ ncu dram__throughput)
+  rocprofv3 --pmc TCC_EA_RDREQ_32B,TCC_EA_WRREQ_32B python infer.py
+
+  # Flat memory wavefronts (bandwidth utilization)
+  rocprofv3 --pmc TA_FLAT_READ_WAVEFRONTS,TA_FLAT_WRITE_WAVEFRONTS python infer.py
+
+  # Export to CSV for analysis
+  rocprofv3 --stats --output-format csv -o mi300x_profile.csv python infer.py
+
+  rocm-smi monitoring equivalents (≈ nvidia-smi):
+    rocm-smi                           # live utilization
+    watch -n 0.5 rocm-smi             # continuous (≈ watch nvidia-smi)
+    rocm-smi --showuse --showmemuse    # GPU + memory utilization
+    rocm-smi --showpower               # power consumption
+    rocm-smi --showtemp                # temperature
+
+  ✓ Section 2 passed
+
+── Section 3: PyTorch on ROCm — Installation and Verification ──
+
+  PyTorch uses 'cuda' as the device string on ROCm (HIP maps CUDA → AMD).
+  torch.version.hip is set on ROCm; torch.version.cuda is None.
+
+  Installation:
+    pip install torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/rocm6.0
+
+  Verification:
+    import torch
+    print(torch.__version__)
+    print(torch.cuda.is_available())       # True on ROCm
+    print(torch.cuda.get_device_name(0))   # 'AMD Instinct MI300X'
+    print(torch.version.hip)               # '6.0.0' on ROCm
+    print(torch.version.cuda)              # None on ROCm
+
+  Your environment:
+    torch version   : 2.11.0+cu130
+    CUDA available  : True
+    Device name     : NVIDIA GeForce RTX 4060 Laptop GPU
+    torch.version.hip  : None
+    torch.version.cuda : 13.0
+    Running on ROCm : NO  (CUDA or CPU)
+  ✓ Section 3 passed
+
+── Section 4: Known ROCm Differences Affecting This Book's Exercises ──
+
+  Most code from Chapters 1–19 runs unchanged on ROCm.
+  Four known differences require attention:
+
+  torch.compile (Chapter 6.3)
+    • Uses Triton-HIP kernels on ROCm — same API, different backend.
+    • max-autotune mode works but first compilation may take longer.
+    • Not all fusion patterns supported on every ROCm version.
+    • Verify compile speedup on your specific ROCm version.
+
+  FlashAttention (Chapters 11–13)
+    • FlashAttention-2 available for ROCm via flash-attn with ROCm wheels.
+    • FlashAttention-3 (Hopper-specific) has NO ROCm equivalent.
+    • Use composable_kernel ROCm-optimized attention as alternative.
+
+  FP8 Quantisation (Chapter 6.2)
+    • MI300X supports FP8 E4M3 and E5M2 natively.
+    • PyTorch autocast does NOT auto-select FP8 on ROCm.
+    • Explicit dtype casting required: tensor.to(torch.float8_e4m3fn).
+
+  Multi-GPU / FSDP (Chapter 13.3)
+    • ROCm uses RCCL (ROCm Collective Communications Library).
+    • RCCL is a drop-in replacement — same Python API as NCCL.
+    • DDP and FSDP work identically on ROCm via RCCL.
+    • AllReduce timing model from Chapter 13 applies with MI300X BW.
+
+  ✓ Section 4 passed — ROCm differences noted
+
+======================================================================
+  ALL SECTIONS COMPLETE — Exercise 21.2 done!
+
+  Key takeaways:
+    ROCm profiling stack: rocprofv3 ≈ ncu, rocm-smi ≈ nvidia-smi.
+    torch.cuda.is_available() returns True on ROCm — same device API.
+    Four exercises to revisit on ROCm: compile, FlashAttention,
+    FP8 autocast, and NCCL→RCCL multi-GPU.
+
+  Next: VII.Hardware_Landscape/22.Custom_Silicon/22.1_hardware_landscape.py
+======================================================================

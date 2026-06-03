@@ -1,0 +1,128 @@
+# VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/18.2_memory_budget_planning.py
+# status=PASS rc=0 duration=2.3s
+======================================================================
+--- STDOUT ---
+============================================================
+  Capstone 18.2 — Memory Budget Planning
+============================================================
+  Device: NVIDIA GeForce RTX 4060 Laptop GPU  |  VRAM: 8.6 GB
+
+── Section 1: Full Memory Budget Decomposition ──
+
+  GPU memory is consumed by four components:
+
+    1. MODEL WEIGHTS:  params × dtype_bytes
+       Llama-7B FP16:   7B × 2 = 14 GB
+       Llama-7B INT8:   7B × 1 = 7 GB
+       Llama-7B INT4:   7B × 0.5 = 3.5 GB
+
+    2. KV CACHE:  2 × n_layers × n_heads × head_dim × seq × batch × dtype_bytes
+       Grows with context length and concurrent requests
+
+    3. ACTIVATIONS:  batch × seq × d_model × n_layers × dtype_bytes × ~3
+       For inference: typically 0.5–2 GB (small vs weights)
+       For training: much larger (gradient + optimizer state)
+
+    4. FRAMEWORK OVERHEAD:  CUDA context + cuBLAS workspace + allocator
+       Typically 0.5–1.5 GB fixed overhead
+
+  PLANNING FORMULA:
+    available_for_kv = vram - weights - activations - overhead
+    max_kv_tokens    = available_for_kv / (kv_bytes_per_token)
+    max_concurrent   = max_kv_tokens / seq_len
+
+  LEVER INTERACTIONS:
+    ↑ precision (FP16→INT4) → ↑ weights size by 4× → ↑ max_kv
+    ↑ seq_len              → ↓ max_concurrent (linear)
+    ↑ batch (more requests)→ ↓ available for each request's context
+
+  Memory budget (GPU=9GB, seq=2048, batch=4):
+  Model                Weights        KV     Total    Fits    MaxConc
+  ──────────────────  ────────  ────────  ────────  ──────  ─────────
+  Llama-7B FP16          13.5G      4.3G     19.8G     OOM          0
+  Llama-7B INT8           7.0G      2.1G     11.2G     OOM          0
+  Llama-13B FP16         26.0G      6.7G     34.7G     OOM          0
+  Mistral-7B FP16        14.0G      4.3G     20.3G     OOM          0
+  ✓ Section 1 passed — full memory budget decomposition
+
+── Section 2: The 3-Way Trade-off ──
+
+  Given a fixed VRAM budget, you must choose between three goals:
+    A. QUALITY: higher precision (FP16 > INT8 > INT4)
+    B. CONTEXT: longer sequences (more past context per request)
+    C. SCALE:   more concurrent requests
+
+  These are not independent — improving one hurts the others.
+
+  TRADE-OFF TABLE for Llama-7B on a 24GB GPU:
+    Config                | Precision | Max seq | Max concurrent
+    ─────────────────────────────────────────────────────────────
+    Max quality           | FP16      | 2048    | low
+    Max context           | INT8      | 8192    | very low
+    Max scale (throughput)| INT4      | 2048    | high
+
+  TODO 1: Implement tradeoff_analysis(vram_gb, n_layers, n_heads, head_dim)
+  that returns a table of configurations optimized for each goal.
+
+  Llama-7B trade-off configurations (GPU=9GB):
+  Config                     Weights     Seq    MaxConc     Total   Fits
+  ────────────────────────  ────────  ──────  ─────────  ────────  ─────
+  Max quality (FP16)           13.5G    2048          0     16.6G    OOM
+  Max quality (FP16)           13.5G    4096          0     17.6G    OOM
+  Balanced (INT8)               7.0G    4096          0     10.1G    OOM
+  Max scale (INT4)              3.5G    2048          5      6.0G      ✓
+  Max scale (INT4)              3.5G    8192          1      7.7G      ✓
+  ✓ Section 2 passed — 3-way trade-off analysis complete
+
+── Section 3: Deployment Planning Decision Matrix ──
+
+  A deployment plan must specify:
+    1. MODEL:          which model and precision
+    2. CONTEXT:        max supported sequence length
+    3. CONCURRENCY:    max concurrent requests in flight
+    4. STRATEGY:       full / sliding-window / paged (vLLM)
+    5. LATENCY SLO:    TTFT budget and per-step decode budget
+
+  DECISION RULES:
+    If latency SLO is tight (< 2s TTFT): use smaller model or INT8
+    If context > 4096 needed: use sliding window or INT8/INT4
+    If concurrency > 10 needed: use INT4 or multiple GPU replicas
+    If quality is paramount: FP16 with paged attention
+
+  TODO 2: Implement deployment_plan(use_case, vram_gb, latency_slo_ms,
+          required_seq_len, required_concurrent) that returns
+          the recommended model config as a dict.
+
+
+  Deployment recommendations (GPU=9GB):
+  Use case                  Model                 MaxConc    Total GB   Meets SLO
+  ────────────────────────  ──────────────────  ─────────  ──────────  ──────────
+  Chat (low latency)        Llama-7B INT4              11        6.6G           ✓
+  RAG (long context)        NONE — requirements cannot be met          0        0.0G           ✗
+  Batch (high tput)         NONE — requirements cannot be met          0        0.0G           ✗
+  ✓ Section 3 passed — deployment recommendations generated
+
+── Section 4: Saving the Planning Report ──
+  Report saved: /tmp/capstone18_planning_report.json
+
+  CAPSTONE 18 SUMMARY — The 3-way Memory Budget Trade-off:
+
+    PRECISION      : FP16 → INT8 → INT4 → weights shrink 2×/4×/8×
+    CONTEXT LENGTH : Seq × batch determines KV cache size → OOM risk
+    CONCURRENCY    : More requests = more KV cache = less room for long context
+
+  The right choice depends on your use case:
+    Latency-sensitive : FP16, short context, few concurrent requests
+    Throughput-focused: INT4, medium context, many concurrent requests
+    Long context RAG  : INT8, long context, fewer concurrent requests
+
+  The formula makes the trade-off explicit and quantitative.
+  That is the goal of memory budget planning.
+
+  ✓ Section 4 passed — planning report saved
+
+============================================================
+  ALL SECTIONS PASSED — Capstone 18.2 complete!
+  Memory budget planning for LLM deployment complete.
+  Next: VI.Capstone_Projects/19.Flamegraph_Challenge/19.1_slow_training_analysis.py
+============================================================

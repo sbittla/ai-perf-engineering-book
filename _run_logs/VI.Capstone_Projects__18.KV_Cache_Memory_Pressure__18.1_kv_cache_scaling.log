@@ -1,0 +1,161 @@
+# VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/18.1_kv_cache_scaling.py
+# status=PASS rc=0 duration=2.4s
+======================================================================
+--- STDOUT ---
+============================================================
+  Capstone 18.1 — KV Cache Memory Pressure
+============================================================
+  Device: NVIDIA GeForce RTX 4060 Laptop GPU  |  VRAM: 8.6 GB
+
+── Section 1: KV Cache Memory Formula ──
+
+  The KV cache stores the Key and Value tensors for every past token
+  for every layer and every attention head. Its memory cost is:
+
+    KV bytes = 2 × n_layers × n_heads × head_dim × seq_len × batch × dtype_bytes
+
+  where:
+    2            = Key + Value (each the same shape)
+    n_layers     = number of transformer layers
+    n_heads      = number of attention heads
+    head_dim     = d_model / n_heads
+    seq_len      = context length (grows during decode)
+    batch        = number of concurrent requests
+    dtype_bytes  = 2 for FP16 / BF16, 4 for FP32
+
+  LLAMA-7B PARAMETERS (for reference):
+    n_layers  = 32
+    n_heads   = 32
+    head_dim  = 128  (d_model=4096 / n_heads=32)
+    FP16: KV per token per request = 2×32×32×128×2 = 524,288 bytes = 512 KB/tok
+
+  For 2048-token sequences:
+    Per request: 512 KB × 2048 = 1 GB
+    8 concurrent: 8 GB — fills a 24GB A10G leaving only 16GB for weights
+
+  KV cache per token (Llama-7B FP16): 524,288 bytes  ✓
+
+  KV cache footprint (GB) — Llama-7B FP16:
+                seq=512   seq=1024  seq=2048  seq=4096
+  ────  ──────  ────────  ────────  ────────  ────────
+  b=1      0.27GBOOM   0.54GBOOM   1.07GBOOM   2.15GBOOM 
+  b=4      1.07GBOOM   2.15GBOOM   4.29GBOOM   8.59GBOOM 
+  b=8      2.15GBOOM   4.29GBOOM   8.59GBOOM   17.18GBOOM 
+  b=16     4.29GBOOM   8.59GBOOM   17.18GBOOM   34.36GBOOM 
+  b=32     8.59GBOOM   17.18GBOOM   34.36GBOOM   68.72GBOOM 
+
+  Model weights: 13.5 GB  |  GPU VRAM: 8.6 GB
+  OOM threshold: total_kv + 13.5 > 8.6 GB
+  ✓ Section 1 passed — KV cache formula verified
+
+── Section 2: Finding the OOM Threshold ──
+
+  The OOM threshold is the maximum (batch × seq_len) product that fits
+  in GPU memory alongside the model weights.
+
+  AVAILABLE KV MEMORY = GPU_VRAM - MODEL_WEIGHTS
+
+  MAX CONCURRENT REQUESTS at a given seq_len:
+    max_batch = available_kv_gb × 1e9 / kv_bytes_per_request
+
+  TODO 1: Implement max_concurrent_requests(vram_gb, model_gb, seq_len,
+          n_layers, n_heads, head_dim, dtype_bytes)
+  that returns the maximum number of concurrent requests that fit.
+
+  Max concurrent requests (Llama-7B FP16, GPU=9GB):
+   seq_len    max_concurrent   kv_gb per req
+  ────────  ────────────────  ──────────────
+       512                 0           0.268
+      1024                 0           0.537
+      2048                 0           1.074
+      4096                 0           2.147
+  ✓ Section 2 passed — OOM threshold and max concurrency computed
+
+── Section 3: Latency Inflation Under Memory Pressure ──
+
+  As the KV cache fills up, two things happen:
+    1. Memory bandwidth: larger KV cache → more memory to scan per step
+       Each decode step must load ALL past K,V tensors for attention
+       Latency for decode step ∝ seq_len (linear in context length)
+
+    2. Memory pressure eviction: when KV cache exceeds GPU VRAM,
+       the system must evict older tokens (sliding window) or swap to CPU.
+       Swap-to-CPU introduces 100–1000× latency spike.
+
+  LATENCY GROWTH MODEL (per decode step):
+    Without cache pressure:
+      decode_ms(s) = base_ms + bandwidth_factor × s
+      where bandwidth_factor = (2 × n_layers × n_heads × head_dim × dtype_bytes) / BW_GB/s × 1000
+
+    With memory pressure (swap):
+      decode_ms(s) ≈ swap_latency_ms >> compute_latency_ms
+
+  TODO 2: Implement decode_latency_ms(seq_len, n_layers, n_heads, head_dim,
+          bandwidth_gb_s, base_ms=0.5, dtype_bytes=2)
+  that models the per-step decode latency as memory-bandwidth-bound.
+
+  Measured HBM bandwidth: 148 GB/s
+
+  Decode latency model (Llama-7B FP16, BW=148 GB/s):
+   seq_len   latency (ms)    vs seq=128
+  ────────  ─────────────  ────────────
+       128          0.954         1.00×
+       512          2.316         2.43×
+      1024          4.133         4.33×
+      2048          7.766         8.14×
+      4096         15.032        15.75×
+  ✓ Section 3 passed — decode latency model built
+
+── Section 4: Comparing KV Cache Strategies ──
+
+  When a serving system runs out of KV cache memory, it has three options:
+
+  STRATEGY 1: Full KV Cache (no eviction)
+    Keep all past tokens' K,V tensors. OOM when batch × seq exceeds budget.
+    Best quality (no information loss). Strictly limited by VRAM.
+
+  STRATEGY 2: Sliding Window Attention
+    Keep only the last W tokens' K,V tensors. Memory is O(W × batch), not O(seq × batch).
+    Quality degrades for long-range dependencies.
+    Mistral-7B uses W=4096; Gemma uses W=2048.
+
+  STRATEGY 3: PagedAttention (vLLM)
+    Allocate KV cache in fixed-size blocks (e.g. 16 tokens/block).
+    Allows non-contiguous allocation → eliminates fragmentation.
+    Max concurrency = floor(available_blocks × block_size / seq_len_per_req).
+    Quality same as full cache (no eviction, just flexible allocation).
+
+  TODO 3: Implement kv_strategy_analysis(vram_gb, model_gb, seq_len,
+          window_size, block_size, **llm_params)
+  that returns max_concurrent for each of the three strategies.
+
+
+  Max concurrent requests by strategy (Llama-7B FP16, GPU=9GB):
+   seq_len    Full cache    Sliding W=1k    Paged B=16
+  ────────  ────────────  ──────────────  ────────────
+       512             0               0             0
+      1024             0               0             0
+      2048             0               0             0
+      4096             0               0             0
+  ✓ Section 4 passed — strategy comparison complete
+
+── Section 5: Memory Pressure Profile Report ──
+  Profile saved: /tmp/capstone18_kv_profile.json
+
+  KEY INSIGHTS:
+    1. KV cache grows linearly with seq_len × batch × n_layers.
+    2. Decode latency grows linearly with seq_len (more K,V to load each step).
+    3. Sliding window caps memory but loses long-range context.
+    4. PagedAttention matches full cache quality with better memory utilization.
+    5. The OOM threshold for seq=2048 on a 9GB GPU is ~0 concurrent requests.
+
+  NEXT STEP: Run 18.2_memory_budget_planning.py to apply this analysis
+  to concrete deployment planning decisions.
+
+  ✓ Section 5 passed — memory pressure profile saved
+
+============================================================
+  ALL SECTIONS PASSED — Capstone 18.1 complete!
+  KV cache formula, OOM threshold, latency model, strategy comparison.
+  Next: VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/18.2_memory_budget_planning.py
+============================================================

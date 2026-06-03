@@ -1,0 +1,121 @@
+# VII.Hardware_Landscape/20.NVIDIA_Blackwell/20.2_blackwell_profiling.py
+# status=PASS rc=0 duration=2.9s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 20.2 — Blackwell Profiling Guide
+======================================================================
+
+── Section 1: Consumer GPU Comparison ──
+
+  RTX 5090 is the consumer Blackwell flagship. Profiling commands
+  (nsys, ncu, torch.profiler) work identically to RTX 4060.
+  The key changes are the roofline constants and FP4 support.
+
+  Spec                        RTX 4060      RTX 4090      RTX 5090
+  ──────────────────────  ────────────  ────────────  ────────────
+  Architecture            Ada Lovelace  Ada Lovelace     Blackwell
+  Compute Cap.                     8.9           8.9          10.0
+  CUDA Cores                     3,072        16,384        21,760
+  Tensor Core Gen                  4th           4th           5th
+  VRAM (GB)                          8            24            32
+  Memory Type                    GDDR6        GDDR6X         GDDR7
+  BW (GB/s)                        272          1008          1792
+  FP16 (TFLOP/s)                   136           660           838
+  TDP (W)                          115           450           575
+  PCIe                     PCIe 4.0 x8  PCIe 4.0 x16  PCIe 5.0 x16
+
+  RTX 5090 has 6.6× the memory bandwidth of RTX 4060.
+  Memory-bound kernels complete 6.6× faster (same AI per byte).
+  ✓ Section 1 passed
+
+── Section 2: RTX 5090 Ridge Point vs RTX 4060 ──
+
+  The ridge point determines whether a kernel is compute- or memory-bound.
+  For consumer GPUs in this book's exercises, we use FP16 Tensor Core
+  peak TFLOP/s and the GDDR bandwidth ceiling.
+
+  RTX 4060 ridge point: 500 FLOP/byte
+  RTX 5090 ridge point: 468 FLOP/byte
+  Difference: 32 FLOP/byte (lower on RTX 5090)
+
+  Both cards have similar ridge points (~468–500 FLOP/byte).
+  A kernel memory-bound on RTX 4060 is also memory-bound on RTX 5090.
+  The speed gain comes from 6.6× more bandwidth, not a roofline shift.
+
+  ✓ Section 2 passed
+
+── Section 3: Updated ncu Metric Names for Blackwell ──
+
+  Three ncu metrics needed for Blackwell profiling.
+  Use these to measure Tensor Core utilization for each precision.
+
+
+  FP16/BF16 (all generations)
+  Metric: sm__inst_executed_pipe_tensor_op_hmma.avg.pct_of_peak_sustained_active
+  Note  : Chapters 4–6 — unchanged on Blackwell
+
+  FP8 (Hopper/Blackwell)
+  Metric: sm__inst_executed_pipe_tensor_op_imma_fp8.avg.pct_of_peak_sustained_active
+  Note  : New in ncu 2023.x — requires H100 or B200
+
+  FP4 (Blackwell only)
+  Metric: sm__inst_executed_pipe_tensor_op_imma_fp4.avg.pct_of_peak_sustained_active
+  Note  : New in ncu 2024.x — requires B200
+
+  Usage example (FP8 kernel on H100/B200):
+    ncu --metrics sm__inst_executed_pipe_tensor_op_imma_fp8.avg.pct_of_peak_sustained_active \
+        --kernel-name '.*gemm.*' python infer_fp8.py
+
+  FP4 also requires FP4 correctness validation:
+    import torch
+    max_diff = (out_fp4.float() - out_fp16.float()).abs().max()
+    assert max_diff < 0.05, f'FP4 overflow: max_diff={max_diff:.4f}'
+
+  ✓ Section 3 passed — ncu metrics for FP8 and FP4 noted
+
+── Section 4: Three Profiling Adaptations Required on Blackwell ──
+
+  The Chapter 5 workflow (nsys → ncu → torch.profiler) works unchanged
+  on Blackwell. Three measurement updates are required to interpret
+  results correctly.
+
+
+  1. ncu Roofline — New L2 Cache Bandwidth Ceiling
+    Nsight Compute 2024.x adds an L2 bandwidth roof above the HBM roof.
+    On Blackwell, L2 bandwidth is ~5× HBM bandwidth.
+    Kernels below HBM ceiling but above L2 ceiling: optimize L2 access
+      patterns (shared memory tiling, register blocking), not HBM coalescing.
+
+  2. FP8 Tensor Core Metric (Section 3 above)
+    Use sm__inst_executed_pipe_tensor_op_imma_fp8 instead of the FP16 metric
+    when profiling FP8-quantized models.
+    Verify FP8 TC utilization > 80% to confirm Transformer Engine is active.
+
+  3. FP4 Overflow Detection
+    FP4 has an extremely limited dynamic range (E2M1 format: max ±6).
+    Overflow to infinity without proper per-block scaling is a common bug.
+    Run compute-sanitizer --tool racecheck on FP4 models.
+    Always compare FP4 output against FP16 baseline (max_diff < 0.05).
+
+  ✓ Section 4 passed — three Blackwell profiling adaptations understood
+
+── Section 5: Detect Your Local GPU Generation ──
+
+  GPU: NVIDIA GeForce RTX 4060 Laptop GPU  (cc 8.9)
+  Architecture  : Ada Lovelace  (RTX 40xx)
+  FP8 Tensor Core support : ✗
+  FP4 Tensor Core support : ✗
+  → Use FP16/BF16 ncu metric; FP8/FP4 not available on this GPU.
+  ✓ Section 5 passed
+
+======================================================================
+  ALL SECTIONS COMPLETE — Exercise 20.2 done!
+
+  Key takeaways:
+    RTX 5090 vs RTX 4060: ~6.6× more bandwidth, similar ridge point.
+    FP4 adds ~2× memory efficiency vs FP8 with < 1% perplexity loss.
+    Three profiling adaptations: L2 ceiling, FP8 metric, FP4 overflow.
+
+  Next: VII.Hardware_Landscape/21.AMD_MI300X_ROCm/21.1_roofline_multi_gpu.py
+======================================================================

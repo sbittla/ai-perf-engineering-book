@@ -1,0 +1,61 @@
+# VII.Hardware_Landscape/23.Accelerator_Spectrum/23.1_accelerator_selection.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 23.1 - The Accelerator Spectrum: Selection Calculator
+======================================================================
+
+-- Section 1: Throughput-per-Watt and Throughput-per-Dollar --
+
+  The accelerator choice is a performance-engineering question with five
+  axes: throughput, latency, performance-per-watt, performance-per-dollar,
+  and flexibility (toolchain maturity / tolerance for model churn).
+
+  Here we compute the two efficiency ratios for each reference profile.
+
+  Accelerator     tps   watts     tps/W       tps/$
+  ------------ ------ ------- --------- -----------
+  GPU            1.00     700    0.0014    0.000033
+  ASIC           1.30     400    0.0033    0.000108
+  FPGA           0.25     225    0.0011    0.000025
+  Edge-NPU       0.02      10    0.0020    0.000133
+
+  [check] ASIC wins perf/watt; Edge-NPU wins absolute power budget
+
+-- Section 2: ASIC-vs-GPU Energy Break-Even --
+
+  An ASIC carries large non-recurring engineering (NRE) cost (a tapeout is
+  tens to hundreds of millions of dollars). It only pays back when its
+  perf-per-watt energy savings, multiplied by deployment volume and service
+  lifetime, exceed that NRE. This is the single most important number in the
+  GPU-vs-ASIC decision.
+
+  Scenario                                break-even (yr)
+  -------------------------------------- ----------------
+  Hyperscaler (50k units, $50M NRE)                  3.81
+  Mid-size fleet (5k units, $50M NRE)               38.05
+  Small fleet  (500 units, $50M NRE)               380.52
+
+  [check] break-even falls as deployment volume rises
+
+-- Section 3: Matching the Binding Constraint to the Hardware --
+
+  The five axes collapse into a short decision procedure keyed on the single
+  binding constraint of the deployment.
+
+  Binding constraint     Choose     Why
+  ---------------------- ---------- ----------------------------------------
+  model_churn            GPU        Flexibility and mature toolchain dominate
+  stable_high_volume     ASIC       Best perf/watt amortizes the NRE
+  deterministic_us       FPGA       No kernel-launch or batching overhead
+  battery_thermal        Edge-NPU   Only option inside the power budget
+
+  [check] recommendation engine maps every constraint correctly
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise 23.1 complete
+  You computed perf/watt and perf/$ across the accelerator spectrum,
+  modeled the ASIC-vs-GPU energy break-even, and built a
+  constraint-driven accelerator recommendation.
+======================================================================

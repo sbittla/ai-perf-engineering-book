@@ -81,7 +81,7 @@ def find_hotspot(frame_widths: dict) -> str:
     Example: find_hotspot({"forward": 45, "backward": 35, "dataload": 20})
     should return "forward" because 45 is the largest value.
     """
-    pass  # YOUR CODE HERE → return max(frame_widths, key=frame_widths.get)
+    return max(frame_widths, key=frame_widths.get)
 
 
 test_frames = {"forward": 45, "backward": 35, "dataload": 20}
@@ -176,7 +176,10 @@ def mixed_workload() -> None:
 #     4. Assert that the Stats object is not None
 #   The Stats constructor validates the profile — if profiling failed it will raise.
 
-profile = None  # YOUR CODE HERE → profile = cProfile.Profile()
+profile = cProfile.Profile()
+profile.enable()
+mixed_workload()
+profile.disable()
 
 assert profile is not None, (
     "profile must be a cProfile.Profile() object. Did you implement TODO 2?"
@@ -254,7 +257,13 @@ def profile_fn(fn) -> float:
 
     Hint: pstats.Stats has a .total_tt attribute after sort_stats is called.
     """
-    pass  # YOUR CODE HERE → return total_time_seconds
+    pr = cProfile.Profile()
+    pr.enable()
+    fn()
+    pr.disable()
+    stats = pstats.Stats(pr, stream=io.StringIO())
+    stats.sort_stats("cumulative")
+    return stats.total_tt
 
 
 slow_fn = lambda: time.sleep(0.02)
@@ -343,7 +352,12 @@ def classify_frame(width_pct: float) -> str:
       width_pct > 5   → "contributing" (notable but not dominant)
       else            → "noise"        (< 5% — too small to optimize)
     """
-    pass  # YOUR CODE HERE → return classification string
+    if width_pct > 20:
+        return "hotspot"
+    elif width_pct > 5:
+        return "contributing"
+    else:
+        return "noise"
 
 
 assert classify_frame(35) == "hotspot",      f"35% → 'hotspot', got '{classify_frame(35)}'"

@@ -73,7 +73,7 @@ t_large_seq  = time_access(large, sequential=True,  n_accesses=N_ACCESSES)
 t_large_rand = time_access(large, sequential=False, n_accesses=N_ACCESSES)
 
 # TODO 1: Compute speedup: how much faster is sequential vs random for the large tensor?
-speedup_large = None  # YOUR CODE HERE  → t_large_rand / t_large_seq
+speedup_large = t_large_rand / t_large_seq
 
 assert speedup_large is not None, "compute speedup_large"
 print(f"  Small tensor (128 KB — fits in L1/L2):")
@@ -104,8 +104,8 @@ labels = torch.randint(0, 10, (N_SAMPLES,))
 ds     = TensorDataset(data, labels)
 
 # TODO 2: Create two DataLoaders — one with shuffle=False, one with shuffle=True
-loader_seq  = None  # YOUR CODE HERE  → DataLoader(ds, batch_size=64, shuffle=False)
-loader_shuf = None  # YOUR CODE HERE  → DataLoader(ds, batch_size=64, shuffle=True)
+loader_seq  = DataLoader(ds, batch_size=64, shuffle=False)
+loader_shuf = DataLoader(ds, batch_size=64, shuffle=True)
 
 assert loader_seq  is not None, "create loader_seq"
 assert loader_shuf is not None, "create loader_shuf"
@@ -170,7 +170,7 @@ else:
         htod_ms  = s.elapsed_time(e) / ITERS
         # TODO 3: Compute HtoD bandwidth in GB/s
         #   bandwidth = size_mb / 1000 / (htod_ms / 1000)
-        htod_bw = None  # YOUR CODE HERE
+        htod_bw = size_mb / 1000 / (htod_ms / 1000)
 
         # Device-to-Host (DtoH)
         s2 = torch.cuda.Event(enable_timing=True)
@@ -182,7 +182,7 @@ else:
         torch.cuda.synchronize()
         dtoh_ms = s2.elapsed_time(e2) / ITERS
         # TODO 4: Compute DtoH bandwidth in GB/s
-        dtoh_bw = None  # YOUR CODE HERE
+        dtoh_bw = size_mb / 1000 / (dtoh_ms / 1000)
 
         assert htod_bw is not None, f"compute htod_bw for {size_mb}MB"
         assert dtoh_bw is not None, f"compute dtoh_bw for {size_mb}MB"
@@ -211,7 +211,7 @@ else:
 
     # TODO 5: Create a pinned CPU tensor of the same size
     #   torch.empty(n_floats).pin_memory()
-    pinned = None  # YOUR CODE HERE
+    pinned = torch.empty(n_floats).pin_memory()
     pinned.copy_(pageable)   # fill with same data
 
     assert pinned is not None,         "create pinned tensor"
@@ -234,7 +234,7 @@ else:
     t_pinned_ms   = measure_htod(pinned)
 
     # TODO 6: Compute speedup of pinned over pageable
-    pinned_speedup = None  # YOUR CODE HERE  → t_pageable_ms / t_pinned_ms
+    pinned_speedup = t_pageable_ms / t_pinned_ms
 
     assert pinned_speedup is not None, "compute pinned_speedup"
     print(f"  Transfer size          : {SIZE_MB} MB")

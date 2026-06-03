@@ -1,0 +1,208 @@
+# IV.LLM_Inference_Systems/13.Distributed_Inference/13.3_fsdp_and_pipeline.py
+# status=PASS rc=0 duration=0.1s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 13.3 — FSDP and Pipeline Parallelism
+============================================================
+
+── Section 1: DDP vs FSDP Memory Usage ──
+
+  DDP (Distributed Data Parallel):
+    Each GPU holds a FULL copy of model parameters AND gradients.
+    VRAM per GPU = 2 × param_bytes + optimizer_states
+    AllReduce gradients after backward.
+
+  FSDP (Fully Sharded Data Parallel):
+    Parameters, gradients, AND optimizer states are sharded across N GPUs.
+    Each GPU holds 1/N of each parameter tensor.
+    Before a forward pass: AllGather to reconstruct the full layer.
+    After backward: ReduceScatter to shard the gradients.
+
+  MEMORY COMPARISON (Adam optimizer, FP16 params, FP32 optimizer states):
+    DDP  per GPU = params × 2 B (model)
+                + params × 2 B (gradients)
+                + params × 8 B (optimizer: first+second moment, FP32)
+                = 12 × param_bytes
+
+    FSDP per GPU = (12 × param_bytes) / N    ← sharded
+                + (2 × param_bytes)          ← full param buffer during forward
+                + activation_bytes
+
+  For Llama-7B with 8-GPU FSDP:
+    DDP  : 7B × 12B = 84 GB per GPU (needs A100 80GB, barely)
+    FSDP : 84 GB / 8 + 14 GB buffer ≈ 25 GB per GPU (RTX 4090 feasible)
+
+         Model    Params    DDP (GB)     FSDP 4GPU     FSDP 8GPU
+  ────────────  ────────  ──────────  ────────────  ────────────
+      Llama-7B        7B        84.0          35.0          24.5
+     Llama-13B       13B       156.0          65.0          45.5
+     Llama-70B       70B       840.0         350.0         245.0
+
+  Llama-7B: DDP=84GB vs FSDP/8=24GB — FSDP saves 60GB
+  ✓ Section 1 passed — FSDP dramatically reduces peak memory vs DDP
+
+── Section 2: Pipeline Parallelism ──
+
+  PIPELINE PARALLELISM (PP):
+    Split the model's layers across P GPUs (stages).
+    Each GPU processes all micro-batches for its layers,
+    then passes activations to the next stage.
+
+    Stage 0: layers 0...(L/P - 1)
+    Stage 1: layers L/P...(2L/P - 1)
+    ...
+    Stage P-1: layers (P-1)L/P...L-1
+
+  PIPELINE BUBBLE:
+    On startup, stages 1..P-1 are idle waiting for stage 0 to finish.
+    On shutdown, stage 0 is idle while stages 1..P-1 drain.
+    Bubble fraction = (P - 1) / (M + P - 1)
+    where M = number of micro-batches per pipeline flush.
+
+    With M micro-batches per pipeline step:
+      Useful compute = M / (M + P - 1)
+      Bubble        = (P - 1) / (M + P - 1)
+
+  To minimise bubble: use large M (many micro-batches).
+  Rule of thumb: M >= 4 × P to keep bubble below 20%.
+
+  TODO 2: Implement pipeline_bubble_fraction() below.
+
+  Pipeline bubble fraction  (ideal < 20%):
+
+    P (stages)    M= 2  M= 4  M= 8  M=16  M=32
+  ────────────    ─────  ─────  ─────  ─────  ─────
+             2    0.33   0.20   0.11✓  0.06✓  0.03✓
+             4    0.60   0.43   0.27   0.16✓  0.09✓
+             8    0.78   0.64   0.47   0.30   0.18✓
+            16    0.88   0.79   0.65   0.48   0.32 
+
+  P=8: bubble drops from 63.6% (M=4) to 17.9% (M=32)
+  ✓ Section 2 passed — pipeline bubble formula working
+
+── Section 3: 1F1B Interleaved Schedule ──
+
+  NAIVE SCHEDULE ("GPipe"):
+    All micro-batches forward, then all backward.
+    Peak memory: M × activation_per_microbatch (must hold all activations)
+    Bubble fraction: (P-1)/(M+P-1) — same as above.
+
+  1F1B SCHEDULE (One Forward One Backward):
+    Interleave forward and backward within a single pipeline flush.
+    As soon as stage 0 finishes microbatch k's forward, it starts k's backward.
+    Peak memory: P × activation_per_microbatch (only P activations in flight)
+
+  INTERLEAVED 1F1B (Megatron):
+    Each stage handles V virtual stages (model chunks).
+    Reduces bubble from (P-1)/(M+P-1) to (P-1)/(V×M+P-1)
+    At V=2: bubble halved. At large V: bubble → 0.
+    Cost: V × 2(P-1) extra communication events per flush.
+
+  TODO 3: Implement interleaved_bubble_fraction() below.
+
+  P=8, M=8, varying V (virtual stages):
+    V=1: bubble = 46.67%
+    V=2: bubble = 30.43%
+    V=4: bubble = 17.95%
+    V=8: bubble = 9.86%
+
+  V=2 halves bubble vs V=1 (naive): 46.7% → 30.4%
+  ✓ Section 3 passed — interleaved 1F1B reduces pipeline bubble
+
+── Section 4: 3D Parallelism at Scale ──
+
+  For extreme scale (GPT-4 class), a single parallelism strategy is not enough.
+  Megatron-LM and DeepSpeed combine three orthogonal strategies:
+
+    TENSOR PARALLELISM (TP):
+      Split weight matrices within a node (NVLink required).
+      Typical: TP=8 within an 8-GPU server node.
+
+    PIPELINE PARALLELISM (PP):
+      Assign layer groups to different nodes.
+      Typical: PP=N_nodes or PP=N_nodes/2.
+      Requires fast inter-node network (InfiniBand).
+
+    DATA PARALLELISM (DP):
+      Run multiple independent copies of the TP+PP model.
+      AllReduce gradients across DP replicas.
+      Typical: DP=2–8 for training.
+
+  TOTAL GPUs = TP × PP × DP
+
+  Example — GPT-3 175B training (Megatron):
+    TP=8  (within each 8-GPU DGX A100)
+    PP=16 (16 pipeline stages across 16 DGX nodes)
+    DP=12 (12 replicas of the TP+PP model)
+    Total = 8 × 16 × 12 = 1536 A100s
+
+  Memory per GPU (FP16, Adam, DP with FSDP across DP replicas):
+    Model params : 175B × 2B = 350 GB total / (8×16 GPU pipeline+TP) ≈ 2.7 GB/GPU
+    Gradients    : same shard
+    Optimizer    : FP32, 8B per param / (8×16) ≈ 10.9 GB/GPU
+    Activations  : ~80 GB/GPU (gradient checkpointing needed)
+
+  Config                      Total GPUs   Mem/GPU (GB)
+  ──────────────────────────  ──────────  ─────────────
+  Llama-7B  small                      1           84.0
+  Llama-7B  TP=2                       2           42.0
+  Llama-13B TP=2                       2           78.0
+  Llama-70B TP=8                       8          105.0
+  Llama-70B TP=4,PP=2                  8          105.0
+  GPT-3 175B full                   1536            6.4
+
+  Llama-70B: single GPU needs 840GB → TP=8 needs 105GB/GPU
+  ✓ Section 4 passed — 3D parallelism enables training at extreme scale
+
+── Section 5: Decision Guide — TP vs PP vs DP ──
+
+  USE TENSOR PARALLELISM (TP) when:
+    • Model fits in a single node (NVLink available)
+    • Individual layers are too large for one GPU
+    • Need lowest latency (all GPUs work on every token)
+    • Example: Llama-70B on 4–8 A100 within one DGX
+
+  USE PIPELINE PARALLELISM (PP) when:
+    • Model spans multiple nodes (tensor TP doesn't cross nodes well)
+    • Batch is large enough to fill the pipeline (M ≥ 4P)
+    • Throughput > latency is the priority
+    • Example: 100B+ models across many nodes
+
+  USE DATA PARALLELISM (DP / FSDP) when:
+    • Dataset is large and you want to train faster
+    • Model fits on N GPUs with TP/PP, but you have more GPUs
+    • Gradient averaging across replicas is the only communication needed
+    • Example: TP=8 within each node, DP across 8 nodes = 64 GPU total
+
+  USE FSDP (instead of DDP) when:
+    • Optimizer states don't fit per GPU
+    • Model is 10B+ parameters
+    • Fine-tuning a large foundation model on limited GPUs
+
+  COMBINATION GUIDE:
+    7B  models   : TP=1 or 2 within node, DP across nodes
+    70B  models  : TP=8 within node, optional DP
+    175B+ models : TP=8, PP=4–16, DP as needed
+
+  Model          GPUs      VRAM  Recommendation
+  ────────────  ─────  ────────  ────────────────────────────────────────
+  Llama-7B          1       80GB  Single GPU — no parallelism needed
+  Llama-7B          4       24GB  DP (DataParallel or FSDP across GPUs)
+  Llama-13B         2       80GB  DP (DataParallel or FSDP across GPUs)
+  Llama-70B         8       80GB  TP=8 (within node, NVLink required)
+  Llama-70B         4       80GB  TP=4 (within node, NVLink required)
+  GPT-3 175B       16       80GB  TP=8 + PP=2 (multi-node)
+  ✓ Section 5 passed — parallelism decision guide complete
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 13.3 complete!
+  You understand FSDP memory savings, pipeline bubble,
+  interleaved schedules, and 3D parallelism trade-offs.
+============================================================
+
+  Part IV complete!  You have covered:
+  Chapter 10: Prefill/decode, KV cache, inference metrics
+  Chapter 11: Static batching, continuous batching, PagedAttention
+  Chapter 12: Speculative decoding, acceptance rate analysis
+  Chapter 13: Tensor parallelism, NCCL, FSDP, pipeline parallelism

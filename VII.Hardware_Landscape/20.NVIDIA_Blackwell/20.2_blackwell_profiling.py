@@ -63,7 +63,7 @@ for label, vals in specs:
 # TODO 1: Compute the bandwidth speedup of RTX 5090 over RTX 4060.
 rtx5090_bw = 1_792
 rtx4060_bw = 272
-bw_speedup = None  # YOUR CODE HERE → rtx5090_bw / rtx4060_bw
+bw_speedup = rtx5090_bw / rtx4060_bw
 
 assert bw_speedup is not None, "compute bw_speedup"
 assert 6.0 < bw_speedup < 7.0, f"BW speedup should be ~6.6×, got {bw_speedup:.1f}"
@@ -84,8 +84,8 @@ print("""
 
 # TODO 2: Compute ridge points for RTX 4060 and RTX 5090.
 #   ridge = fp16_tflops * 1000 / bw_gbs   (FLOP/byte)
-rtx4060_ridge = None  # YOUR CODE HERE → 136 * 1000 / 272
-rtx5090_ridge = None  # YOUR CODE HERE → 838 * 1000 / 1792
+rtx4060_ridge = 136 * 1000 / 272
+rtx5090_ridge = 838 * 1000 / 1792
 
 assert rtx4060_ridge is not None, "compute rtx4060_ridge"
 assert rtx5090_ridge is not None, "compute rtx5090_ridge"

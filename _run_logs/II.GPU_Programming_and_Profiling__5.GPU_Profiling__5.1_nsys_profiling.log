@@ -1,0 +1,108 @@
+# II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.1_nsys_profiling.py
+# status=PASS rc=0 duration=4.0s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 5.1 — Nsight Systems Profiling
+============================================================
+  Device: cuda
+
+
+  ── How to use Nsight Systems ──
+
+  Nsight Systems (nsys) captures a full system timeline showing:
+    - CPU thread activity and kernel launches
+    - CUDA kernel execution on the GPU
+    - Memory copy operations (HtoD, DtoH, DtoD)
+    - NVTX annotation ranges (your custom labels)
+
+  To profile this script:
+    nsys profile --trace=cuda,nvtx \
+        -o /tmp/5.1_nsys_output \
+        python II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.1_nsys_profiling.py
+
+  Then open the .nsys-rep file in the Nsight Systems GUI, or generate
+  a text report:
+    nsys stats /tmp/5.1_nsys_output.nsys-rep
+
+  Look for: NVTX ranges appearing as colored bands above the GPU kernels.
+  If the GPU row shows gaps between your NVTX ranges, the GPU was idle.
+
+── Section 1: NVTX Markers ──
+
+  NVTX (NVIDIA Tools Extension) adds named ranges to the profiler timeline.
+  Range push/pop pairs appear as colored bands labelled with your string.
+
+  Pattern:
+    torch.cuda.nvtx.range_push("phase_name")
+    ... do work ...
+    torch.cuda.nvtx.range_pop()
+
+  On CPU-only machines, nvtx calls are silently no-ops — safe to run.
+
+  MLP output shape: torch.Size([64, 10])  ✓
+  ✓ Section 1 passed — NVTX markers added; run under nsys to visualise
+
+── Section 2: Measuring CPU-GPU Overlap ──
+
+  In a real training loop, each step has:
+    1. CPU time: DataLoader (disk I/O, augmentations, batching)
+    2. GPU time: forward pass, loss, backward
+
+  If the DataLoader is slow, the GPU idles waiting for the next batch.
+  We simulate this with time.sleep(delay) inside a loop.
+
+  We measure:
+    wall_ms      = total wall-clock time for N steps (perf_counter)
+    gpu_ms_total = total GPU compute time (sum of CUDA event timings)
+
+  idle_fraction = (wall_ms - gpu_ms_total) / wall_ms
+
+  Wall time total  : 43.8 ms
+  GPU compute total: 1.8 ms
+  ✓ Section 2 passed — CPU-GPU timeline measurements collected
+
+── Section 3: Detecting GPU Idle Time ──
+
+  idle_fraction measures how much of the total wall time the GPU was NOT
+  computing.  A high idle fraction (>20%) means the GPU is starved —
+  typically due to:
+    - Slow DataLoader (disk/network I/O bound)
+    - CPU-side preprocessing bottleneck
+    - synchronization barriers (e.g. loss.item() in the inner loop)
+
+  A low idle fraction (<10%) means the GPU is the bottleneck —
+  time to profile kernels with ncu (Exercise 5.2).
+
+  Idle fraction: 95.80%
+  GPU is idle >20% of the time → likely I/O bound.
+  Fix: increase DataLoader num_workers, add pin_memory=True,
+       or cache preprocessed data to a fast disk/RAM.
+  ✓ Section 3 passed — idle_fraction computed
+
+── Section 4: Annotating a Full Training Step ──
+
+  A production training step has six clearly distinct phases that should
+  appear as separate NVTX ranges in the nsys timeline:
+
+    zero_grad     — clear gradient buffers
+    data_to_gpu   — CPU → GPU tensor transfer
+    forward       — model forward pass
+    loss          — loss function computation
+    backward      — gradient computation
+    optimizer_step — weight update
+
+  Annotating each phase lets you immediately see in nsys which phase
+  is slow, whether the GPU is idle between phases, and whether the
+  PCIe transfer overlaps with compute.
+
+  Training step completed.  loss = 2.3619
+  NVTX annotations added — run under nsys to see the six phases.
+  ✓ Section 4 passed — full training step annotated with NVTX
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 5.1 complete!
+  You now know how to annotate code with NVTX, measure CPU-GPU
+  overlap, compute idle_fraction, and annotate a training step.
+  Next: II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.2_ncu_profiling.py
+============================================================

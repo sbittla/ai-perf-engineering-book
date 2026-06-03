@@ -168,25 +168,35 @@ for prompt_len in prompt_lens:
     input_ids = torch.randint(0, VOCAB, (1, prompt_len), device=DEVICE)
 
     # Warmup
-    with torch.no_grad():
-        _ = model(input_ids)
+    for _ in range(5):
+        with torch.no_grad():
+            _ = model(input_ids)
     if DEVICE == "cuda":
         torch.cuda.synchronize()
 
+    # These prompts are small, so a single forward is dominated by fixed
+    # kernel-launch overhead (~1 ms) and the prompt-length signal is buried in
+    # noise. Take the MIN over several iterations to isolate the real prefill
+    # cost, which scales with prompt length.
+    ITERS = 20
     if DEVICE == "cuda":
-        s = torch.cuda.Event(enable_timing=True)
-        e = torch.cuda.Event(enable_timing=True)
-        s.record()
-        with torch.no_grad():
-            logits, kv_caches = model(input_ids)
-        e.record()
-        torch.cuda.synchronize()
-        ttft_ms = s.elapsed_time(e)
+        ttft_ms = float("inf")
+        for _ in range(ITERS):
+            s = torch.cuda.Event(enable_timing=True)
+            e = torch.cuda.Event(enable_timing=True)
+            s.record()
+            with torch.no_grad():
+                logits, kv_caches = model(input_ids)
+            e.record()
+            torch.cuda.synchronize()
+            ttft_ms = min(ttft_ms, s.elapsed_time(e))
     else:
-        t0 = time.perf_counter()
-        with torch.no_grad():
-            logits, kv_caches = model(input_ids)
-        ttft_ms = (time.perf_counter() - t0) * 1000
+        ttft_ms = float("inf")
+        for _ in range(ITERS):
+            t0 = time.perf_counter()
+            with torch.no_grad():
+                logits, kv_caches = model(input_ids)
+            ttft_ms = min(ttft_ms, (time.perf_counter() - t0) * 1000)
 
     ttft_results[prompt_len] = ttft_ms
     print(f"  Prompt {prompt_len:>4} tokens → TTFT = {ttft_ms:.2f} ms")

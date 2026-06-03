@@ -80,19 +80,29 @@ class SlowDataset(Dataset):
 #   Verify the class is a valid Dataset subclass by creating an instance.
 assert issubclass(SlowDataset, Dataset), "SlowDataset must inherit from Dataset"
 
-# 3-layer conv model for the compute part
+# 3-layer conv model for the compute part.
+# The conv stack is sized so one forward pass takes ~10-15 ms on a modern GPU:
+# heavy enough that GPU compute dominates wall time when data is in memory
+# (Section 2), but still far smaller than SlowDataset's 20 ms/item disk delay
+# (Section 1).  A trivially small model would finish in microseconds, leaving
+# the GPU "idle" almost 100% of the time even with a fast loader — which would
+# defeat the comparison this exercise is trying to teach.
 conv_model = nn.Sequential(
-    nn.Conv2d(3, 16, 3, padding=1), nn.ReLU(),
-    nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(),
-    nn.AdaptiveAvgPool2d(4),
+    nn.Conv2d(3, 32, 3, padding=1), nn.ReLU(),
+    nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(),
+    nn.AdaptiveAvgPool2d(8),
     nn.Flatten(),
-    nn.Linear(32 * 4 * 4, 10),
+    nn.Linear(64 * 8 * 8, 10),
 ).to(DEVICE)
 conv_model.eval()
 
-slow_loader = DataLoader(SlowDataset(n=40), batch_size=4, num_workers=0)
-
+# batch_size=16 gives the GPU enough work per step for compute to dominate.
+BATCH_SIZE = 16
 N_BATCHES = 10
+
+slow_loader = DataLoader(
+    SlowDataset(n=BATCH_SIZE * N_BATCHES), batch_size=BATCH_SIZE, num_workers=0
+)
 gpu_compute_ms = 0.0
 
 wall_start = time.perf_counter()
@@ -141,7 +151,12 @@ class FastDataset(Dataset):
     def __getitem__(self, idx):
         return self.data[idx]
 
-fast_loader = DataLoader(FastDataset(n=80), batch_size=4, num_workers=2)
+# num_workers=0: the data is already in RAM, so worker processes add nothing but
+# their (one-time) spawn cost — which, amortized over just N_BATCHES, would
+# inflate wall time and falsely report the GPU as idle.
+fast_loader = DataLoader(
+    FastDataset(n=BATCH_SIZE * N_BATCHES), batch_size=BATCH_SIZE, num_workers=0
+)
 
 gpu_compute_ms_fast = 0.0
 wall_start_fast = time.perf_counter()
@@ -150,7 +165,7 @@ for i, batch in enumerate(fast_loader):
         break
     # TODO 2: Measure GPU forward pass time for this batch.
     #   Use measure_batch_gpu_ms(conv_model, batch) and accumulate.
-    pass  # YOUR CODE HERE → gpu_compute_ms_fast += measure_batch_gpu_ms(conv_model, batch)
+    gpu_compute_ms_fast += measure_batch_gpu_ms(conv_model, batch)
 
 wall_end_fast = time.perf_counter()
 total_wall_ms_fast = (wall_end_fast - wall_start_fast) * 1000
@@ -257,7 +272,14 @@ def diagnose_dataloader(idle_pct: float) -> list:
                          "use non_blocking=True"]
       else           → ["DataLoader is not the bottleneck — profile GPU kernels"]
     """
-    pass  # YOUR CODE HERE
+    if idle_pct > 70:
+        return ["add num_workers, check disk speed",
+                "move dataset to faster storage"]
+    elif idle_pct > 40:
+        return ["add pin_memory, increase prefetch_factor",
+                "use non_blocking=True"]
+    else:
+        return ["DataLoader is not the bottleneck — profile GPU kernels"]
 
 
 result_high = diagnose_dataloader(80)

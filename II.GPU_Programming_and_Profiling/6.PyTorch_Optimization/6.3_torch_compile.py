@@ -77,7 +77,7 @@ with torch.no_grad():
 # TODO 1: Call torch.compile(mlp, mode="default") to create compiled_mlp.
 #   Then run 5 warmup iterations with dummy input to trigger compilation.
 #   On Windows, _COMPILE_SUPPORTED is False — assign mlp directly instead.
-compiled_mlp = None  # YOUR CODE HERE → torch.compile(mlp, mode="default") if _COMPILE_SUPPORTED else mlp
+compiled_mlp = torch.compile(mlp, mode="default") if _COMPILE_SUPPORTED else mlp
 
 assert compiled_mlp is not None, "compiled_mlp must not be None"
 
@@ -129,8 +129,25 @@ fresh_mlp.eval()
 #   Use CUDA events on GPU, time.perf_counter on CPU.
 #   Store results in step_times list (in ms).
 
-fresh_compiled = None  # YOUR CODE HERE → torch.compile(fresh_mlp, mode="default")
-step_times = []        # YOUR CODE HERE → list of per-step times in ms
+fresh_compiled = torch.compile(fresh_mlp, mode="default") if _COMPILE_SUPPORTED else fresh_mlp
+step_times = []        # per-step times in ms
+
+x_fresh = torch.randn(64, 256, device=DEVICE)
+for i in range(10):
+    if DEVICE == "cuda":
+        s = torch.cuda.Event(enable_timing=True)
+        e = torch.cuda.Event(enable_timing=True)
+        s.record()
+        with torch.no_grad():
+            fresh_compiled(x_fresh)
+        e.record()
+        torch.cuda.synchronize()
+        step_times.append(s.elapsed_time(e))
+    else:
+        t0 = time.perf_counter()
+        with torch.no_grad():
+            fresh_compiled(x_fresh)
+        step_times.append((time.perf_counter() - t0) * 1000)
 
 # Fallback check
 if not step_times or fresh_compiled is None:
@@ -203,9 +220,9 @@ if DEVICE == "cuda":
     # TODO 3: Time each mode after warmup (10 warmup, 30 iters).
     #   Call bench_mode for "eager", "default", and "reduce-overhead".
     #   Print speedup vs eager.
-    eager_ms = None  # YOUR CODE HERE → bench_mode(t_layer, xt, "eager")
-    default_ms = None  # YOUR CODE HERE → bench_mode(t_layer, xt, "default")
-    reduce_ms  = None  # YOUR CODE HERE → bench_mode(t_layer, xt, "reduce-overhead")
+    eager_ms = bench_mode(t_layer, xt, "eager")
+    default_ms = bench_mode(t_layer, xt, "default")
+    reduce_ms  = bench_mode(t_layer, xt, "reduce-overhead")
 
     if eager_ms is None:
         print("  (TODO 3 not completed — using reference values)")
@@ -260,8 +277,27 @@ throughputs   = {}
 
 for batch in batch_sizes:
     x_sw = torch.randn(batch, 512, device=DEVICE)
-    # YOUR CODE HERE: warmup, timing, compute throughput_sps, store in throughputs[batch]
-    pass  # replace with implementation
+    for _ in range(5):
+        with torch.no_grad():
+            linear_layer(x_sw)
+    if DEVICE == "cuda":
+        torch.cuda.synchronize()
+        s = torch.cuda.Event(enable_timing=True)
+        e = torch.cuda.Event(enable_timing=True)
+        s.record()
+        for _ in range(30):
+            with torch.no_grad():
+                linear_layer(x_sw)
+        e.record()
+        torch.cuda.synchronize()
+        ms_per_iter = s.elapsed_time(e) / 30
+    else:
+        t0 = time.perf_counter()
+        for _ in range(30):
+            with torch.no_grad():
+                linear_layer(x_sw)
+        ms_per_iter = (time.perf_counter() - t0) / 30 * 1000
+    throughputs[batch] = batch / (ms_per_iter / 1000)
 
 # Fallback for untouched TODO
 if not throughputs:

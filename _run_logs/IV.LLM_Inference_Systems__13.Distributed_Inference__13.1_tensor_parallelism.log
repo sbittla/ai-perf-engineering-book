@@ -1,0 +1,153 @@
+# IV.LLM_Inference_Systems/13.Distributed_Inference/13.1_tensor_parallelism.py
+# status=PASS rc=0 duration=2.8s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 13.1 — Tensor Parallelism
+============================================================
+  Device: cuda
+
+── Section 1: The Multi-GPU Motivation ──
+
+  MODEL SIZE VS GPU MEMORY (FP16, 2 bytes/param):
+    GPT-2   (117M)  →   0.23 GB  → fits on any GPU
+    Llama-7B         →  14    GB  → barely fits on A100 40GB
+    Llama-13B        →  26    GB  → needs A100 80GB
+    Llama-70B        → 140    GB  → needs 2× A100 80GB minimum
+    GPT-4 (est. 1.8T)→ 3600   GB  → needs 40+ A100 80GB
+
+  Even if the model fits, KV cache + activations may not:
+    Llama-70B inference at batch=8, seq=2048: ~140 GB (weights) + ~8 GB (KV)
+    → 2 A100 80GB mandatory even at small batch size
+
+  SOLUTION: TENSOR PARALLELISM
+    Split each weight matrix across N GPUs.
+    Each GPU holds 1/N of each matrix.
+    A small all-reduce synchronization after each layer reconstructs the output.
+
+  KEY TRADE-OFF:
+    More GPUs → less memory per GPU, but more all-reduce communication.
+    Optimal N is where compute time ≈ communication time.
+
+  ✓ Section 1 passed — tensor parallelism is necessary for large models
+
+── Section 2: Weight Sharding Strategy ──
+
+  COLUMN-PARALLEL LINEAR (Weight partitioned along output dim):
+    Full weight  : [D_out, D_in]
+    GPU k holds  : [D_out // N, D_in]   (rows of weight matrix)
+    Forward      : y_k = x @ W_k^T
+    No communication needed — each GPU produces a partial output column.
+
+  ROW-PARALLEL LINEAR (Weight partitioned along input dim):
+    Full weight  : [D_out, D_in]
+    GPU k holds  : [D_out, D_in // N]   (columns of weight matrix)
+    Forward      : Each GPU takes a different slice of x, computes partial matmul.
+    Communication: All-Reduce (sum) across GPUs to get full D_out output.
+
+  MEGATRON-LM PATTERN (for attention + MLP):
+    Attention Q/K/V : Column-parallel  (no comm)
+    Attention proj  : Row-parallel     (All-Reduce)
+    MLP up-proj     : Column-parallel  (no comm)
+    MLP down-proj   : Row-parallel     (All-Reduce)
+    → 2 All-Reduces per transformer layer, N GPUs
+
+  Each All-Reduce transfers: batch × seq_len × d_model × 2 bytes
+  (the factor 2 is because all-reduce does reduce + broadcast)
+
+  Llama-70B approximate weight distribution:
+    N GPUs   Weight/GPU (GB)    Fits in A100 80GB?
+  ────────  ────────────────  ────────────────────
+         1             118.1                  ✗ NO
+         2              59.1                 ✓ YES
+         4              29.5                 ✓ YES
+         8              14.8                 ✓ YES
+
+  Total Llama-70B weight: 118 GB → need at least 2× A100 80GB
+  ✓ Section 2 passed — weight sharding understood
+
+── Section 3: All-Reduce Cost Analysis ──
+
+  All-Reduce (ring-based, N GPUs):
+    Communication volume per GPU: 2 × (N-1)/N × tensor_bytes
+    ≈ 2 × tensor_bytes  (for large N)
+
+  For one all-reduce after a row-parallel layer:
+    Tensor size = batch × seq_len × D_out × dtype_bytes
+
+  With NVLink bandwidth between A100s (≈ 600 GB/s bidirectional):
+    Time = 2 × tensor_bytes / (NVLink_bandwidth_per_GPU)
+
+  TODO 2: Implement all_reduce_ms() that returns the estimated time in ms.
+
+  All-Reduce time for batch=1, seq=512, d_model=8192:
+
+    N GPUs   NVLink (ms)     PCIe (ms)
+  ────────  ────────────  ────────────
+         2         0.112         2.097
+         4         0.168         3.146
+         8         0.196         3.670
+
+  PCIe 4× slower than NVLink (18.8×) → NVLink required for TP
+  ✓ Section 3 passed — all-reduce cost estimated for different interconnects
+
+── Section 4: Compute vs Communication Roofline ──
+
+  Tensor parallelism is only worthwhile when:
+    compute_time >> all_reduce_time
+
+  Compute time for one row-parallel matmul on one GPU:
+    FLOPs per GPU = 2 × D_out × (D_in // N) × batch × seq_len
+    Time = FLOPs / (GPU_TFLOPS × 1e12)
+
+  TODO 3: Implement compute_ms() for the matmul on one GPU.
+  Then print the compute/comm ratio for various N.
+
+  d_model=8192, batch=1, seq=512, A100 at 312 TFLOPS, NVLink 600GB/s
+
+    N GPUs    Compute (ms)     Comm (ms)   C/C Ratio   Comm bound?
+  ────────  ──────────────  ────────────  ──────────  ────────────
+         1           0.220         0.000         inf            no
+         2           0.110         0.112         1.0           YES
+         4           0.055         0.168         0.3           YES
+         8           0.028         0.196         0.1           YES
+
+  N=2: compute/comm = 1.0× (comm-bound — TP overhead dominates)
+  ✓ Section 4 passed — compute vs communication ratio guides TP degree choice
+
+── Section 5: Using Tensor Parallelism ──
+
+  vLLM (easiest path for serving):
+    vllm serve meta-llama/Llama-2-70b-chat-hf \
+        --tensor-parallel-size 4   # split across 4 GPUs
+        --dtype bfloat16
+
+  Megatron-LM (training + inference):
+    torchrun --nproc_per_node 8 pretrain_gpt.py \
+        --tensor-model-parallel-size 8 \
+        --pipeline-model-parallel-size 1
+
+  HuggingFace Accelerate with device_map:
+    from transformers import AutoModelForCausalLM
+    model = AutoModelForCausalLM.from_pretrained(
+        "meta-llama/Llama-2-70b-hf",
+        device_map="auto",         # Accelerate splits across GPUs automatically
+        torch_dtype=torch.bfloat16
+    )
+    # device_map="auto" uses simple column splitting, not Megatron-style TP
+    # Lower communication efficiency than vLLM or Megatron
+
+  Checking communication overhead empirically:
+    import torch.distributed as dist
+    # After training/serving, look for 'ncclAllReduce' in profiler timeline.
+    # If ncclAllReduce > 15% of step time, TP degree may be too high.
+    # Use nsys profile to capture NCCL kernels with --trace=cuda,nvtx,mpi
+
+  ✓ Section 5 passed — tensor parallelism commands and caveats understood
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 13.1 complete!
+  You understand weight sharding, all-reduce cost, and how to
+  choose tensor parallel degree based on compute/comm ratio.
+  Next: IV.LLM_Inference_Systems/13.Distributed_Inference/13.2_nccl_collectives.py
+============================================================

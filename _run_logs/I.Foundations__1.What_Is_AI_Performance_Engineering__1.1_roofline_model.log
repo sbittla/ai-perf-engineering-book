@@ -1,0 +1,104 @@
+# I.Foundations/1.What_Is_AI_Performance_Engineering/1.1_roofline_model.py
+# status=PASS rc=0 duration=2.7s
+======================================================================
+--- STDOUT ---
+=================================================================
+  Exercise 01 — The Roofline Model
+=================================================================
+  Device: cuda
+
+── Section 1: Hardware Specifications ──
+
+  Before applying the roofline model you need two numbers for your GPU:
+    peak_flops_per_sec   : theoretical maximum FLOP/s (FP16 Tensor Core)
+    mem_bandwidth_bytes  : HBM or GDDR bandwidth in bytes/sec
+
+  These set the ceilings your kernels cannot exceed.
+  The roofline's ridge point = peak_flops / mem_bandwidth  (FLOPs/byte)
+
+  GPU name        : NVIDIA GeForce RTX 4060 Laptop GPU
+  SM count        : 24
+  VRAM            : 8.6 GB
+  GPU 'NVIDIA GeForce RTX 4060 Laptop GPU' not in spec table — using RTX 4060 as fallback
+
+  Peak FLOP/s     : 51.5 TFLOP/s
+  Memory BW       : 272 GB/s
+  Ridge point     : 189.3 FLOPs/byte
+  Interpretation  : operations with AI > 189 FLOPs/byte are compute-bound
+  ✓ Section 1 passed
+
+── Section 2: Arithmetic Intensity ──
+
+  Arithmetic intensity (AI) = FLOPs performed / bytes of memory traffic.
+  Unit: FLOPs/byte.
+
+  High AI → compute-bound (large GEMMs, convolutions with big batch sizes).
+  Low AI  → memory-bandwidth-bound (elementwise ops, small-batch inference).
+
+  GPT-2 QKV projection (768→768, FP16):
+    batch=1   : 1.00 FLOPs/byte  memory-bound
+    batch=32  : 30.72 FLOPs/byte  memory-bound
+    batch=512 : 307.20 FLOPs/byte  COMPUTE-BOUND
+  ReLU (1M elements, FP32):
+    AI        : 0.12 FLOPs/byte  memory-bound
+  ✓ Section 2 passed
+
+── Section 3: Classify Operations ──
+
+  For each operation, compute its arithmetic intensity and classify it
+  as 'compute-bound' (AI > ridge_point) or 'memory-bound' (AI ≤ ridge_point).
+
+  Operation                                            AI  Bound
+  ---------------------------------------------  --------  ----------------
+  GPT-2 QKV projection (bs=1, FP16)                  1.00  memory-bound
+  GPT-2 QKV projection (bs=64, FP16)                59.08  memory-bound
+  Large GEMM (bs=1024, 1024→4096, FP16)            819.20  compute-bound
+  ReLU (1M elements, FP32)                           0.12  memory-bound
+  Dropout (1M elements, FP32)                        0.12  memory-bound
+  ✓ Section 3 passed
+
+── Section 4: Measuring Throughput and MFU ──
+
+  Model FLOPs utilization (MFU) = observed FLOP/s / peak FLOP/s.
+  MFU tells you how efficiently you are using the hardware.
+    MFU < 30%  → fixable bottleneck (DataLoader, FP32, GPU idle)
+    MFU 40-60% → typical well-optimized training
+    MFU > 60%  → excellent (hard to achieve for full training loops)
+
+  2048×2048 matmul (FP16)
+  Average time          : 0.653 ms
+  FLOPs per call        : 17.18 GFLOP
+  Observed throughput   : 26.32 TFLOP/s
+  Peak throughput       : 51.5 TFLOP/s
+  MFU                   : 51.1%
+  Interpretation: Good utilization
+  ✓ Section 4 passed
+
+── Section 5: Roofline Prediction vs Actual ──
+
+  The roofline predicts the MAXIMUM achievable performance given AI.
+  If actual < roofline prediction: there is headroom to optimize.
+  If actual ≈ roofline ceiling: you are hardware-limited.
+
+  For a memory-bound op:  predicted_perf = mem_bw × AI
+  For a compute-bound op: predicted_perf = peak_flops
+
+  Matmul AI             : 1024.0 FLOPs/byte
+  Ridge point           : 189.3 FLOPs/byte
+  Bound                 : compute-bound
+  Roofline prediction   : 51.50 TFLOP/s
+  Actual performance    : 26.32 TFLOP/s
+  Efficiency vs ceiling : 51.1%
+  ✓ Section 5 passed
+
+=================================================================
+  ALL SECTIONS COMPLETE — Exercise 01 done!
+
+  Key takeaways:
+    Ridge point on your hardware : 189.3 FLOPs/byte
+    Your 2048×2048 matmul MFU      : 51.1%
+
+  LLM inference at bs=1 is ALWAYS memory-bound (AI ≈ 1 FLOPs/byte).
+  The fix: continuous batching, quantisation, speculative decoding.
+  All three techniques are covered in Part IV of this book.
+=================================================================

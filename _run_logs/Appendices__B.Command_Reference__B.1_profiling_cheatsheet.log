@@ -1,0 +1,202 @@
+# Appendices/B.Command_Reference/B.1_profiling_cheatsheet.py
+# status=PASS rc=0 duration=3.6s
+======================================================================
+--- STDOUT ---
+====================================================================
+  APPENDIX B — Profiling Command Reference
+====================================================================
+
+  Device: cuda
+
+────────────────────────────────────────────────────────────────────
+Section 1 — Diagnostic Decision Tree
+────────────────────────────────────────────────────────────────────
+
+CONCEPT: Use the right tool for the right question
+
+  SYMPTOM                         → TOOL
+  ─────────────────────────────────────────────────────────────────────
+  "Is the GPU busy at all?"       → nvidia-smi (live util %)
+  "Where is time going?"          → nsys profile --stats=true
+  "Which kernel is the hotspot?"  → torch.profiler  (PyTorch ops)
+  "Is this kernel memory-bound?"  → ncu --metrics dram__throughput
+  "Why is the CPU slow?"          → py-spy record (CPU flamegraph)
+  "Is disk I/O starving the GPU?" → iostat -xz 1 && vmstat 1
+  "Is there NUMA penalty?"        → numastat && numactl --hardware
+  "Is NCCL the bottleneck?"       → nsys --trace=cuda,nvtx,nccl
+
+  QUICK DIAGNOSTIC ORDER:
+    1.  watch -n 0.5 nvidia-smi            # check GPU util %
+    2.  nsys profile --stats=true ...       # timeline view
+    3.  ncu --set basic ...                 # per-kernel view
+    4.  py-spy record -o flame.svg -- ...  # CPU flamegraph
+    5.  iostat -xz 1 && vmstat 1           # I/O + iowait
+
+  The 5 Benchmarking Mistakes (Chapter 14):
+    1. No warmup               First call triggers cuBLAS autotuning → always slow
+    2. time.time() on GPU      Measures CPU submission, not GPU execution → wrong
+    3. Single sample           No variance, no P99 — always run 20+ iterations
+    4. Mixed variables         Changing batch AND precision together → can't isolate cause
+    5. Reporting peak          Peak ≠ sustained — GPU throttles under thermal pressure
+
+✓ Section 1 passed
+
+────────────────────────────────────────────────────────────────────
+Section 2 — torch.profiler Live Demo
+────────────────────────────────────────────────────────────────────
+
+CONCEPT: torch.profiler records CPU ops AND CUDA kernels together.
+  Use record_function() to annotate your own regions.
+  Sort by self_cuda_time_total to find the real hotspot.
+
+  torch.profiler top-5 ops (sorted by self_cuda_time_total):
+
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                    ffn         0.00%       0.000us         0.00%       0.000us       0.000us     740.083us       104.93%     740.083us     148.017us             5  
+                                            aten::addmm        10.06%     537.779us        14.01%     748.999us      49.933us     671.185us        95.16%     671.185us      44.746us            15  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     510.707us        72.41%     510.707us     102.141us             5  
+                                                lm_head         0.00%       0.000us         0.00%       0.000us       0.000us     510.707us        72.41%     510.707us     102.141us             5  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      86.167us        12.22%      86.167us      17.233us             5  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 5.345ms
+Self CUDA time total: 705.331us
+
+  Named regions captured: ['embedding', 'ffn', 'lm_head']
+
+✓ Section 2 passed
+
+────────────────────────────────────────────────────────────────────
+Section 3 — CUDA Events vs Wall-Clock Timing
+────────────────────────────────────────────────────────────────────
+
+CONCEPT: time.perf_counter() on GPU code measures CPU submission time, not
+  GPU execution time. CUDA events bracket the GPU timeline directly.
+
+  CORRECT pattern:
+    torch.cuda.synchronize()        # flush any pending work
+    start_evt = torch.cuda.Event(enable_timing=True)
+    end_evt   = torch.cuda.Event(enable_timing=True)
+    start_evt.record()
+    <GPU work here>
+    end_evt.record()
+    torch.cuda.synchronize()
+    elapsed_ms = start_evt.elapsed_time(end_evt)
+
+  2048×2048 matmul on cuda:
+    wall-clock time   : 1.331 ms
+    CUDA event time   : 1.349 ms
+    ratio             : 0.99x  (close (overhead amortised))
+
+✓ Section 3 passed
+
+────────────────────────────────────────────────────────────────────
+Section 4 — Command Reference (print-ready cheatsheet)
+────────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  NSIGHT SYSTEMS  (nsys)  — GPU timeline, ms granularity             │
+├─────────────────────────────────────────────────────────────────────┤
+│  nsys profile --stats=true python train.py                          │
+│  nsys profile -o report --trace=cuda,nvtx,osrt python train.py     │
+│  nsys profile --delay=5 --duration=10 -o snap python serve.py      │
+│  Look for: white GPU gaps (CPU bound), long H2D bars (pin_memory)  │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  NSIGHT COMPUTE  (ncu)  — kernel counters, nanosecond granularity   │
+├─────────────────────────────────────────────────────────────────────┤
+│  ncu --set basic python matmul_bench.py                             │
+│  ncu --metrics dram__throughput.avg.pct_of_peak_sustained_elapsed,  │
+│               sm__throughput.avg.pct_of_peak_sustained_elapsed      │
+│               --kernel-name ".*mm.*" python script.py               │
+│  Rule: dram≈100% → memory-bound; sm≈100% → compute-bound           │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  TORCH.PROFILER  — PyTorch op granularity                           │
+├─────────────────────────────────────────────────────────────────────┤
+│  with profile(activities=[CPU, CUDA], record_shapes=True) as p:     │
+│      model(x)                                                       │
+│  print(p.key_averages().table(sort_by="self_cuda_time_total"))      │
+│  p.export_chrome_trace("trace.json")   # open in chrome://tracing   │
+│  python -m torch.utils.bottleneck script.py  # quick combined view  │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  NVIDIA-SMI  — live GPU utilization                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│  watch -n 0.5 nvidia-smi                                            │
+│  nvidia-smi --query-gpu=util.gpu,memory.used --format=csv -l 1      │
+│  nvidia-smi dmon -s mu -d 1                                         │
+│  nvitop -m full                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  PY-SPY  — Python CPU flamegraphs (no sudo needed)                  │
+├─────────────────────────────────────────────────────────────────────┤
+│  py-spy record -o flame.svg -- python train.py                      │
+│  py-spy record -o before.folded --format raw -- python slow.py      │
+│  py-spy record -o after.folded  --format raw -- python fast.py      │
+│  ~/FlameGraph/difffolded.pl before.folded after.folded \           │
+│      | ~/FlameGraph/flamegraph.pl > diff.svg                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  LINUX PERF  — hardware events                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│  perf stat -e cycles,instructions,cache-misses python train.py      │
+│  perf record -g -F 99 python train.py && perf report --stdio        │
+│  perf script | stackcollapse-perf.pl | flamegraph.pl > cpu.svg      │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  EBPF / BCC TOOLS  — kernel-level tracing                           │
+├─────────────────────────────────────────────────────────────────────┤
+│  opensnoop -p $(pgrep python)      # file opens                     │
+│  biolatency -D                      # block I/O latency histogram    │
+│  runqlat                            # scheduler latency              │
+│  bpftrace -e 'tracepoint:syscalls:sys_enter_read { @[comm]=count;}' │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  I/O + SYSTEM MONITORING                                            │
+├─────────────────────────────────────────────────────────────────────┤
+│  vmstat 1 30             # CPU states, memory, swap (wa = iowait)   │
+│  iostat -xz 1            # disk throughput + utilization            │
+│  sar -u 1 60             # CPU utilization history                  │
+│  iowait > 20%  → disk bottleneck; swap si/so > 0 → memory pressure │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  NUMA + CPU AFFINITY                                                │
+├─────────────────────────────────────────────────────────────────────┤
+│  numactl --hardware                                                  │
+│  numactl --cpunodebind=0 --membind=0 python train.py                │
+│  taskset -c 0-7 python train.py                                     │
+│  cat /sys/bus/pci/devices/0000:01:00.0/numa_node   # GPU NUMA node  │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  PYTORCH MEMORY                                                     │
+├─────────────────────────────────────────────────────────────────────┤
+│  torch.cuda.memory_allocated() / 1e9      # GB in use               │
+│  torch.cuda.max_memory_allocated() / 1e9  # peak since reset        │
+│  torch.cuda.reset_peak_memory_stats()     # reset peak counter      │
+│  torch.cuda.empty_cache()                 # release cached blocks   │
+│  print(torch.cuda.memory_summary())       # full breakdown           │
+└─────────────────────────────────────────────────────────────────────┘
+
+✓ Section 4 passed
+
+====================================================================
+  ALL SECTIONS PASSED
+  Profiling cheatsheet complete (device=cuda)
+
+  Next: Appendices/C.Interview_Prep/C.1_interview_questions.py
+====================================================================
+
+--- STDERR ---
+/usr/local/lib/python3.12/dist-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(

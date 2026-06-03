@@ -1,0 +1,135 @@
+# II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.3_torch_profiler.py
+# status=PASS rc=0 duration=5.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 5.3 — torch.profiler Deep Dive
+============================================================
+  Device: cuda
+
+── Section 1: Basic Profiling ──
+
+  torch.profiler wraps your code and records the time spent in every
+  PyTorch operator on both CPU and GPU.  The key output is the operator
+  table sorted by cuda_time_total (or cpu_time_total on CPU-only machines).
+
+  The operator at the top of the table is your first optimization target.
+  Look for the Self CUDA column — this is the time spent ONLY in this op,
+  not in its callees.  Ops with high total time but low self time are
+  wrappers; the real work is in their children.
+
+  activities list:
+    CPU-only: [ProfilerActivity.CPU]
+    GPU:      [ProfilerActivity.CPU, ProfilerActivity.CUDA]
+
+
+  Top 10 ops by cuda_time_total:
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                           aten::linear         0.08%      89.975us        74.82%      85.515ms      21.379ms       0.000us         0.00%     109.300us      27.325us             4  
+                                            aten::addmm        67.97%      77.692ms        74.61%      85.278ms      21.319ms      52.580us        92.91%     109.300us      27.325us             4  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      44.137us        77.99%      44.137us      14.712us             3  
+                                  Lazy Function Loading         0.21%     242.845us         0.21%     242.845us      60.711us      33.544us        59.27%      33.544us       8.386us             4  
+                                    cudaLaunchKernelExC         2.76%       3.160ms         2.80%       3.203ms       1.602ms       0.000us         0.00%      13.995us       6.997us             2  
+                                Activity Buffer Request         2.55%       2.919ms         2.55%       2.919ms       2.919ms      12.294us        21.72%      12.294us      12.294us             1  
+                                   cudaGetSymbolAddress         0.18%     204.379us         0.27%     309.628us     309.628us       0.000us         0.00%      12.294us      12.294us             1  
+                       Runtime Triggered Module Loading         0.09%     105.249us         0.09%     105.249us     105.249us      12.294us        21.72%      12.294us      12.294us             1  
+                                             aten::relu         0.06%      63.566us        25.17%      28.765ms       9.588ms       0.000us         0.00%       5.425us       1.808us             3  
+                                        aten::clamp_min        17.25%      19.719ms        25.11%      28.701ms       9.567ms       4.013us         7.09%       5.425us       1.808us             3  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 114.297ms
+Self CUDA time total: 56.593us
+
+  ✓ Section 1 passed — profiler ran and printed operator table
+
+── Section 2: The Profiler Schedule ──
+
+  Profiling every step of a long training run is expensive and produces
+  enormous trace files.  The profiler schedule lets you:
+    wait    N: skip N steps at the start (let things warm up)
+    warmup  N: run the profiler but discard these steps
+    active  N: record these N steps
+    repeat  N: run the whole cycle N times (0 = run once)
+
+  schedule(wait=1, warmup=1, active=3, repeat=1) means:
+    Step 0: skip
+    Step 1: profiler on but discarded (warmup)
+    Steps 2-4: profiled and recorded
+
+  This is the recommended pattern for training loops — it avoids the
+  profiler overhead on all but the steps you care about.
+
+  Profiler collected 157 events over 5 steps
+  ✓ Section 2 passed — schedule-based profiling ran correctly
+
+── Section 3: Chrome Trace Export ──
+
+  torch.profiler can export its data in the Chrome Trace Event format,
+  readable in:
+    chrome://tracing  (built into Chrome/Chromium)
+    Perfetto UI       (https://ui.perfetto.dev)
+    TensorBoard       (pip install tensorboard)
+
+  The JSON file contains every operator with its start time, duration,
+  thread ID, and (on GPU) CUDA stream ID.  It is the most detailed view
+  of your model's execution timeline.
+
+  To open in Chrome: navigate to chrome://tracing, click Load, select the JSON.
+  To open in TensorBoard: use prof.export_chrome_trace() then:
+    tensorboard --logdir /tmp/tb_logs
+
+  Chrome trace exported: /tmp/pt2_chrome_trace.json (78.5 KB)
+  Open with: chrome://tracing → Load → select /tmp/pt2_chrome_trace.json
+  ✓ Section 3 passed — Chrome trace exported
+
+── Section 4: Reading Self CUDA % ──
+
+  The profiler reports two time columns per operator:
+    CUDA total   : time including all ops called BY this op (inclusive)
+    Self CUDA    : time spent ONLY in this specific op (exclusive)
+
+  Example:
+    aten::linear   CUDA total = 5ms   Self CUDA = 0.01ms
+      aten::mm     CUDA total = 4ms   Self CUDA = 4ms
+      aten::addmm  CUDA total = 0.9ms Self CUDA = 0.9ms
+
+  aten::linear's total is 5ms but its self is nearly zero — the real work
+  is in aten::mm.  optimizing aten::linear as a whole is impossible; you
+  must look at its children.
+
+  Always sort by self_cuda_time_total to find the true bottleneck kernel.
+
+  Top op by self CUDA time: aten::addmm
+    Self CUDA time  : 0.437 ms
+    Total CUDA time : 0.447 ms
+    Self %          : 97.7%
+
+  Full table sorted by self_cuda_time_total:
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                            aten::addmm        16.96%       1.169ms        76.61%       5.283ms     132.067us     437.029us        91.74%     447.239us      11.181us            40  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     361.131us        75.81%     361.131us      12.038us            30  
+void cublasLt::splitKreduce_kernel<32, 16, int, floa...         0.00%       0.000us         0.00%       0.000us       0.000us      41.415us         8.69%      41.415us       2.071us            20  
+                                        aten::clamp_min         6.04%     416.262us        12.30%     847.911us      28.264us      39.361us         8.26%      39.361us       1.312us            30  
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us      39.361us         8.26%      39.361us       1.312us            30  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      34.483us         7.24%      34.483us       3.448us            10  
+                                Activity Buffer Request        43.62%       3.008ms        43.62%       3.008ms       3.008ms      10.210us         2.14%      10.210us      10.210us             1  
+                                           aten::linear         3.10%     213.743us        85.12%       5.869ms     146.733us       0.000us         0.00%     447.239us      11.181us            40  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 6.896ms
+Self CUDA time total: 476.390us
+
+  ✓ Section 4 passed — Self CUDA time analysis complete
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 5.3 complete!
+  You now know how to use the profiler schedule, export Chrome
+  traces, and interpret Self CUDA time to find true bottlenecks.
+  Next: II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.1_precision_and_amp.py
+============================================================
+
+--- STDERR ---
+/usr/local/lib/python3.12/dist-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(

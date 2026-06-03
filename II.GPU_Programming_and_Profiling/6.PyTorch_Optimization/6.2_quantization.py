@@ -64,7 +64,9 @@ fp32_model.eval()
 #     qconfig_spec = {nn.Linear}   (set of layer types to quantise)
 #     dtype      = torch.qint8
 #   Store the result in quantized_model.
-quantized_model = None  # YOUR CODE HERE
+quantized_model = torch.quantization.quantize_dynamic(
+    fp32_model, {nn.Linear}, dtype=torch.qint8
+)
 
 assert quantized_model is not None, \
     "quantized_model must not be None. Did you call quantize_dynamic()?"
@@ -111,7 +113,7 @@ print("""
 
 # TODO 2: Compute fp32_size_mb.
 #   Sum (p.numel() * 4) for all parameters in fp32_model, then divide by 1e6.
-fp32_size_mb = None  # YOUR CODE HERE → sum(p.numel()*4 for p in fp32_model.parameters()) / 1e6
+fp32_size_mb = sum(p.numel() * 4 for p in fp32_model.parameters()) / 1e6
 
 assert fp32_size_mb is not None, "compute fp32_size_mb"
 assert fp32_size_mb > 0, "fp32_size_mb must be positive"
@@ -148,9 +150,10 @@ x_eval = torch.randn(64, 256)
 # TODO 3: Run both fp32_model and quantized_model on x_eval (using torch.no_grad()).
 #   Compute diff = (fp32_out - q_out.float()).abs().mean().
 #   Store in fp32_out, q_out, and diff.
-fp32_out = None  # YOUR CODE HERE → fp32_model(x_eval)
-q_out    = None  # YOUR CODE HERE → quantized_model(x_eval)
-diff     = None  # YOUR CODE HERE → (fp32_out - q_out.float()).abs().mean()
+with torch.no_grad():
+    fp32_out = fp32_model(x_eval)
+    q_out    = quantized_model(x_eval)
+diff = (fp32_out - q_out.float()).abs().mean()
 
 assert fp32_out is not None, "fp32_out must not be None"
 assert q_out    is not None, "q_out must not be None"

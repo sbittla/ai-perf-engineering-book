@@ -1,0 +1,100 @@
+# II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py
+# status=PASS rc=0 duration=9.6s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 4.3 — Tensor Cores and Kernel Fusion
+============================================================
+  Device: cuda
+
+── Section 1: Tensor Core Speedup ──
+
+  NVIDIA Tensor Cores are dedicated matrix multiply-accumulate units
+  introduced in the Volta architecture (2017).  They perform a 4×4
+  matrix multiply per clock cycle in FP16, with FP32 accumulation.
+
+  For FP16 matrix multiplications, Tensor Cores deliver 8–16× the
+  throughput of standard FP32 CUDA cores.  The speedup is most visible
+  at large matrix sizes (M ≥ 1024) where the matrix tiles fit well and
+  the overhead of launching the operation is negligible.
+
+  TFLOP/s = 2 * M * M * M / (time_s * 1e12)  [for an M×M matmul]
+
+       M     FP32 ms     FP16 ms   Speedup   FP32 TF/s   FP16 TF/s
+  ------  ----------  ----------  --------  ----------  ----------
+     256       0.022       0.021      1.06x        1.53        1.62
+     512       0.031       0.024      1.28x        8.66       11.09
+    1024       0.176       0.095      1.85x       12.18       22.50
+    2048       1.353       0.656      2.06x       12.70       26.18
+    4096      10.292       4.978      2.07x       13.35       27.61
+  ✓ Section 1 passed — Tensor Core FP16 speedup measured
+
+── Section 2: Alignment Requirement ──
+
+  Tensor Cores require matrix dimensions to be multiples of 8 (and
+  ideally 16 or 64) to use their most efficient execution paths.
+  When a dimension is not a multiple of 8, cuBLAS must pad or fall back
+  to a slower path, introducing a measurable overhead.
+
+  We compare M=1024 (multiple of 8) vs M=1000 (not a multiple):
+    1024 = 128 × 8  → optimal Tensor Core tile alignment
+    1000 = 125 × 8  → requires padding, suboptimal
+
+  On some GPUs the difference is small (cuBLAS handles it gracefully);
+  on others it is significant.  We use a generous 1.5x threshold.
+
+  M=1024 (aligned)   : 0.095 ms
+  M=1000 (unaligned) : 0.093 ms
+  Ratio unaligned/aligned: 0.98x
+  ✓ Section 2 passed — alignment requirement verified
+
+── Section 3: BF16 vs FP16 ──
+
+  BFloat16 (BF16) was introduced with the Ampere architecture and is now
+  the recommended training precision for large models on A100/H100.
+
+  BF16 has the SAME exponent range as FP32 (8 bits) but fewer mantissa
+  bits (7 vs 23).  This means BF16 can represent the same magnitude range
+  as FP32 but with less precision — much less likely to overflow during
+  training than FP16 (which has only 5 exponent bits).
+
+  Both FP16 and BF16 activate Tensor Cores on Ampere+ hardware.
+  They should achieve similar TFLOP/s.  Both should be substantially
+  faster than FP32.
+
+  FP32 matmul (M=2048) : 1.216 ms
+  BF16 matmul (M=2048) : 0.591 ms
+  BF16 speedup         : 2.06x vs FP32
+  ✓ Section 3 passed — BF16 achieves Tensor Core performance
+
+── Section 4: Kernel Fusion with torch.compile ──
+
+  Each PyTorch operation launches a separate CUDA kernel.  For a sequence
+  of small operations — matmul → relu → layer_norm — this means three
+  kernel launches, three HBM reads, three HBM writes.
+
+  torch.compile (introduced in PyTorch 2.0) traces the computation graph
+  and uses TorchInductor to generate fused Triton kernels.  The fused
+  kernel reads the input once, applies all operations, and writes the
+  output once.  For memory-bound operations this can give a significant
+  speedup; for compute-bound operations the benefit is smaller.
+
+  We compare unfused (3 separate ops) vs compiled with mode='default'.
+  Note: the first 2-3 calls to the compiled function trigger compilation;
+  warmup is mandatory before timing.
+
+  Warming up compiled function (may take a few seconds)...
+  Unfused (3 ops)       : 0.119 ms
+  Compiled/fused        : 0.230 ms
+  Speedup from compile  : 0.52x  (>1 = faster; can be <1 for small compute-bound ops)
+  ✓ Section 4 passed — torch.compile fusion benchmarked
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 4.3 complete!
+  You now understand Tensor Core speedups, alignment requirements,
+  BF16 vs FP16, and kernel fusion with torch.compile.
+  Next: II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.1_nsys_profiling.py
+============================================================
+
+--- STDERR ---
+W0602 22:26:29.312000 85489 torch/_inductor/utils.py:1731] [0/1] Not enough SMs to use max_autotune_gemm mode

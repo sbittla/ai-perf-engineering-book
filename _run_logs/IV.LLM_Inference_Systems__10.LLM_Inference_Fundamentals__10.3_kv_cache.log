@@ -1,0 +1,130 @@
+# IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_kv_cache.py
+# status=PASS rc=0 duration=2.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 10.2 — KV Cache Memory Management
+============================================================
+  Device: cuda
+
+── Section 1: The KV Cache — Purpose and Contents ──
+
+  In a transformer, each attention layer computes keys (K) and values (V)
+  for every token in the sequence. During decode, the new token attends to
+  ALL previous tokens. Without caching, we would recompute K and V for the
+  full context on every decode step — O(seq_len) work per step per layer.
+
+  The KV cache stores those computed K and V tensors after each step.
+  On the next step, only the new token's K and V need computing; the rest
+  are read from cache.
+
+  KV CACHE CONTENTS per layer per request:
+    Keys   : [n_heads, seq_len, head_dim]  shape
+    Values : [n_heads, seq_len, head_dim]  shape
+
+  Total KV cache bytes for one request:
+    2  (K and V)
+    × n_layers
+    × n_heads
+    × head_dim
+    × seq_len
+    × dtype_bytes
+
+  This formula appears in every LLM memory budget — memorise it.
+
+  ✓ Section 1 passed — KV cache avoids recomputing attention over history
+
+── Section 2: KV Cache Memory Formula ──
+
+  KV_bytes = 2 × n_layers × n_heads × head_dim × seq_len × batch × dtype_bytes
+
+  For Llama-2-7B (FP16):
+    n_layers=32, n_heads=32, head_dim=128, dtype=float16 (2 bytes)
+    Per token per batch element:
+      2 × 32 × 32 × 128 × 2 = 524,288 bytes ≈ 512 KB
+    For 2048-token context: 512 KB × 2048 = 1 GB per request
+
+  TODO 1: Implement kv_cache_bytes() below.
+
+  Llama-7B KV per token : 524,288 bytes = 512 KB
+  Llama-7B KV @ 2048t   : 1.07 GB per request
+  ✓ Section 2 passed — kv_cache_bytes() formula verified
+
+── Section 3: KV Cache Survey Across Models ──
+
+  Different model sizes have dramatically different KV cache requirements.
+  This directly limits how many concurrent requests a GPU can serve.
+
+  dtype=fp16 (2 bytes/element)
+
+  Model               Params      KV@512     KV@2048     KV@4096
+  ────────────────  ────────  ──────────  ──────────  ──────────
+  GPT-2 (117M)          0.1B        19MB        75MB       151MB
+  Llama-2-7B            7.0B       268MB      1.07GB      2.15GB
+  Llama-2-13B          13.0B       419MB      1.68GB      3.36GB
+  Llama-2-70B          70.0B      1.34GB      5.37GB     10.74GB
+  Mistral-7B            7.0B       268MB      1.07GB      2.15GB
+
+  GPT-2 KV@512  : 18.9 MB
+  Llama-7B KV@512: 268.4 MB  (14× larger)
+  ✓ Section 3 passed — larger models have proportionally larger KV caches
+
+── Section 4: VRAM Budget and Concurrency Limits ──
+
+  A GPU has fixed VRAM. After loading model weights, the remaining
+  VRAM is shared between KV caches and activations.
+
+  For Llama-2-7B on a 24 GB GPU (e.g. RTX 4090):
+    Weights (FP16) : 7B × 2 bytes = 14 GB
+    Remaining      : 24 - 14 = 10 GB for KV + activations
+    Activations    : ~1–2 GB (depends on batch size)
+    KV pool        : ~8 GB
+
+  Max concurrent requests at 2048-token context:
+    8 GB / (1 GB per request) = 8 requests
+
+  TODO 3: Implement max_concurrent_requests() below.
+
+  Llama-7B on 24GB GPU (8GB for KV, 2048-tok context):
+    Max concurrent requests: 7
+
+                 GPU  Model          KV pool  Max concurrent (2048t)
+  ──────────────────  ────────────  ────────  ──────────────────────
+           A100 80GB  Llama-7B           64GB                      59
+       RTX 4090 24GB  Llama-7B            8GB                       7
+       RTX 3090 24GB  GPT-2               8GB                       7
+           A10G 24GB  Mistral-7B          8GB                       7
+  ✓ Section 4 passed — VRAM budget directly limits concurrency
+
+── Section 5: KV Cache Growth During a Request ──
+
+  The KV cache for a single request grows linearly with each generated token.
+  If a request starts with a 512-token prompt and generates 512 tokens:
+    Start  : KV cache holds 512 tokens worth of K and V
+    End    : KV cache holds 1024 tokens worth of K and V
+
+  This is why long-context requests are expensive — they consume
+  proportionally more KV cache VRAM than short ones.
+
+  Implication: a request with max_len=4096 could need 8× the KV memory
+  of a request with max_len=512, even if the actual output is 100 tokens.
+  Static allocation (naive) reserves the max up-front. PagedAttention
+  allocates on demand (Exercise 11.3).
+
+  Llama-7B FP16, prompt=512, generate=512:
+   Token #   Context len   KV Cache (MB)
+  ────────  ────────────  ──────────────
+         0           512           268.4
+       128           640           335.5
+       256           768           402.7
+       512          1024           536.9
+
+  KV cache at end = 2× start  (context doubled)
+  ✓ Section 5 passed — KV cache grows linearly with context length
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 10.2 complete!
+  You can now calculate KV cache memory for any model,
+  predict max concurrency, and understand the memory budget.
+  Next: IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.4_inference_metrics.py
+============================================================

@@ -76,7 +76,19 @@ def measure_cpu_bandwidth(size_mb: float) -> float:
     DataLoader pipeline benchmarks.  size_mb should be large enough
     to overflow the L3 cache.
     """
-    pass  # YOUR CODE HERE → return bandwidth_gbs
+    n_elems = int(size_mb * 1e6 / 4)
+    t = torch.randn(n_elems, dtype=torch.float32)
+    for _ in range(3):          # warmup
+        _ = t.clone()
+    bytes_transferred = size_mb * 1e6 * 2   # read src + write dst
+    best_bw = 0.0
+    for _ in range(5):
+        t0 = time.perf_counter()
+        _ = t.clone()
+        elapsed = time.perf_counter() - t0
+        if elapsed > 0:
+            best_bw = max(best_bw, bytes_transferred / elapsed / 1e9)
+    return best_bw
 
 
 bw = measure_cpu_bandwidth(256.0)
@@ -139,7 +151,25 @@ def measure_h2d_bandwidth(size_mb: float, pinned: bool) -> float:
     If CUDA is not available:
       Return -1.0 (caller will skip the assertion).
     """
-    pass  # YOUR CODE HERE → return bandwidth_gbs (or -1.0 if no CUDA)
+    if not torch.cuda.is_available():
+        return -1.0
+    n_elems = int(size_mb * 1e6 / 4)
+    t = torch.randn(n_elems, dtype=torch.float32)
+    if pinned:
+        t = t.pin_memory()
+    for _ in range(3):          # warmup
+        _ = t.to("cuda", non_blocking=pinned)
+    torch.cuda.synchronize()
+    bytes_transferred = size_mb * 1e6
+    best_bw = 0.0
+    for _ in range(10):
+        t0 = time.perf_counter()
+        _ = t.to("cuda", non_blocking=pinned)
+        torch.cuda.synchronize()
+        elapsed = time.perf_counter() - t0
+        if elapsed > 0:
+            best_bw = max(best_bw, bytes_transferred / elapsed / 1e9)
+    return best_bw
 
 
 if DEVICE == "cuda":
@@ -225,7 +255,14 @@ def identify_bottleneck(stage: str) -> str:
       "training_matmul_large_batch" → "Compute (Tensor Cores)"
     For unknown stages, return "unknown".
     """
-    pass  # YOUR CODE HERE → return bottleneck string
+    mapping = {
+        "dataloader_ssd":               "SSD (3–7 GB/s)",
+        "dataloader_dram":              "CPU DRAM (~50 GB/s)",
+        "pcie_transfer":                "PCIe (~20 GB/s)",
+        "llm_decode":                   "GPU HBM (~2 TB/s)",
+        "training_matmul_large_batch":  "Compute (Tensor Cores)",
+    }
+    return mapping.get(stage, "unknown")
 
 
 assert identify_bottleneck("dataloader_ssd") is not None, \
@@ -311,7 +348,7 @@ def compute_ridge_point(peak_tflops: float, bandwidth_gbs: float) -> float:
 
     Return the ridge point as a float (FLOPs per byte).
     """
-    pass  # YOUR CODE HERE → return ridge_flops_per_byte
+    return peak_tflops * 1e12 / (bandwidth_gbs * 1e9)
 
 
 ridge_spec     = compute_ridge_point(312, 2000)

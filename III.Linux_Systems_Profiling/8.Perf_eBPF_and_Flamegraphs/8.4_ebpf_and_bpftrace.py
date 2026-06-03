@@ -108,7 +108,7 @@ def describe_ebpf_tool(name: str) -> str:
         "tcplife":     "Tracks TCP connection lifetimes, IPs, ports, and bytes transferred",
         "funclatency": "Measures latency histogram for any kernel or user-space function",
     }
-    pass  # YOUR CODE HERE → return descriptions.get(name, "unknown tool")
+    return descriptions.get(name, "unknown tool")
 
 
 assert describe_ebpf_tool("opensnoop") is not None, \
@@ -189,7 +189,30 @@ def simulate_file_opens(n_files: int, n_reads: int) -> dict:
       5. Clean up temporary files
       6. Return the result dict
     """
-    pass  # YOUR CODE HERE → return result dict
+    paths = []
+    for _ in range(n_files):
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        tmp.write(b"test_data" * 100)
+        tmp.close()
+        paths.append(tmp.name)
+
+    # Build an access list of length n_reads by cycling through the files,
+    # then shuffle so the access order is random (the worst case for caching).
+    accesses = [paths[i % n_files] for i in range(n_reads)]
+    random.shuffle(accesses)
+
+    for path in accesses:
+        with open(path, "rb") as fh:
+            fh.read()
+
+    for path in paths:
+        os.unlink(path)
+
+    return {
+        "unique_files":   n_files,
+        "total_opens":    n_reads,
+        "opens_per_file": n_reads // n_files,
+    }
 
 
 result = simulate_file_opens(10, 100)
@@ -252,7 +275,17 @@ def build_latency_histogram(latencies_ms: list) -> dict:
 
     All four keys must always be present (use 0 for empty buckets).
     """
-    pass  # YOUR CODE HERE → return histogram dict
+    hist = {"<1ms": 0, "1-5ms": 0, "5-20ms": 0, ">20ms": 0}
+    for ms in latencies_ms:
+        if ms < 1.0:
+            hist["<1ms"] += 1
+        elif ms < 5.0:
+            hist["1-5ms"] += 1
+        elif ms < 20.0:
+            hist["5-20ms"] += 1
+        else:
+            hist[">20ms"] += 1
+    return hist
 
 
 test_latencies = [0.5, 2.0, 8.0, 25.0]
@@ -349,7 +382,16 @@ def categorize_latency(ms: float) -> str:
       ms < 50.0  → "slow"            (HDD, network storage)
       ms >= 50.0 → "disk-bottleneck" (severe — will stall DataLoader)
     """
-    pass  # YOUR CODE HERE → return tier string
+    if ms < 0.5:
+        return "excellent"
+    elif ms < 2.0:
+        return "good"
+    elif ms < 10.0:
+        return "acceptable"
+    elif ms < 50.0:
+        return "slow"
+    else:
+        return "disk-bottleneck"
 
 
 assert categorize_latency(0.3)  == "excellent",        f"0.3ms → 'excellent', got '{categorize_latency(0.3)}'"

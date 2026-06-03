@@ -1,0 +1,42 @@
+# IX.Production_Capstones/28.Production_Serving/28.1_serving_benchmark.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 28.1 - Capstone 5: Production LLM Serving Benchmark
+======================================================================
+
+-- Section 1: Throughput-Latency Knee --
+
+  Sweep offered load and record throughput + p99 TTFT. Throughput climbs until
+  the GPU saturates, then latency rises sharply (the knee). Operate just left
+  of it: max throughput while the latency SLO still holds.
+
+   req/s    tok/s   p99 TTFT
+       5     1800       90 ms
+      10     3600      130 ms
+      20     6500      280 ms  <- knee (meets SLO)
+      30     6900      650 ms  (SLO breached)
+      40     7000     1400 ms  (SLO breached)
+  [check] operating point = 20 req/s, 6500 tok/s
+
+-- Section 2: Cost Per Million Tokens --
+
+  cost/token = GPU $/hr / tokens-per-hour. Running at the knee amortizes the
+  fixed GPU rent over far more tokens than running at low load.
+
+  at knee  (6500 tok/s): $0.128 / 1M tokens
+  at low   (1800 tok/s): $0.463 / 1M tokens (3.6x worse)
+  [check] running at the knee cuts cost/token several-fold
+
+-- Section 3: Cost Across GPU Prices --
+  L40S  ($1.0/hr): $0.043 / 1M tokens
+  A100  ($2.0/hr): $0.085 / 1M tokens
+  H100  ($3.0/hr): $0.128 / 1M tokens
+  [check] cost/token scales with hourly price at equal throughput
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise 28.1 complete
+  You found the SLO-respecting throughput knee and reported cost per
+  million tokens across operating points and GPU prices.
+======================================================================

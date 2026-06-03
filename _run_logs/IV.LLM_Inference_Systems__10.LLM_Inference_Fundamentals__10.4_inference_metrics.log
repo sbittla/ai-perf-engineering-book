@@ -1,0 +1,128 @@
+# IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.4_inference_metrics.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 10.3 — LLM Inference Metrics
+============================================================
+
+── Section 1: Inference Metrics Vocabulary ──
+
+  TTFT  (Time To First Token)
+    Wall-clock time from request arrival to first token delivered.
+    Equals prefill time for a single request.
+    SLO example: < 500ms for interactive chat.
+
+  TPS  (Tokens Per Second)  —  also called generation speed
+    Number of new tokens produced per second during decode.
+    Dictates how long a response takes to stream to the user.
+    SLO example: > 30 tok/s to feel faster than human reading speed.
+
+  E2E Latency  (End-to-End latency)
+    TTFT + decode time for all requested tokens.
+    = TTFT + (n_tokens / TPS) × 1000 ms
+
+  Throughput
+    System-level metric: total tokens/s across ALL concurrent requests.
+    High throughput ≠ low latency — they often trade against each other.
+
+  P50 / P99 percentiles
+    P50 (median): 50% of requests complete within this time.
+    P99: 99% of requests complete within this time.
+    Averages hide tail latency; SLOs are typically written as P99.
+
+  ✓ Section 1 passed — commit these definitions to memory
+
+── Section 2: Percentile Latency — P50 vs P99 ──
+
+  In production, a small fraction of requests have very long prompts
+  or request many tokens. These long-tail requests inflate average latency
+  and mask the experience of the majority.
+
+  Example SLO: "P99 TTFT < 2000ms"
+  This means: 99% of requests get their first token within 2 seconds.
+  1% of requests may exceed this — which is acceptable for rare edge cases.
+
+  TODO 1: Implement percentile(values, pct) below.
+  pct=0.50 → P50, pct=0.99 → P99.
+
+  Simulated TTFT over 1000 requests:
+    Mean :    173.5 ms  ← average (misleading!)
+    P50  :    106.3 ms  ← most users see this
+    P99  :   1549.1 ms  ← SLO target
+    P99 / Mean ratio: 8.9×  (P99 much worse than avg)
+  ✓ Section 2 passed — always report P99, not just mean latency
+
+── Section 3: End-to-End Latency Calculation ──
+
+  E2E latency for a single request:
+    e2e_ms = ttft_ms + (n_tokens_generated / tps) * 1000
+
+  For a chat interface: user waits e2e_ms before they see the full response.
+  For a streaming interface: user waits ttft_ms before seeing ANY text.
+
+  TODO 2: Implement e2e_latency_ms() below.
+
+  Scenario                        TTFT    TPS   Tokens    E2E (ms)
+  ────────────────────────────  ──────  ─────  ───────  ──────────
+  Fast GPU, short response         100     50       30         700
+  Fast GPU, long response          100     50      300        6100
+  Slow server, short               500     20       30        2000
+  Slow server, long                500     20      300       15500
+  ✓ Section 3 passed — e2e latency = TTFT + decode time
+
+── Section 4: Throughput vs Latency Tradeoff ──
+
+  Increasing batch size improves THROUGHPUT (tokens/sec across all requests)
+  because the GPU is better utilized. But it also increases TTFT for each
+  individual request, because requests must wait for others in the batch.
+
+  This is the fundamental tradeoff in LLM serving:
+    Small batch → low latency, low GPU utilization
+    Large batch → high GPU utilization, high latency
+
+  The optimal operating point depends on your SLO:
+    • Latency-sensitive API: keep batch small (TTFT < 200ms)
+    • Throughput-maximising offline: use large batch (maximise tok/s)
+
+  Here we simulate a simple queueing model.
+
+  Requests=64, prefill=50ms/req, decode=2ms/tok, 100 tokens
+
+   Batch    Throughput    P50 TTFT    P99 TTFT     P50 E2E
+  ──────  ────────────  ──────────  ──────────  ──────────
+       1         400/s          50          50         250
+       4        1000/s         200         200         400
+       8        1333/s         400         400         600
+      16        1600/s         800         800        1000
+      32        1778/s        1600        1600        1800
+
+  Throughput: 400 → 1778 tok/s  (batch 1 → 32)
+  P99 TTFT:  50 → 1600 ms  (latency penalty)
+  ✓ Section 4 passed — larger batch trades latency for throughput
+
+── Section 5: SLO Compliance Check ──
+
+  An SLO (Service Level Objective) is a target for a specific percentile.
+  Example: "P99 TTFT < 500ms AND P99 E2E < 5000ms"
+
+  TODO 3: Implement check_slo() that returns True if all requests satisfy
+  the given SLO, False otherwise.
+
+  SLO targets: P99 TTFT < 600ms, P99 E2E < 3000ms
+
+   Batch    P99 TTFT    TTFT OK     P99 E2E    E2E OK
+  ──────  ──────────  ─────────  ──────────  ────────
+       1          50          ✓         250         ✓
+       4         200          ✓         400         ✓
+       8         400          ✓         600         ✓
+      16         800          ✗        1000         ✓
+      32        1600          ✗        1800         ✓
+  ✓ Section 5 passed — SLO compliance verified per batch size
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 10.3 complete!
+  You can compute TTFT, TPS, E2E latency, P50/P99,
+  and reason about the throughput-latency tradeoff.
+  Next: IV.LLM_Inference_Systems/11.Batching_Strategies/11.1_static_batching.py
+============================================================

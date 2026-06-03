@@ -37,15 +37,19 @@ print("""
 """)
 
 # TODO 1: Create a Linear layer — 8 inputs, 4 outputs, no bias
-linear = None  # YOUR CODE HERE
+linear = nn.Linear(8, 4, bias=False)
 
 # TODO 2: Create a 3-layer MLP with nn.Sequential:
 #   Linear(16, 64) → ReLU → Linear(64, 32) → ReLU → Linear(32, 10)
-mlp = None  # YOUR CODE HERE
+mlp = nn.Sequential(
+    nn.Linear(16, 64), nn.ReLU(),
+    nn.Linear(64, 32), nn.ReLU(),
+    nn.Linear(32, 10),
+)
 
 # TODO 3: Count total trainable parameters in mlp
 #   Formula: each Linear(M, N) with bias has M*N + N parameters
-n_params = None  # YOUR CODE HERE
+n_params = sum(p.numel() for p in mlp.parameters())
 
 x   = torch.randn(4, 16)   # batch of 4, feature dim 16
 out = mlp(x)
@@ -77,13 +81,13 @@ class ResidualBlock(nn.Module):
     def __init__(self, dim: int):
         super().__init__()
         # TODO 4: Define self.linear as nn.Linear(dim, dim)
-        self.linear = None  # YOUR CODE HERE
+        self.linear = nn.Linear(dim, dim)
         # TODO 5: Define self.norm as nn.LayerNorm(dim)
-        self.norm = None  # YOUR CODE HERE
+        self.norm = nn.LayerNorm(dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # TODO 6: Return self.norm(x + self.linear(x))
-        pass  # YOUR CODE HERE
+        return self.norm(x + self.linear(x))
 
 dim   = 32
 block = ResidualBlock(dim).to(DEVICE)
@@ -125,12 +129,12 @@ mdl = ModelWithDropout()
 x   = torch.ones(100, 10)
 
 # TODO 7: Switch mdl to TRAIN mode (model.train())
-pass  # YOUR CODE HERE
+mdl.train()
 with torch.no_grad():
     out_train = mdl(x)
 
 # TODO 8: Switch mdl to EVAL mode (model.eval())
-pass  # YOUR CODE HERE
+mdl.eval()
 with torch.no_grad():
     out_eval1 = mdl(x)
     out_eval2 = mdl(x)
@@ -160,17 +164,17 @@ net = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, 2))
 net.eval()
 
 # TODO 9: Save net's state_dict to "test_model.pt"
-pass  # YOUR CODE HERE  → torch.save(...)
+torch.save(net.state_dict(), "test_model.pt")
 
 # TODO 10: Create net2 with the SAME architecture
-net2 = None  # YOUR CODE HERE
+net2 = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, 2))
 
 # TODO 11: Load saved weights into net2
-pass  # YOUR CODE HERE  → net2.load_state_dict(...)
+net2.load_state_dict(torch.load("test_model.pt"))
 net2.eval()
 
 # TODO 12: Create a test input of shape (2, 4)
-x_test = None  # YOUR CODE HERE
+x_test = torch.randn(2, 4)
 
 with torch.no_grad():
     out_orig   = net(x_test)
@@ -193,11 +197,11 @@ print("""
 net3 = nn.Linear(8, 4)
 
 # TODO 13: Move net3 to DEVICE in-place (net3 = net3.to(DEVICE))
-net3 = None  # YOUR CODE HERE
+net3 = net3.to(DEVICE)
 
 # TODO 14: Check every parameter is on DEVICE
 #   all(p.device.type == DEVICE for p in net3.parameters())
-all_on_device = None  # YOUR CODE HERE
+all_on_device = all(p.device.type == DEVICE for p in net3.parameters())
 
 x_dev   = torch.randn(2, 8, device=DEVICE)
 out_dev = net3(x_dev)
@@ -227,7 +231,7 @@ class BlockWithBuffer(nn.Module):
 
         # Register a fixed positional embedding as a buffer
         # TODO 15: Use self.register_buffer("pos", torch.zeros(max_seq, dim))
-        pass  # YOUR CODE HERE
+        self.register_buffer("pos", torch.zeros(max_seq, dim))
 
         # This is a plain tensor — it will NOT move with model.to(device)
         self.scale = torch.tensor(1.0)  # intentionally wrong
@@ -267,13 +271,13 @@ big_model = nn.Sequential(
 )
 
 # TODO 16: Count total parameters (sum of p.numel() for all parameters)
-total_params = None  # YOUR CODE HERE
+total_params = sum(p.numel() for p in big_model.parameters())
 
 # TODO 17: Count trainable parameters (same, but only where p.requires_grad)
-trainable_params = None  # YOUR CODE HERE
+trainable_params = sum(p.numel() for p in big_model.parameters() if p.requires_grad)
 
 # TODO 18: Compute model size in MB assuming float32 (4 bytes per element)
-model_size_mb = None  # YOUR CODE HERE
+model_size_mb = total_params * 4 / (1024 ** 2)
 
 assert total_params    == trainable_params, "all params should be trainable by default"
 assert total_params    > 0,                 "total_params should be > 0"

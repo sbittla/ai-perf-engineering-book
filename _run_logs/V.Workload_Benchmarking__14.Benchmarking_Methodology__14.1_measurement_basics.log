@@ -1,0 +1,182 @@
+# V.Workload_Benchmarking/14.Benchmarking_Methodology/14.1_measurement_basics.py
+# status=PASS rc=0 duration=6.3s
+======================================================================
+--- STDOUT ---
+============================================================
+SECTION 1: Why Measurement Is Hard
+============================================================
+
+Three fundamental problems with measuring AI system performance:
+
+Problem 1: Dynamic Systems
+  Modern hardware adapts to workload in real time.
+  CPU: frequency scaling (Intel Turbo Boost / AMD Precision Boost)
+  GPU: clock boost (base 1410 MHz → boost 1980 MHz on RTX 4090)
+  DRAM: power management states (C-states, P-states)
+
+  Consequence: your first measurement is NOT representative.
+  The CPU may be at base clock; your second run will be faster.
+
+Problem 2: Warmup Effects
+  cuDNN auto-tuning: the first forward pass benchmarks 5-20 kernel
+  variants for your specific tensor shapes and selects the fastest.
+  This takes 200-2000 ms. Run 1 is slow; all subsequent runs are fast.
+
+  Python JIT: PyTorch 2.0+ torch.compile() traces and compiles your
+  model on first call. Run 1 compiles; runs 2+ execute compiled code.
+
+  L2/L3 cache warmup: data repeatedly accessed moves from DRAM
+  into cache. Run 1 is cache-cold; later runs are cache-warm.
+
+Problem 3: Observer Effect
+  Profiling changes timing. Adding torch.profiler() adds 10-30%
+  overhead from event recording. CUDA event timing is more accurate
+  than CPU wall-clock for GPU kernels.
+
+Ground Rule: always discard the first N runs as warmup,
+then report P50 and P99 over at least 50 stable samples.
+
+============================================================
+SECTION 2: Warmup Effect Demo (CPU-based)
+============================================================
+   Run     Time (ms)  Note
+  ----  ------------  ------------------------------
+     1         4.080  ← first run (cache cold)
+     2         3.813  ← warming up
+     3         3.815  ← warming up
+     4         3.719  
+     5         3.671  
+     6         3.601  
+     7         3.608  
+     8         3.666  
+     9         3.931  
+    10         3.778  
+    11         3.987  
+    12         3.693  
+    13         4.020  
+    14         3.670  
+    15         3.871  
+    16         3.807  
+    17         4.041  
+    18         3.602  
+    19         3.887  
+    20         3.630  ← stable
+
+  First run:   4.080 ms
+  Steady P50:  3.778 ms
+  Difference:  8.0% slower on run 1
+
+============================================================
+SECTION 3: Mean vs Percentiles — Why the Mean Lies
+============================================================
+
+Scenario: a model serving system processes requests with these latencies (ms):
+  [10, 10, 10, 10, 10, 10, 10, 10, 10, 1000]
+  (9 fast requests, 1 slow due to a garbage collection pause)
+
+  Mean   = (9 × 10 + 1000) / 10 = 109 ms  ← MISLEADING
+  P50    = 10 ms                            ← typical user experience
+  P90    = 10 ms                            ← 90% of users see this
+  P99    = 1000 ms                          ← 1 in 100 users sees this
+
+The mean obscures the tail. In a system serving 1,000 requests/second,
+P99 means 10 users per second are getting 100× worse service than average.
+
+Simulated distribution: 990 fast (50±5 ms) + 10 slow (800±50 ms):
+  Mean :     57.4 ms  ← inflated by tail
+  P50  :     50.0 ms  ← typical user
+  P90  :     56.8 ms
+  P95  :     59.1 ms
+  P99  :     68.8 ms  ← worst 1%
+
+Rule: always report at least P50 and P99. Never report only the mean.
+
+============================================================
+SECTION 4: Coefficient of Variation (CV)
+============================================================
+
+CV = std_dev / mean × 100%
+
+CV tells you how noisy your benchmark is relative to its own magnitude.
+It is unit-free, so you can compare stability across different workloads.
+
+  CV < 2%   — excellent, your result is reliable
+  CV 2-5%   — acceptable for most benchmarks
+  CV 5-10%  — something is variable (thermal throttle? background load?)
+  CV > 10%  — do not report this result, find and fix the noise source
+
+  Scenario                                     Mean   StdDev     CV % Verdict
+  ---------------------------------------- -------- -------- -------- ---------------
+  Stable (thermal steady state)                50.1      0.1      0.2              OK
+  Mild variability (mixed load)                50.5      3.0      6.0           check
+  Noisy (thermal throttling)                   55.0     12.9     23.5           NOISY
+  Bimodal (warmup contamination)               65.6     47.2     72.0         warmup!
+
+============================================================
+SECTION 5: Amdahl's Law — What Speedup Is Actually Possible?
+============================================================
+
+Amdahl's Law (1967): if you speed up a fraction P of your workload by S×,
+the overall end-to-end speedup is:
+
+  Speedup = 1 / ((1 - P) + P/S)
+
+Where:
+  P = fraction of time spent on the part you are optimizing
+  S = speedup of that specific part
+  (1 - P) = the part you are NOT changing (serial fraction)
+
+Example: if the GPU kernel runs 10× faster but only occupies 80% of runtime,
+  overall speedup = 1 / (0.2 + 0.8/10) = 1 / 0.28 = 3.57×  (not 10×!)
+
+GPU kernel speedup assumed: 4×
+
+  GPU fraction (P)       Serial fraction (1-P)    End-to-end speedup
+  ---------------------- ------------------------ --------------------
+      20%                    80%                      1.18×
+      50%                    50%                      1.60×
+      80%                    20%                      2.50×
+      90%                    10%                      3.08×
+      95%                     5%                      3.48×
+      99%                     1%                      3.88×
+     100%                     0%                      4.00×
+
+Key lesson: optimizing the GPU kernel matters only if the GPU is the
+bottleneck. If DataLoader occupies 50% of wall time, a 10× GPU speedup
+delivers only 1.67× end-to-end improvement.
+
+============================================================
+SECTION 6: Benchmark Type Comparison
+============================================================
+  Type                         Scope                        Strength                       Weakness
+  ---------------------------- ---------------------------- ------------------------------ -----------------------------------
+  Microbenchmark               Single kernel or op          Isolates one variable          Not representative of full workload
+  End-to-end synthetic         Full model, synthetic data   Repeatable, no data prep       May not match real input distribution
+  Prod trace replay            Real request log replayed    Most realistic                 Hard to reproduce, privacy concerns
+  Parametrised replay          Synthetic data, real shape distribution Reproducible + realistic       Requires shape analysis upfront
+
+============================================================
+SECTION 7: A Rigorous Timing Harness
+============================================================
+
+Every benchmark result you report must include:
+  1. Measurement method (CUDA events / CPU wall clock / perf counters)
+  2. Warmup iterations (how many runs discarded before recording)
+  3. Sample count (how many stable measurements taken)
+  4. P50 and P99 (not just mean)
+  5. CV% (to confirm the benchmark was stable)
+
+Below is the harness pattern used throughout this book:
+
+Running GPU timing harness demo...
+  Operation   : torch.mm(1024, 1024)
+  Warmup runs : 10
+  Sample runs : 50
+  Measurement : CUDA events (device-side, not CPU wall clock)
+  Mean        : 0.242 ms
+  P50         : 0.238 ms
+  P99         : 0.437 ms
+  CV          : 13.37%  ← check variability
+
+Explore next: V.Workload_Benchmarking/14.Benchmarking_Methodology/
+              V.Workload_Benchmarking/15.Porting_a_Workload/

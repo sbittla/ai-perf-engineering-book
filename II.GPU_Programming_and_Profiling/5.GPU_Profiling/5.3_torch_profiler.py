@@ -13,6 +13,7 @@ All sections must print ✓.
 """
 
 import os
+import tempfile
 import torch
 import torch.nn as nn
 from torch.profiler import (
@@ -61,7 +62,9 @@ x = torch.randn(64, 512, device=DEVICE)
 # TODO 1: Build the activities list.
 #   Always include ProfilerActivity.CPU.
 #   If DEVICE == "cuda", also add ProfilerActivity.CUDA.
-activities = None  # YOUR CODE HERE → [ProfilerActivity.CPU] or [CPU, CUDA]
+activities = [ProfilerActivity.CPU]
+if DEVICE == "cuda":
+    activities.append(ProfilerActivity.CUDA)
 
 assert activities is not None, "activities list must not be None"
 assert len(activities) >= 1,   "activities must have at least one entry"
@@ -110,10 +113,11 @@ with profile(
     record_shapes=False,
 ) as prof:
     for step in range(TOTAL_STEPS):
-        # YOUR CODE HERE: forward pass with torch.no_grad() and model(x)
-        pass  # replace this with the forward pass
-        # YOUR CODE HERE: prof.step()
-        pass  # replace this with prof.step()
+        # Forward pass with torch.no_grad() and model(x)
+        with torch.no_grad():
+            model(x)
+        # Advance the profiler schedule
+        prof.step()
 
 # Collect events for assertion
 if DEVICE == "cuda":
@@ -147,7 +151,7 @@ print("""
     tensorboard --logdir /tmp/tb_logs
 """)
 
-TRACE_PATH = "/tmp/pt2_chrome_trace.json"
+TRACE_PATH = os.path.join(tempfile.gettempdir(), "pt2_chrome_trace.json")
 
 # Run a fresh profile to get a trace we can export
 with profile(activities=activities, record_shapes=True) as prof2:
@@ -157,7 +161,7 @@ with profile(activities=activities, record_shapes=True) as prof2:
 
 # TODO 3: Export the Chrome trace to TRACE_PATH.
 #   Call prof2.export_chrome_trace(TRACE_PATH)
-pass  # YOUR CODE HERE → prof2.export_chrome_trace(TRACE_PATH)
+prof2.export_chrome_trace(TRACE_PATH)
 
 assert os.path.exists(TRACE_PATH), \
     f"Chrome trace file not found at {TRACE_PATH}. Did you call export_chrome_trace()?"
@@ -204,13 +208,17 @@ with profile(
 #     avgs = prof3.key_averages()
 #     attr = "self_cuda_time_total" if DEVICE == "cuda" else "self_cpu_time_total"
 #     top_op = max(avgs, key=lambda e: getattr(e, attr, 0))
-top_op = None  # YOUR CODE HERE
+avgs = prof3.key_averages()
+# PyTorch 2.6+ renamed the per-event CUDA timing attributes to the
+# device-agnostic "*_device_time_total"; older releases used "*_cuda_time_total".
+attr = "self_device_time_total" if DEVICE == "cuda" else "self_cpu_time_total"
+top_op = max(avgs, key=lambda e: getattr(e, attr, 0))
 
 assert top_op is not None, "top_op must not be None — check your key_averages() call"
 
 if DEVICE == "cuda":
-    self_ms = top_op.self_cuda_time_total / 1000  # microseconds → ms
-    total_ms = top_op.cuda_time_total / 1000
+    self_ms = top_op.self_device_time_total / 1000  # microseconds → ms
+    total_ms = top_op.device_time_total / 1000
     print(f"  Top op by self CUDA time: {top_op.key}")
     print(f"    Self CUDA time  : {self_ms:.3f} ms")
     print(f"    Total CUDA time : {total_ms:.3f} ms")

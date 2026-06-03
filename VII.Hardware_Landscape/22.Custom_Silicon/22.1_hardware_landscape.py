@@ -60,7 +60,7 @@ for k, v in GAUDI3_SPECS.items():
 # TODO 1: Compute Gaudi 3 roofline ridge point.
 #   ridge = bf16_tflops * 1000 / bw_gbs
 #   (BF16 peak = 1,835 TFLOP/s; HBM BW = 3.7 TB/s = 3,700 GB/s)
-gaudi3_ridge = None  # YOUR CODE HERE
+gaudi3_ridge = 1_835 * 1000 / 3_700
 
 assert gaudi3_ridge is not None, "compute gaudi3_ridge"
 print(f"\n  Gaudi 3 ridge point: {gaudi3_ridge:.0f} FLOP/byte")
@@ -154,7 +154,7 @@ for chip, yr, cpu, gpu, mem, bw, ane in APPLE_CHIPS:
 
 # TODO 2: Llama 3 70B FP16 requires ~140 GB. Does it fit in M4 Max 128 GB config?
 #   A float: fits_llama70_fp16_m4max = (140 <= 128)
-fits_llama70_fp16_m4max = None  # YOUR CODE HERE → 140 <= 128
+fits_llama70_fp16_m4max = (140 <= 128)
 
 assert fits_llama70_fp16_m4max is not None, "compute fits_llama70_fp16_m4max"
 assert fits_llama70_fp16_m4max is False, "Llama 70B FP16 (140 GB) exceeds M4 Max 128 GB"
@@ -287,7 +287,7 @@ for k, v in CXL_SPECS.items():
 #   How many times faster is CXL than NVMe for KV swapping?
 cxl_bw_gbs  = 100.0
 nvme_bw_gbs = 7.0
-cxl_vs_nvme = None  # YOUR CODE HERE → cxl_bw_gbs / nvme_bw_gbs
+cxl_vs_nvme = cxl_bw_gbs / nvme_bw_gbs
 
 assert cxl_vs_nvme is not None, "compute cxl_vs_nvme"
 print(f"\n  CXL for KV swap: {cxl_vs_nvme:.0f}× faster than NVMe SSD "

@@ -1,0 +1,30 @@
+# I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py
+# status=PASS rc=0 duration=2.5s
+======================================================================
+--- STDOUT ---
+=======================================================
+  Exercise 01 — Tensors & Operations
+=======================================================
+
+── Section 1: Creating Tensors ──
+  ✓ Section 1 passed
+
+── Section 2: Shape Operations ──
+  ✓ Section 2 passed
+
+── Section 3: Math Operations ──
+  ✓ Section 3 passed
+
+── Section 4: Indexing & Slicing ──
+  ✓ Section 4 passed
+
+── Section 5: Device Movement ──
+  ✓ Section 5 passed  (device=cuda)
+
+── Section 6: Dtypes & Memory ──
+  ✓ Section 6 passed
+
+=======================================================
+  ALL SECTIONS PASSED — Exercise 01 complete!
+  Next: I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py
+=======================================================

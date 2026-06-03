@@ -75,7 +75,8 @@ if DEVICE == "cuda":
         # TODO 1: Compute bandwidth in GB/s.
         #   bytes_read = n_idx * 4  (each indexed element is 4 bytes)
         #   bw_gbs = bytes_read / (ms_per_iter / 1000) / 1e9
-        bw_gbs = None  # YOUR CODE HERE → bytes_read / (ms_per_iter / 1000) / 1e9
+        bytes_read = n_idx * 4
+        bw_gbs = bytes_read / (ms_per_iter / 1000) / 1e9
 
         assert bw_gbs is not None, "compute bw_gbs"
         bw_results[stride] = bw_gbs
@@ -112,7 +113,7 @@ print("""
 
 if DEVICE == "cuda":
     props = torch.cuda.get_device_properties(0)
-    l2_size_mb = props.l2_cache_size / 1e6
+    l2_size_mb = props.L2_cache_size / 1e6
     print(f"  L2 cache size: {l2_size_mb:.0f} MB (from device properties)\n")
 
     sizes_mb = [0.01, 0.1, 1.0, 10.0, 64.0, 256.0]
@@ -142,7 +143,12 @@ if DEVICE == "cuda":
         #   If size_mb < 1.0: "L1/L2 hit"
         #   elif size_mb < l2_size_mb: "L2 hit"
         #   else: "DRAM"
-        classification = None  # YOUR CODE HERE → one of: "L1/L2 hit", "L2 hit", "DRAM"
+        if size_mb < 1.0:
+            classification = "L1/L2 hit"
+        elif size_mb < l2_size_mb:
+            classification = "L2 hit"
+        else:
+            classification = "DRAM"
 
         assert classification is not None and len(classification) > 0, \
             "classification must not be empty"
@@ -183,8 +189,21 @@ if DEVICE == "cuda":
     # TODO 3: Time both access patterns with CUDA events.
     #   row_major_ms: time 128 iterations of M_mat[i % 1024, :].sum()
     #   col_major_ms: time 128 iterations of M_mat[:, i % 1024].sum()
-    row_major_ms = None  # YOUR CODE HERE → CUDA event timing, 128 iters
-    col_major_ms = None  # YOUR CODE HERE → CUDA event timing, 128 iters
+    s1, e1 = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+    s1.record()
+    for i in range(128):
+        _ = M_mat[i % 1024, :].sum()
+    e1.record()
+    torch.cuda.synchronize()
+    row_major_ms = s1.elapsed_time(e1)
+
+    s2, e2 = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+    s2.record()
+    for i in range(128):
+        _ = M_mat[:, i % 1024].sum()
+    e2.record()
+    torch.cuda.synchronize()
+    col_major_ms = s2.elapsed_time(e2)
 
     assert row_major_ms is not None and row_major_ms > 0, "row_major_ms must be > 0"
     assert col_major_ms is not None and col_major_ms > 0, "col_major_ms must be > 0"
@@ -226,7 +245,7 @@ if DEVICE == "cuda":
     print(f"  B_transposed.is_contiguous(): {B_transposed.is_contiguous()}")
 
     # TODO 4: Call .contiguous() on B_transposed to produce B_cont.
-    B_cont = None  # YOUR CODE HERE → B_transposed.contiguous()
+    B_cont = B_transposed.contiguous()
 
     assert B_cont is not None, "B_cont must not be None"
     assert B_cont.is_contiguous(), "B_cont.is_contiguous() must return True"
@@ -263,9 +282,9 @@ if DEVICE == "cuda":
     print(f"  (results may be similar — modern cuBLAS handles both paths)")
 else:
     B_transposed = torch.randn(512, 512).t()
-    B_cont = None  # YOUR CODE HERE → B_transposed.contiguous()
+    B_cont = B_transposed.contiguous()
     # On CPU we still verify the TODO
-    assert B_cont is None or True, "CPU fallback"
+    assert B_cont.is_contiguous(), "CPU fallback"
     print("  (CUDA not available — verifying contiguous() logic on CPU)")
     B_cpu = torch.randn(512, 512).t()
     B_cont_cpu = B_cpu.contiguous()

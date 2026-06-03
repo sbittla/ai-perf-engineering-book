@@ -58,21 +58,31 @@ class SlowDataset(Dataset):
         time.sleep(0.0005)  # 0.5ms simulated file I/O
         return torch.randn(64), torch.randint(0, 10, (1,)).squeeze()
 
-dataset = SlowDataset(n=320)  # 320 items, 40 batches of 8
+dataset = SlowDataset(n=400)  # 400 items, 50 batches of 8
 
 single_loader = DataLoader(dataset, batch_size=8, num_workers=0, shuffle=False)
 multi_loader  = DataLoader(dataset, batch_size=8, num_workers=4, shuffle=False,
                            persistent_workers=True)
 
-N_BATCHES = 20
+# Time enough batches that the one-time worker-spawn cost is amortized.
+# Over too few batches, spawning 4 worker processes can dominate wall time and
+# mask the parallelism win (the multi-worker speedup then looks much smaller).
+N_BATCHES = 40
 
 # TODO 1: Implement the timing loop for both DataLoaders.
 #   For each loader, iterate over N_BATCHES batches and measure total wall time.
 #   single_worker_ms = wall time for single_loader (ms)
 #   multi_worker_ms  = wall time for multi_loader  (ms)
 
-single_worker_ms = None  # YOUR CODE HERE
-multi_worker_ms  = None  # YOUR CODE HERE
+def _time_loader(loader, n_batches):
+    t0 = time.perf_counter()
+    for i, _ in enumerate(loader):
+        if i + 1 >= n_batches:
+            break
+    return (time.perf_counter() - t0) * 1000
+
+single_worker_ms = _time_loader(single_loader, N_BATCHES)
+multi_worker_ms  = _time_loader(multi_loader, N_BATCHES)
 
 if single_worker_ms is None or multi_worker_ms is None:
     print("  (TODO 1 not completed — using simulated values)")
@@ -135,8 +145,19 @@ pinned_batch  = next(iter(pinned_loader))
 #   regular_ms: time regular_batch.to(DEVICE) with GPU sync
 #   pinned_ms:  time pinned_batch.to(DEVICE, non_blocking=True) with GPU sync
 
-regular_ms = None  # YOUR CODE HERE
-pinned_ms  = None  # YOUR CODE HERE
+regular_ms = None
+pinned_ms  = None
+if DEVICE == "cuda":
+    torch.cuda.synchronize()
+    t0 = time.perf_counter()
+    _ = regular_batch.to(DEVICE)
+    torch.cuda.synchronize()
+    regular_ms = (time.perf_counter() - t0) * 1000
+
+    t0 = time.perf_counter()
+    _ = pinned_batch.to(DEVICE, non_blocking=True)
+    torch.cuda.synchronize()
+    pinned_ms = (time.perf_counter() - t0) * 1000
 
 if DEVICE == "cuda":
     if regular_ms is None or pinned_ms is None:
@@ -197,8 +218,8 @@ pf4_loader = DataLoader(io_ds, batch_size=4, num_workers=2,
 N_IO = 20  # batches to time
 
 # TODO 3: Time 20 batches for each prefetch_factor.
-prefetch1_ms = None  # YOUR CODE HERE
-prefetch4_ms = None  # YOUR CODE HERE
+prefetch1_ms = _time_loader(pf1_loader, N_IO)
+prefetch4_ms = _time_loader(pf4_loader, N_IO)
 
 if prefetch1_ms is None or prefetch4_ms is None:
     print("  (TODO 3 not completed — using simulated values)")
@@ -258,8 +279,16 @@ bad_ms = (time.perf_counter() - t_bad_start) * 1000
 #   call .item() ONCE at the end.
 #   Measure the wall time in good_ms.
 
-# YOUR CODE HERE: implement good version
-good_ms = None  # YOUR CODE HERE
+t_good_start = time.perf_counter()
+good_total = torch.zeros((), device=DEVICE)
+for _ in range(STEPS_ITEM):
+    out = model_item(x_item)
+    loss_good = out.sum()
+    good_total += loss_good.detach()   # no GPU sync
+_ = good_total.item()                  # single sync at the end
+if DEVICE == "cuda":
+    torch.cuda.synchronize()
+good_ms = (time.perf_counter() - t_good_start) * 1000
 
 if good_ms is None:
     print("  (TODO 4 not completed — using reference timing)")

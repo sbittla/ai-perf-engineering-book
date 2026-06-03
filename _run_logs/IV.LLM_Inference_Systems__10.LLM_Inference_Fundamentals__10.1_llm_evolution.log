@@ -1,0 +1,178 @@
+# IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.1_llm_evolution.py
+# status=PASS rc=0 duration=1.6s
+======================================================================
+--- STDOUT ---
+============================================================
+SECTION 1: The Sequence Problem
+============================================================
+
+Natural language is sequential — words depend on what came before.
+
+  "The trophy didn't fit in the suitcase because it was too big."
+
+  'it' refers to the trophy, not the suitcase.
+  A model must look ~10 tokens back to resolve this correctly.
+
+  "The bank on the river bank charged interest on my bank account."
+
+  'bank' appears 3 times with 3 different meanings. Context determines
+  which meaning is correct at each position.
+
+The challenge for machine learning:
+  1. Variable-length sequences (2 words to 100,000 words)
+  2. Long-range dependencies (pronoun 500 tokens after its antecedent)
+  3. Parallel training (can't wait for word N to process word N+1)
+
+============================================================
+SECTION 2: RNNs — Good Idea, Wrong Execution
+============================================================
+
+Recurrent Neural Networks (RNNs, 1986) process sequences step by step:
+
+  h_0 → [RNN cell] → h_1 → [RNN cell] → h_2 → ... → h_N → output
+
+  h_t = tanh(W_h * h_{t-1} + W_x * x_t + b)
+
+The hidden state h_t is supposed to carry everything the model needs
+to remember about the past. In practice, two problems arise:
+
+Problem 1: Vanishing Gradients
+  During backpropagation through 512 time steps, the gradient is
+  multiplied by the same weight matrix 512 times.
+  If max eigenvalue of W < 1: gradient → 0  (vanishes, model forgets)
+  If max eigenvalue of W > 1: gradient → ∞  (explodes, training crashes)
+
+  LSTMs (1997) add gates to control what to remember and what to forget.
+  They partially fix vanishing gradients but not the sequential constraint.
+
+Problem 2: Sequential Computation
+  Step t cannot begin until step t-1 finishes.
+  On a GPU with 6,912 CUDA cores, you are using ONE of them per step.
+  GPU utilization during RNN training: typically 5-10%.
+
+  For a 1,000-token sequence with a 1,024-dim hidden state:
+    RNN:         1,000 sequential matrix-vector multiplications
+    Transformer: 1 parallel matrix-matrix multiplication (all tokens at once)
+
+Concrete GPU utilization numbers:
+  Typical RNN training GPU utilization  :  5-10%
+  Typical Transformer training GPU util : 40-90%
+  Speedup from parallelism alone        : 5-18×
+
+============================================================
+SECTION 3: Attention — Learning What to Look At
+============================================================
+
+Bahdanau et al. (2014) introduced attention for neural machine translation.
+Instead of encoding a whole sentence into one vector, use ALL encoder states
+and learn to weight them differently for each decoder step.
+
+  context_t = Σ α_{t,s} * h_s    for all source positions s
+
+  α_{t,s} = softmax(score(h_t, h_s))  — learned alignment weights
+
+Vaswani et al. (2017) "Attention Is All You Need" extended this:
+  - NO recurrence at all — pure attention
+  - Self-attention: every token attends to every other token
+  - Multi-head attention: run H attention heads in parallel
+
+Scaled Dot-Product Attention (the core equation):
+
+  Attention(Q, K, V) = softmax(Q @ K.T / sqrt(d_k)) @ V
+
+  Q = queries  (what am I looking for?)
+  K = keys     (what do I have to offer?)
+  V = values   (what information do I carry?)
+  d_k = key dimension (scaling prevents softmax saturation)
+
+Live demo — minimal attention on a toy sequence:
+  Input shape   : Q/K/V = (8, 16)
+  Scores shape  : (8, 8)  (every token × every token)
+  Weights shape : (8, 8)  (sum to 1.0 per row)
+  Output shape  : (8, 16)
+  Row 0 weights : [0.14  0.098 0.246 0.079 0.174 0.129 0.127 0.006]
+  (token 0 attends to all 8 positions, learned weights)
+
+============================================================
+SECTION 4: O(N²) Memory — The Scaling Problem
+============================================================
+
+The attention matrix (seq_len × seq_len) must be held in GPU memory.
+For long sequences this grows quadratically:
+
+     Seq Len     Attn Matrix (FP16)   Fits on H100 80GB?
+  ---------- ---------------------- --------------------
+         512                0.5 MB                    YES
+       2,048                8.0 MB                    YES
+       8,192              128.0 MB                    YES
+      32,768             2048.0 MB                    YES
+     131,072            32768.0 MB                    YES
+
+FlashAttention (Dao et al., 2022) computes attention in tiles,
+never materialising the full N×N matrix in HBM.
+Memory: O(N²) → O(N). Speed: 2-4× faster on long sequences.
+
+============================================================
+SECTION 5: Scaling Laws — Why Models Got So Large
+============================================================
+  Model        Year   Params     Tokens     Key Contribution
+  ------------ ------ ---------- ---------- -----------------------------------
+  GPT-1        2018   117M       5B         First large Transformer LM
+  GPT-2        2019   1.5B       40B        Surprising zero-shot ability
+  GPT-3        2020   175B       300B       In-context learning emerged
+  PaLM         2022   540B       780B       Chain-of-thought reasoning
+  LLaMA-2      2023   70B        2T         Open weights, Chinchilla-optimal
+  GPT-4        2023   ~1.8T?     unknown    Multimodal, tool use
+  LLaMA-3      2024   405B       15T        Long context, 128K tokens
+
+Kaplan et al. (2020) Scaling Laws: loss ∝ (params)^0.076 + (tokens)^0.095
+Hoffman et al. (2022) Chinchilla: optimal tokens ≈ 20 × model_parameters
+Implication: GPT-3 was under-trained. A 70B model on 1.4T tokens beats it.
+
+============================================================
+SECTION 6: The Decode Bottleneck
+============================================================
+
+Training is embarrassingly parallel — process a full batch simultaneously.
+Inference decode is inherently sequential — generate ONE token at a time.
+
+  Token 1: read all 140 GB of model weights from HBM → produce 1 token
+  Token 2: read all 140 GB of model weights from HBM → produce 1 token
+  Token N: read all 140 GB of model weights from HBM → produce 1 token
+
+For a 70B FP16 model:
+  Weight size = 70 × 10^9 × 2 bytes = 140 GB
+
+  GPU            Year   HBM BW (TB/s)    Max tokens/s (1 stream)
+  -------------- ------ ---------------- -------------------------
+  V100 SXM2      2017   0.90             6.4                      
+  A100 SXM4      2020   2.00             14.3                     
+  H100 SXM5      2022   3.35             23.9                     
+  H200 SXM5      2024   4.80             34.3                     
+
+Arithmetic intensity of decode: ~2 FLOPs / byte (pure memory-bound).
+This is why decode throughput scales with HBM bandwidth, not TFLOP/s.
+
+Three techniques that help:
+  KV Cache    — store past key/value projections, avoid recomputing
+  Batching    — serve multiple users simultaneously, amortise weight reads
+  Speculative — small draft model proposes tokens, large model verifies
+
+============================================================
+SECTION 7: The Full Production Inference Stack
+============================================================
+  Stage              Where    What happens
+  ------------------ -------- ------------------------------------------------
+  1. Tokenise        CPU      Convert text → token IDs (tiktoken/SentencePiece)
+  2. Queue           CPU      Request batching, priority scheduling, SLA tracking
+  3. Prefill         GPU      Process all prompt tokens in one forward pass (parallel)
+  4. Decode          GPU      Autoregressively generate tokens one at a time
+  5. Detokenise      CPU      Convert token IDs → text, stream to client
+
+Prefill is compute-bound (high arithmetic intensity, uses Tensor Cores).
+Decode is memory-bandwidth-bound (low arithmetic intensity, HBM limited).
+This is why Time-to-First-Token (TTFT) and tokens-per-second (TPS)
+require different optimization strategies.
+
+Explore next: IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/
+              IV.LLM_Inference_Systems/11.Batching_Strategies/

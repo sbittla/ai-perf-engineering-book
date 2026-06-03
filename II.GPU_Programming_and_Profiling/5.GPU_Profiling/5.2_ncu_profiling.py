@@ -87,7 +87,10 @@ def compute_ai(M: int, K: int, N: int, dtype: torch.dtype) -> float:
       bytes_io = element_size * (M*K + K*N + M*N)
       return flops / bytes_io
     """
-    pass  # YOUR CODE HERE → return flops / bytes_io
+    element_size = 2 if dtype in (torch.float16, torch.bfloat16) else 4
+    flops = 2 * M * K * N
+    bytes_io = element_size * (M * K + K * N + M * N)
+    return flops / bytes_io
 
 
 # Verify the function was implemented
@@ -129,7 +132,7 @@ def classify_kernel(ai: float, ridge_point: float) -> str:
     """
     TODO 2: Return "memory-bound" if ai < ridge_point, else "compute-bound".
     """
-    pass  # YOUR CODE HERE → return "memory-bound" or "compute-bound"
+    return "memory-bound" if ai < ridge_point else "compute-bound"
 
 
 assert classify_kernel(1.0,   156) == "memory-bound",  \
@@ -188,11 +191,23 @@ if DEVICE == "cuda":
     #   achieved_bw = (src.numel() * src.element_size() * 2) / (ms/1000) / 1e9
     #   (factor of 2: one read + one write)
 
-    src = None  # YOUR CODE HERE → torch.randn(128*1024*1024, device=DEVICE)
-    dst = None  # YOUR CODE HERE → torch.empty_like(src)
+    src = torch.randn(128 * 1024 * 1024, device=DEVICE)
+    dst = torch.empty_like(src)
 
-    # YOUR CODE HERE: warmup and timing loop with CUDA events
-    achieved_bw = None  # YOUR CODE HERE → compute bandwidth
+    # Warmup
+    for _ in range(3):
+        dst.copy_(src)
+    torch.cuda.synchronize()
+
+    start = torch.cuda.Event(enable_timing=True)
+    end   = torch.cuda.Event(enable_timing=True)
+    start.record()
+    for _ in range(5):
+        dst.copy_(src)
+    end.record()
+    torch.cuda.synchronize()
+    ms = start.elapsed_time(end) / 5
+    achieved_bw = (src.numel() * src.element_size() * 2) / (ms / 1000) / 1e9
 
     assert achieved_bw is not None and achieved_bw > 0, \
         "achieved_bw must be > 0 GB/s"
@@ -238,8 +253,10 @@ classifications = []
 
 shapes = [(1, 4096, 4096), (32, 4096, 4096), (256, 4096, 4096), (2048, 4096, 4096)]
 for M, K, N in shapes:
-    # YOUR CODE HERE: compute ai and classification, print, and append to classifications
-    pass  # replace with: ai = compute_ai(...); cls = classify_kernel(...); print(...)
+    ai  = compute_ai(M, K, N, torch.float16)
+    cls = classify_kernel(ai, a100_ridge)
+    classifications.append(cls)
+    print(f"  {M:>6}  {ai:>16.1f}  {cls:>16}")
 
 assert len(classifications) > 0, "Must populate classifications list in TODO 4"
 assert any(c == "memory-bound"  for c in classifications), \

@@ -40,13 +40,13 @@ if DEVICE == "cuda":
     props = torch.cuda.get_device_properties(0)
 
     # TODO 1: Read props.multi_processor_count (number of SMs)
-    n_sms = None  # YOUR CODE HERE
+    n_sms = props.multi_processor_count
 
     # TODO 2: Read props.total_memory in GB
-    vram_gb = None  # YOUR CODE HERE  → props.total_memory / 1e9
+    vram_gb = props.total_memory / 1e9
 
     # TODO 3: Read props.major and props.minor (compute capability as a float, e.g. 8.6)
-    compute_capability = None  # YOUR CODE HERE  → props.major + props.minor / 10
+    compute_capability = props.major + props.minor / 10
 
     assert n_sms              is not None, "read n_sms"
     assert vram_gb            is not None, "read vram_gb"
@@ -56,9 +56,22 @@ if DEVICE == "cuda":
     print(f"  Streaming Multiprocessors: {n_sms}")
     print(f"  VRAM                    : {vram_gb:.1f} GB")
     print(f"  CUDA Compute Capability : {compute_capability:.1f}")
-    print(f"  Clock rate (MHz)        : {props.clock_rate // 1000}")
-    print(f"  Memory clock (MHz)      : {props.memory_clock_rate // 1000}")
-    print(f"  L2 cache size           : {props.l2_cache_size / 1e6:.0f} MB")
+    # A few device-property attributes were renamed or dropped across PyTorch
+    # versions (e.g. l2_cache_size -> L2_cache_size, and clock_rate is absent on
+    # some builds). Read them defensively so the survey never crashes.
+    def _prop(*names):
+        for n in names:
+            if hasattr(props, n):
+                return getattr(props, n)
+        return None
+
+    clock_khz     = _prop("clock_rate")
+    mem_clock_khz = _prop("memory_clock_rate")
+    l2_bytes      = _prop("L2_cache_size", "l2_cache_size")
+
+    print(f"  Clock rate (MHz)        : {clock_khz // 1000 if clock_khz else 'n/a'}")
+    print(f"  Memory clock (MHz)      : {mem_clock_khz // 1000 if mem_clock_khz else 'n/a'}")
+    print(f"  L2 cache size           : {f'{l2_bytes / 1e6:.0f} MB' if l2_bytes else 'n/a'}")
     print(f"  Max threads per SM      : {props.max_threads_per_multi_processor}")
     print("  ✓ Section 1 passed")
 
@@ -123,7 +136,7 @@ if DEVICE == "cuda":
         peak_flops, mem_bw = 51.5e12, 272e9
 
     # TODO 4: Compute the ridge point for your GPU
-    ridge_point = None  # YOUR CODE HERE  → peak_flops / mem_bw
+    ridge_point = peak_flops / mem_bw
 
     assert ridge_point is not None, "compute ridge_point"
     print(f"\n  Peak FP16 FLOP/s : {peak_flops/1e12:.1f} TFLOP/s")
@@ -183,13 +196,13 @@ else:
 
 # TODO 5: Compute FLOPs for one M×M matrix multiply
 #   For a square GEMM: FLOPs = 2 * M * M * M
-flops_per_call = None  # YOUR CODE HERE
+flops_per_call = 2 * M * M * M
 
 # TODO 6: Compute observed FLOP/s
-observed_flops_per_sec = None  # YOUR CODE HERE  → flops_per_call / (avg_ms / 1000)
+observed_flops_per_sec = flops_per_call / (avg_ms / 1000)
 
 # TODO 7: Compute MFU as a percentage (0–100)
-mfu = None  # YOUR CODE HERE  → observed_flops_per_sec / peak_flops * 100
+mfu = observed_flops_per_sec / peak_flops * 100
 
 assert flops_per_call           is not None, "compute flops_per_call"
 assert observed_flops_per_sec   is not None, "compute observed_flops_per_sec"
@@ -240,7 +253,7 @@ if DEVICE == "cuda":
 
                 # TODO 8: Compute clock throttle percentage
                 #   throttle_pct = (1 - int(clk) / int(max_clk)) * 100
-                throttle_pct = None  # YOUR CODE HERE
+                throttle_pct = (1 - int(clk) / int(max_clk)) * 100
 
                 assert throttle_pct is not None, "compute throttle_pct"
                 print(f"  Temperature      : {temp.strip()} °C")
@@ -291,7 +304,7 @@ if n_gpus > 1:
                 print("    — ", end="")
             else:
                 # TODO 9a: Check if GPU i can access GPU j directly
-                can_access = None  # YOUR CODE HERE  → torch.cuda.can_device_access_peer(i, j)
+                can_access = torch.cuda.can_device_access_peer(i, j)
                 assert can_access is not None, f"check P2P for ({i},{j})"
                 print(f"  {'P2P' if can_access else 'off'}", end="")
         print()

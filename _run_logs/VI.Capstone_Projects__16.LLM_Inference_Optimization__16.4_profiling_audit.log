@@ -1,0 +1,155 @@
+# VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py
+# status=PASS rc=0 duration=6.4s
+======================================================================
+--- STDOUT ---
+============================================================
+  Capstone 16.3 — Profiling Audit
+============================================================
+  Device: cuda
+
+── Section 1: torch.profiler — How to Read the Output ──
+
+  torch.profiler records CPU and CUDA time for every PyTorch op.
+  The key column is "Self CUDA %" — the fraction of total CUDA time
+  that this op consumes EXCLUDING its sub-ops.
+
+  READING THE TABLE:
+    Name              : op name or user-annotated region
+    Self CPU %        : CPU time excluding child ops
+    Self CUDA %       : GPU kernel time excluding child ops  ← target
+    CUDA total %      : GPU time INCLUDING child ops (can exceed 100% via nesting)
+    # of Calls        : how many times this op ran
+
+  PROFILER SCHEDULE (recommended):
+    wait=1   : skip first iteration (warmup noise)
+    warmup=2 : run without recording (JIT / cuBLAS warmup)
+    active=5 : record these iterations → reliable mean
+    repeat=1 : one cycle
+
+  record_function("name") creates a named annotation in the trace.
+  Use it to label your code blocks so they appear in the profiler table.
+
+  Top 10 ops by CUDA time (FP32, prompt=256):
+  -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                     Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+  -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                attention         0.00%       0.000us         0.00%       0.000us       0.000us      17.338ms       218.12%      17.338ms     866.900us            20  
+                                             aten::linear         1.63%     573.679us        18.86%       6.649ms      78.229us       0.000us         0.00%       6.606ms      77.719us            85  
+                                                      ffn         0.00%       0.000us         0.00%       0.000us       0.000us       6.456ms        81.23%       6.456ms     322.823us            20  
+                                              attn_scores         0.00%       0.000us         0.00%       0.000us       0.000us       5.179ms        65.15%       5.179ms     258.935us            20  
+                                             aten::matmul         2.27%     801.762us        16.31%       5.750ms      67.646us       0.000us         0.00%       4.949ms      58.220us            85  
+  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       4.876ms        61.35%       4.876ms     108.362us            45  
+                                                 aten::mm         4.02%       1.416ms         6.43%       2.266ms      50.352us       4.523ms        56.91%       4.523ms     100.517us            45  
+                                                  lm_head         0.00%       0.000us         0.00%       0.000us       0.000us       3.943ms        49.60%       3.943ms     788.581us             5  
+                                                attn_proj         0.00%       0.000us         0.00%       0.000us       0.000us       3.836ms        48.26%       3.836ms     191.820us            20  
+                                                  lm_head         0.74%     261.923us         2.67%     941.854us     188.371us       0.000us         0.00%       3.481ms     696.271us             5  
+  -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+  Self CPU time total: 35.249ms
+  ...
+  ✓ Section 1 passed — torch.profiler recording works
+
+── Section 2: Op-Level Time Attribution ──
+
+  We now extract self-time per labelled region (embedding, attention, ffn,
+  lm_head) and compute each region's share of total CUDA time.
+
+  This answers: "Where does the time actually go?"
+
+  Expected breakdown for a 4-layer transformer (FP32, prompt=256):
+    FFN (4 layers)     : ~50% — two large matmuls per layer
+    Attention (4 layers): ~35% — QKV proj + scores + output proj
+    LM head            : ~10% — large vocab projection
+    Embedding + misc   :  ~5% — lookup tables, LayerNorm
+
+  TODO 1: Implement profile_region_breakdown(model, idx, n_iters=5)
+  that profiles n_iters forward passes and returns a dict mapping
+  region name → mean time in ms.
+
+
+  Region breakdown (FP32, prompt=256):
+  Region                   Time (µs)     Share
+  ────────────────────  ────────────  ────────
+  attention                   3886.7     42.5%
+  ffn                         1255.9     13.7%
+  attn_scores                 1221.8     13.3%
+  attn_proj                    795.2      8.7%
+  lm_head                      780.9      8.5%
+  layer_0                      221.4      2.4%
+  layer_3                      220.8      2.4%
+  layer_2                      220.7      2.4%
+  layer_1                      220.3      2.4%
+  attn_qkv                     137.1      1.5%
+  ✓ Section 2 passed — op-level attribution extracted
+
+── Section 3: FP16 vs FP32 — Where Does the Speedup Come From? ──
+
+  The profiler breakdown across precision levels shows exactly which
+  operations benefit most from FP16. The expected pattern:
+    - FFN matmuls      : 2× speedup (Tensor Cores for large tiles)
+    - Attention scores : 1.5–2× speedup (smaller L×L matrix)
+    - LM head          : 2× speedup (large vocab matmul)
+    - LayerNorm        : marginal (already fast, elementwise)
+
+  TODO 2: Compare FP32 and FP16 region breakdowns.
+  Build a side-by-side table showing time in each dtype and speedup per region.
+
+
+  FP32 vs FP16 breakdown comparison (top regions):
+  Region                   FP32 (µs)     FP16 (µs)    Speedup
+  ────────────────────  ────────────  ────────────  ─────────
+  attention                   3886.7       28335.3      0.14×
+  ffn                         1255.9        1293.7      0.97×
+  attn_scores                 1221.8        1769.3      0.69×
+  attn_proj                    795.2         875.4      0.91×
+  lm_head                      780.9         659.0      1.18×
+  layer_0                      221.4        1499.7      0.15×
+  layer_3                      220.8         138.4      1.60×
+  layer_2                      220.7         138.6      1.59×
+  ✓ Section 3 passed — FP16 vs FP32 breakdown compared
+
+── Section 4: Diagnosis → Fix Attribution ──
+
+  A complete profiling audit ends with a diagnosis-to-fix table:
+  which profiler finding pointed to which optimization, and how much
+  speedup that optimization produced.
+
+  DIAGNOSIS-TO-FIX FRAMEWORK:
+    Finding                        → Fix                  → Speedup (typical)
+    ─────────────────────────────────────────────────────────────────────────
+    FFN matmul dominates (>40%)    → FP16 precision        → 1.5–2.0×
+    Attention dominates (>40%)     → Flash Attention       → 1.5–3.0×
+    LM head dominates (>20%)       → FP16 + weight sharing → 1.5–2.0×
+    Embedding is slow (>10%)       → Reduce vocab size     → 1.2–1.5×
+    GPU utilization < 50%          → Larger batch          → 2–5×
+    Compile shows many tiny ops    → torch.compile         → 1.2–1.8×
+
+  This is the final output of the capstone: a structured audit report
+  linking observations to actions to measured outcomes.
+
+  Bottleneck #1: attention             3887 µs  (42.5%)  → Apply FP16 + optional Flash Attention (O(L) memory)
+  Bottleneck #2: ffn                   1256 µs  (13.7%)  → Apply FP16 (2× Tensor Core speedup on large tiles)
+  Bottleneck #3: attn_scores           1222 µs  (13.3%)  → Profile further with ncu
+
+  Overall best config: FP32 + compile  (2.13×)
+
+  AUDIT SAVED: /tmp/capstone16_audit.json
+
+  CAPSTONE 16 COMPLETE SUMMARY:
+    1. Establish baseline (16.1)  → TTFT, TPS, VRAM snapshot
+    2. optimize (16.2)            → FP16 + torch.compile ladder
+    3. Audit (16.3)               → profiler attribution per region
+
+  The audit links EVERY speedup back to a specific profiler finding.
+  That is the standard of evidence required for production optimization.
+
+  ✓ Section 4 passed — diagnosis-to-fix audit complete
+
+============================================================
+  ALL SECTIONS PASSED — Capstone 16.3 complete!
+  Capstone 16 (LLM Inference optimization) is finished.
+  Next: VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.1_slow_dataloader.py
+============================================================
+
+--- STDERR ---
+/usr/local/lib/python3.12/dist-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(

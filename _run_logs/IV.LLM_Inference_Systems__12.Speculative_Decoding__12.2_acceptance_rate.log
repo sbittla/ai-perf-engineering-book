@@ -1,0 +1,151 @@
+# IV.LLM_Inference_Systems/12.Speculative_Decoding/12.2_acceptance_rate.py
+# status=PASS rc=0 duration=1.7s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 12.2 — Acceptance Rate Analysis
+============================================================
+
+── Section 1: Acceptance Rate — What It Measures ──
+
+  The acceptance rate α measures how often the draft model predicts
+  a token that the target model would also have chosen.
+
+  α = E[min(1, p_target[tok] / p_draft[tok])]
+
+  This is the expected ratio of probabilities, not just agreement on the
+  argmax token. The rejection sampling rule is conservative — it accepts
+  even suboptimal draft tokens if the ratio is high enough.
+
+  WHAT DRIVES α:
+    • Vocabulary alignment: draft and target share the same tokeniser (required)
+    • Training data similarity: draft trained on same distribution as target
+    • Task difficulty: repetitive/structured text → high α; creative/random → low α
+    • Temperature: lower temperature → more peaked distributions → higher α
+    • Prompt style: few-shot examples align draft with target → higher α
+
+  TYPICAL ACCEPTANCE RATES BY TASK:
+    Code completion            : α ≈ 0.75–0.90  (high — structured syntax)
+    Document summarisation     : α ≈ 0.65–0.80  (medium — constrained output)
+    Creative writing           : α ≈ 0.30–0.60  (low — many valid continuations)
+    Open-ended chat            : α ≈ 0.50–0.75  (varies by topic)
+    Translation                : α ≈ 0.70–0.85  (high — strong target correspondence)
+
+  ✓ Section 1 passed — acceptance rate reflects distribution overlap
+
+── Section 2: Computing Acceptance Rate from Distributions ──
+
+  Given draft distribution P_d and target distribution P_t over V tokens,
+  the expected acceptance rate for a single token is:
+
+    α = sum over tokens t: P_d[t] × min(1, P_t[t] / P_d[t])
+      = sum over tokens t: min(P_d[t], P_t[t])
+
+  This equals 1 minus the total variation distance between P_d and P_t:
+    α = 1 - TV(P_d, P_t)
+
+  TODO 1: Implement acceptance_rate_from_distributions() below.
+
+  Content type                Simulated α   E[tok/step] K=5
+  ─────────────────────────  ────────────  ────────────────
+  Code (structured)                 0.973              5.60
+  Translation                       0.919              4.91
+  Summarisation                     0.836              4.01
+  Open-ended chat                   0.725              3.11
+  Creative writing                  0.592              2.34
+  ✓ Section 2 passed — acceptance rate computed from distributions
+
+── Section 3: Choosing the Optimal K ──
+
+  For a given acceptance rate α and draft cost ratio r:
+    Net speedup(K) = E[tok/step] / (K × r + 1)
+                   = [(1 - α^(K+1)) / (1 - α)] / (K × r + 1)
+
+  Beyond some K*, increasing K gives diminishing returns:
+    - More draft steps add cost (K × r grows)
+    - But E[tok/step] saturates at 1/(1-α)
+
+  TODO 2: Implement optimal_K() that finds the K maximising net_speedup.
+  Search K ∈ [1, K_max] and return the K with highest net_speedup.
+
+  Draft cost ratio = 10% of target
+
+       α   Optimal K   Max speedup    Saturates at
+  ──────  ──────────  ────────────  ──────────────
+    0.30           1          1.18×             1.4
+    0.50           2          1.46×             2.0
+    0.60           3          1.67×             2.5
+    0.70           4          1.98×             3.3
+    0.80           6          2.47×             5.0
+    0.90          10          3.43×            10.0
+    0.95          15          4.48×            20.0
+
+  Higher α → larger optimal K: 1 (α=0.3) vs 10 (α=0.9)
+  ✓ Section 3 passed — optimal K increases with acceptance rate
+
+── Section 4: Diagnosing and Improving Acceptance Rate ──
+
+  SYMPTOMS OF LOW α:
+    • Spec decode throughput barely above standard decode
+    • vllm metric: spec_decode_draft_acceptance_rate < 0.5
+    • Many "bonus token from correction" events in debug logs
+
+  DIAGNOSIS CHECKLIST:
+    □ Wrong draft model: draft not trained on same data as target
+    □ Temperature mismatch: different temp/top-p between draft and target
+    □ Task mismatch: creative task with structured-text draft
+    □ Prompt mismatch: system prompt changes distribution significantly
+    □ K too large: at low α, most tokens rejected early; reduce K
+
+  REMEDIATION OPTIONS:
+    1. Use a task-matched draft model (e.g. CodeLlama-7B draft for code)
+    2. Lower temperature (increases α on both models)
+    3. Reduce K until net speedup > 1× (see table above)
+    4. Use ngram lookup instead of draft model (always α=1 for matched text)
+    5. Switch to standard decode for tasks where α < 0.5
+
+  TODO 3: Given observed α = 0.45 and K=5, compute net_speedup.
+  If < 1.1×, recommend switching to standard decode.
+
+  Observed α = 0.45, K = 5
+  Net speedup       : 1.20×
+  Recommendation    : keep speculative
+  Best possible K   : 2  (speedup = 1.38×)
+  Lowering K to 2 gives 1.38× — worth keeping speculative
+  ✓ Section 4 passed — α-based diagnosis and K selection working
+
+── Section 5: Monitoring Acceptance Rate in Production ──
+
+  vLLM exposes Prometheus metrics you can query with:
+
+    curl http://localhost:8000/metrics | grep spec_decode
+
+  Key metrics:
+    vllm:spec_decode_draft_acceptance_rate  — rolling average α per minute
+    vllm:spec_decode_efficiency             — actual tokens/target-step
+    vllm:spec_decode_num_accepted_tokens    — cumulative accepted tokens
+    vllm:spec_decode_num_draft_tokens       — cumulative draft tokens
+
+  Simple acceptance rate estimate from vLLM logs:
+    α = num_accepted_tokens / num_draft_tokens
+
+  Adaptive K (future feature in vLLM):
+    If α drops below 0.6, automatically reduce K.
+    If α rises above 0.8, automatically increase K.
+    This keeps the system self-tuning to the current content distribution.
+
+  Benchmark command to measure spec decode improvement:
+    python benchmarks/benchmark_serving.py \
+        --backend vllm --request-rate 5 --num-prompts 200 \
+        --model <target> \
+        --speculative-model <draft>
+    Compare output_token_throughput with and without --speculative-model.
+
+  ✓ Section 5 passed — production monitoring strategy understood
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 12.2 complete!
+  You can measure acceptance rate, find optimal K, diagnose
+  poor performance, and monitor spec decode in production.
+  Next: IV.LLM_Inference_Systems/13.Distributed_Inference/13.1_tensor_parallelism.py
+============================================================

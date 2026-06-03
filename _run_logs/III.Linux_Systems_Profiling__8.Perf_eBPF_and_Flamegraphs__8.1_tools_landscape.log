@@ -1,0 +1,177 @@
+# III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.1_tools_landscape.py
+# status=PASS rc=0 duration=0.7s
+======================================================================
+--- STDOUT ---
+============================================================
+SECTION 1: Tool Availability on This System
+============================================================
+  Tool         Available    Purpose
+  ------------ ------------ ----------------------------------------
+  perf         YES          Hardware PMU counters, CPU cycles, cache misses
+  py-spy       YES          Python sampling profiler, zero-overhead flamegraphs
+  bpftrace     YES          eBPF one-liners for kernel-level tracing
+  nsys         YES          NVIDIA Nsight Systems — GPU/CPU timeline profiler
+  ncu          YES          NVIDIA Nsight Compute — per-kernel roofline analysis
+  strace       not found    System call tracer — see every syscall a process makes
+  lsof         not found    List open file descriptors — diagnose I/O bottlenecks
+
+Missing tools can usually be installed with:
+  sudo apt-get install linux-perf bpftrace strace lsof
+  pip install py-spy
+  (Nsight tools require NVIDIA driver + CUDA toolkit)
+
+============================================================
+SECTION 2: cProfile — Python's Built-in Profiler
+============================================================
+
+cProfile instruments every function call at the interpreter level.
+It is the first tool to reach for when you don't know where Python
+is spending its time. It has no external dependencies.
+
+How it works:
+  - CPython's eval loop calls a C hook on every function entry/exit.
+  - cProfile records call count and cumulative time per function.
+  - Overhead: ~10-30% depending on call density.
+
+Limitation: it only sees Python time. GPU kernels running asynchronously
+are invisible to cProfile — use Nsight Systems for GPU work.
+
+         1028460 function calls (4 primitive calls) in 0.176 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.176    0.176 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.1_tools_landscape.py:105(workload)
+1028457/1    0.166    0.000    0.166    0.166 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.1_tools_landscape.py:90(fib_recursive)
+        1    0.010    0.010    0.010    0.010 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.1_tools_landscape.py:95(matrix_naive)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+
+Reading the output above:
+  ncalls  — how many times this function was called
+  tottime — time spent IN this function (excluding callees)
+  cumtime — total time including all callees
+  The function with the highest tottime is usually the bottleneck.
+
+============================================================
+SECTION 3: perf — Hardware PMU Counters
+============================================================
+
+'perf' speaks directly to the CPU's Performance Monitoring Unit (PMU).
+Every modern CPU has dedicated hardware registers that count events at
+zero cost to the running program — no code modification needed.
+
+Key counters for AI workloads:
+
+  cycles          — raw clock ticks consumed
+  instructions    — retired instructions (IPC = instructions/cycles)
+  cache-misses    — L3 misses that go to DRAM (very expensive)
+  branch-misses   — mispredicted branches causing pipeline flushes
+  page-faults     — virtual memory page allocations
+
+IPC (Instructions Per Cycle) is the most important single number:
+  IPC < 1.0  → memory-bound (CPU is stalling waiting for data)
+  IPC 1-2    → mixed compute/memory
+  IPC > 2    → compute-bound (pipeline is well-fed)
+
+Example command:
+  sudo perf stat -e cycles,instructions,cache-misses,branch-misses \
+       python train.py
+
+How 'perf' works internally (2009 kernel addition):
+  - perf_event_open() syscall registers a counter with the kernel.
+  - The kernel programs the PMU hardware registers on each CPU core.
+  - On overflow, the PMU fires an interrupt; the kernel records the
+    call stack at that moment (sampling mode) or accumulates counts.
+  - Requires CAP_PERFMON or sudo on most systems.
+
+The perf_event_open syscall number on x86_64 is 298.
+You can verify: strace -e perf_event_open perf stat sleep 1
+
+============================================================
+SECTION 4: Flamegraphs
+============================================================
+
+A flamegraph turns a stream of sampled call stacks into a visual:
+
+  ┌─────────────────────────────────────────────────────────┐
+  │ torch.nn.Module.forward                                  │ (wide = slow)
+  │   ┌────────────────────────────┐ ┌──────────────────┐   │
+  │   │ nn.Linear.forward          │ │ nn.ReLU.forward   │   │
+  │   │   ┌────────────────────┐   │ │                   │   │
+  │   │   │ F.linear           │   │ │                   │   │
+  │   │   │   ┌────────────┐   │   │ │                   │   │
+  │   │   │   │cublasSgemm │   │   │ │                   │   │
+  │   │   │   └────────────┘   │   │ │                   │   │
+  │   │   └────────────────────┘   │ │                   │   │
+  │   └────────────────────────────┘ └──────────────────┘   │
+  └─────────────────────────────────────────────────────────┘
+  Width = time. Deep call stacks appear tall. Hottest code is wide at the bottom.
+
+Brendan Gregg invented flamegraphs in 2011 while debugging a MySQL
+performance issue. Traditional profiler output (sorted tables) made it
+hard to see the COMPOSITION of where time went. Flamegraphs solve this.
+
+For Python processes, py-spy captures stacks without pausing the process:
+  sudo py-spy record -o profile.svg --pid <PID>
+  sudo py-spy top --pid <PID>           (htop-style live view)
+
+For PyTorch specifically, torch.profiler wraps Nsight data and can
+export Chrome traces viewable at chrome://tracing or perfetto.dev.
+
+============================================================
+SECTION 5: eBPF — The Modern Observability Superpower
+============================================================
+
+Before eBPF: if you needed to trace a kernel event (e.g., every file open,
+every TCP packet, every context switch), you had to write a kernel MODULE.
+Kernel modules run with full privileges — one bug causes a kernel panic
+and system crash. They also require recompiling for every kernel version.
+
+eBPF (2014, Linux 3.18+) changed this:
+  - You write a small program in restricted C.
+  - The kernel verifier proves it is safe (no infinite loops, bounded memory).
+  - The JIT compiler converts it to native machine code.
+  - It attaches to a kernel event (tracepoint, kprobe, uprobe, socket).
+  - It runs at kernel speed with near-zero overhead.
+  - No reboot, no risk of kernel panic.
+
+Key eBPF tools for AI infrastructure:
+
+  BCC (BPF Compiler Collection):
+    opensnoop          — trace every file open() call systemwide
+    biolatency         — histogram of disk I/O latency
+    execsnoop          — trace every exec() (new process)
+    profile            — CPU profiler using hardware PMU sampling
+
+  bpftrace (one-liners):
+    # Count context switches per process name
+    sudo bpftrace -e 'tracepoint:sched:sched_switch { @[comm] = count(); }'
+
+    # Histogram of read() syscall duration
+    sudo bpftrace -e 'tracepoint:syscalls:sys_enter_read { @ts[tid] = nsecs; }
+                      tracepoint:syscalls:sys_exit_read  /@ts[tid]/
+                      { @ms = hist((nsecs - @ts[tid]) / 1e6); delete(@ts[tid]); }'
+
+Use case for AI training:
+  If your DataLoader workers are slow, eBPF can tell you exactly which
+  file is taking longest to open, and whether it is I/O or CPU bound —
+  without adding a single line of instrumentation to your code.
+
+============================================================
+SECTION 6: Symptom → Tool Mapping
+============================================================
+  Symptom                      Tool                     Likely Cause
+  ---------------------------- ------------------------ -----------------------------------
+  GPU util < 30%               py-spy / cProfile        CPU bottleneck on Python side
+  GPU util 100%, slow          Nsight Systems (nsys)    Memory bandwidth or kernel efficiency
+  High IPC, slow               Nsight Compute (ncu)     Roofline: compute-bound kernel
+  Low IPC (< 1.0)              perf cache-misses        Memory-bound: cache misses
+  DataLoader slow              py-spy + bpftrace        File I/O or CPU preprocessing
+  Random OOM crashes           nvidia-smi dmon          Memory fragmentation over time
+  Spiky P99 latency            perf + flamegraph        GC pauses or lock contention
+  Kernel panic / crash         dmesg + journalctl       Driver bug or OOM killer
+
+Explore next: III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/
+              III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/

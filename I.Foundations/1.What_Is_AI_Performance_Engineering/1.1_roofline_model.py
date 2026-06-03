@@ -81,7 +81,7 @@ else:
 
 # TODO 1: Compute the ridge point in FLOPs/byte
 #   ridge_point = peak_flops / mem_bw
-ridge_point = None  # YOUR CODE HERE
+ridge_point = peak_flops / mem_bw
 
 assert ridge_point is not None and ridge_point > 0, "compute ridge point"
 print(f"\n  Peak FLOP/s     : {peak_flops/1e12:.1f} TFLOP/s")
@@ -126,16 +126,16 @@ def elementwise_ai(n_elements: int, n_ops: int = 1, dtype_bytes: int = 4) -> flo
 
 # TODO 2: Compute AI for a GPT-2 small QKV projection at batch_size=1
 #   in_features=768, out_features=768, dtype_bytes=2 (FP16)
-ai_gpt2_bs1 = None  # YOUR CODE HERE
+ai_gpt2_bs1 = linear_layer_ai(768, 768, 1, dtype_bytes=2)
 
 # TODO 3: Same projection at batch_size=32
-ai_gpt2_bs32 = None  # YOUR CODE HERE
+ai_gpt2_bs32 = linear_layer_ai(768, 768, 32, dtype_bytes=2)
 
 # TODO 4: Same projection at batch_size=512
-ai_gpt2_bs512 = None  # YOUR CODE HERE
+ai_gpt2_bs512 = linear_layer_ai(768, 768, 512, dtype_bytes=2)
 
 # TODO 5: AI for a ReLU over 1M float32 elements (elementwise, 1 op)
-ai_relu = None  # YOUR CODE HERE
+ai_relu = elementwise_ai(1_000_000, n_ops=1, dtype_bytes=4)
 
 assert ai_gpt2_bs1   is not None, "compute ai_gpt2_bs1"
 assert ai_gpt2_bs32  is not None, "compute ai_gpt2_bs32"
@@ -177,7 +177,7 @@ print(f"  {'-'*45}  {'-'*8}  {'-'*16}")
 for name, ai in ops:
     # TODO 6: Fill in the bound for each operation
     #   bound = "compute-bound" if ai > ridge_point else "memory-bound"
-    bound = None  # YOUR CODE HERE
+    bound = "compute-bound" if ai > ridge_point else "memory-bound"
     assert bound is not None, f"fill in bound for {name}"
     print(f"  {name:<45}  {ai:>8.2f}  {bound}")
 
@@ -227,13 +227,13 @@ else:
 
 # TODO 7: Compute observed FLOPs for one M×M matrix multiply
 #   FLOPs = 2 * M * M * M  (each output element = M multiply-adds)
-flops_per_mm = None  # YOUR CODE HERE
+flops_per_mm = 2 * M * M * M
 
 # TODO 8: Compute observed FLOP/s (FLOPs / time_in_seconds)
-observed_flops_per_sec = None  # YOUR CODE HERE
+observed_flops_per_sec = flops_per_mm / (avg_ms / 1000)
 
 # TODO 9: Compute MFU as a percentage
-mfu_pct = None  # YOUR CODE HERE
+mfu_pct = observed_flops_per_sec / peak_flops * 100
 
 assert flops_per_mm           is not None, "compute flops_per_mm"
 assert observed_flops_per_sec is not None, "compute observed FLOP/s"
@@ -268,7 +268,7 @@ ai_matmul = linear_layer_ai(M, M, M, dtype_bytes=2 if DEVICE=="cuda" else 4)
 # TODO 10: Compute the roofline-predicted FLOP/s for our M×M matmul
 #   If ai_matmul > ridge_point: predicted = peak_flops
 #   Else:                        predicted = mem_bw * ai_matmul
-predicted_flops_per_sec = None  # YOUR CODE HERE
+predicted_flops_per_sec = peak_flops if ai_matmul > ridge_point else mem_bw * ai_matmul
 
 efficiency = (observed_flops_per_sec / predicted_flops_per_sec * 100
               if predicted_flops_per_sec else 0)

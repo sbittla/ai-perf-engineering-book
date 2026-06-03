@@ -1,0 +1,143 @@
+# V.Workload_Benchmarking/15.Porting_a_Workload/15.2_bottleneck_shift.py
+# status=PASS rc=0 duration=9.4s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 15.2 — Bottleneck Shift
+============================================================
+  Device: cuda
+
+── Section 1: The Bottleneck Shift ──
+
+  Every optimization removes one bottleneck and exposes the next.
+  This is called the BOTTLENECK SHIFT. If you don't anticipate it,
+  you will be surprised when your GPU FP16 model is still "slow".
+
+  THE optimization LADDER (typical order for an inference workload):
+
+    Rung 1: CPU FP32 (baseline)
+      Bottleneck: compute — CPUs have ~200 GFLOPS vs GPUs ~10 TFLOPS
+      Speedup potential: 50×
+
+    Rung 2: GPU FP32 (simple port)
+      Bottleneck: memory bandwidth — FP32 AI may be below ridge point
+      Speedup potential: 2–5× over GPU FP32
+
+    Rung 3: GPU FP16 / BF16 (AMP)
+      Bottleneck: Tensor Core utilization — need large tiles for peak
+      Speedup potential: 1.5–2× over GPU FP32
+
+    Rung 4: torch.compile (kernel fusion)
+      Bottleneck: Python overhead / small-batch memory access pattern
+      Speedup potential: 1.2–1.8× for inference
+
+    Rung 5: INT8 quantisation (static or dynamic)
+      Bottleneck: I/O between weight cache and compute units
+      Speedup potential: 1.5–3× over FP16 for large models
+
+  KEY INSIGHT: at each rung, the LIMITING FACTOR changes.
+  Measuring throughput alone won't tell you which rung you are on.
+  You must also measure: AI, memory bandwidth utilization, SM utilization.
+
+  ✓ Section 1 passed — understand the bottleneck shift ladder
+
+── Section 2: Measuring Each Rung of the Ladder ──
+
+  We will benchmark the same MLP across multiple configurations.
+  The key is to change ONE thing per rung and record all metrics.
+
+  TODO 1: Implement benchmark_config(model, x, warmup=10, iters=50)
+  that returns (mean_ms, p99_ms, throughput_sps).
+  Use CUDA events on GPU, perf_counter on CPU.
+
+  Baseline (CPU FP32): 1.793 ms  P99=2.425 ms  17845 sps
+  ✓ Section 2 passed — benchmark_config() works correctly
+
+── Section 3: The Full optimization Ladder ──
+
+  We now run every rung and build a comparison table.
+  On CPU-only machines, we simulate the GPU rungs with dtype changes
+  to demonstrate the dtype effect; the speedup numbers will differ.
+
+
+  Config                   Mean (ms)    P99 (ms)    Tput (sps)    Speedup
+  ──────────────────────  ──────────  ──────────  ────────────  ─────────
+  CPU FP32                     2.202       2.651         14533      1.00×
+  GPU FP32                     0.167       0.358        191970     13.21×
+  GPU FP16                     0.176       0.648        182027     12.52×
+  GPU FP16 + compile           0.159       0.358        200721     13.81×
+  ✓ Section 3 passed — optimization ladder measured
+
+── Section 4: Diagnosing the Bottleneck at Each Rung ──
+
+  Throughput alone doesn't tell you WHY you're at a given rung.
+  You need a diagnosis: what is the limiting resource?
+
+  DIAGNOSIS QUESTIONS:
+    Q1: Is GPU SM utilization < 50%?
+        → CPU-bound: Python overhead, DataLoader, or too-small batch
+    Q2: Is GPU memory bandwidth > 80% of peak?
+        → Memory-bandwidth-bound: try FP16, reduce model size, fuse ops
+    Q3: Is GPU SM utilization > 80% but throughput below roofline?
+        → Compute-bound: try Tensor Cores (FP16), increase arithmetic intensity
+    Q4: Does throughput scale linearly with batch?
+        → Good: compute-bound and properly utilizing the GPU
+    Q5: Does throughput plateau early (e.g. batch=4)?
+        → Memory-bound or GPU launch overhead dominates
+
+  TODO 2: Implement throughput_scaling_ratio(model, device, d_model, batches)
+  that benchmarks each batch size and returns the ratio
+  (throughput at largest batch) / (throughput at smallest batch).
+  A ratio > 8× for 10× batch increase suggests good compute utilization.
+
+
+  Throughput scaling (CPU FP32, d_model=512):
+   Batch    Tput (sps)
+       1          3720
+       4         18002
+      16         68716
+      64        325895
+
+  Scaling ratio (batch=64 / batch=1): 87.6×
+  Diagnosis: strong compute scaling — good GPU utilization
+  ✓ Section 4 passed — throughput scaling ratio measured
+
+── Section 5: The Python Overhead Floor ──
+
+  Even on GPU, Python code has overhead: each torch.nn.Linear call
+  launches a CUDA kernel, which requires a CPU-side dispatch (~5–20 µs
+  per kernel). For a 100-layer model at batch=1, this can be 2+ ms of
+  overhead — with the actual GPU work taking only 0.5 ms.
+
+  This is called the PYTHON OVERHEAD FLOOR. It limits throughput
+  even when the GPU is fast, because you can't reduce latency below
+  the overhead of dispatching all the kernels.
+
+  SYMPTOMS:
+    • GPU SM utilization < 20% for batch=1
+    • Increasing batch from 1→2 gives < 1.5× throughput
+    • profiler shows many tiny kernels with large gaps between them
+
+  REMEDIES:
+    1. torch.compile() — fuses kernels, reduces dispatch count
+    2. CUDA Graphs   — records kernel launches; replays without CPU overhead
+    3. Larger batches — amortises fixed overhead over more samples
+    4. cuBLAS GEMM batching — run all layers as a batched GEMM
+
+  MEASURING THE OVERHEAD:
+    If GPU time (CUDA events) << wall-clock time (perf_counter), you have overhead.
+    overhead_ms = wall_clock_ms - gpu_kernel_ms
+
+  Batch=1, d_model=512:
+    Wall-clock (CPU dispatch + GPU): 0.191 ms
+    GPU kernel only (CUDA events)  : 0.165 ms
+    Python overhead floor          : 0.026 ms  (13.4% of wall)
+  OK: overhead < 30% — GPU is the primary bottleneck (as expected)
+  ✓ Section 5 passed — Python overhead floor measured
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 15.2 complete!
+  You can now run the optimization ladder, diagnose the bottleneck
+  at each rung, and measure the Python overhead floor.
+  Next: V.Workload_Benchmarking/15.Porting_a_Workload/15.3_dataloader_at_scale.py
+============================================================
