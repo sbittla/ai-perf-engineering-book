@@ -1,0 +1,45 @@
+# Appendices/E.Advanced_Capstones/E.5_disaggregated_serving.py
+# status=PASS rc=0 duration=0.1s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise E.5 - Disaggregated Prefill/Decode Serving (latency model)
+======================================================================
+
+-- Section 1: Single Pool Inter-Token Gap --
+
+  On one pool, a decode step cannot run while a long prefill occupies the GPU.
+  The inter-token gap for in-flight requests = 1 (their own step) + any prefill
+  steps that jumped ahead of them. We record the per-step gap distribution.
+
+  Inter-token gap  P50:    6 steps
+  Inter-token gap  P99:   78 steps  <- long prompts spike the tail
+  [check] single pool has a heavy P99 inter-token tail
+
+-- Section 2: Disaggregated Inter-Token Gap --
+
+  With prefill on a separate pool, the decode pool runs only single-token steps,
+  so its inter-token gap is ~1 step regardless of how long any prompt is. The
+  cost moves to a one-time KV-cache transfer between pools.
+
+  Inter-token gap  P50:    1 steps
+  Inter-token gap  P99:    1 steps
+  P99 jitter reduction : 78x
+  [check] isolating prefill flattens the decode-latency tail
+
+-- Section 3: KV Transfer Overhead --
+
+  Disaggregation only pays off if moving the KV cache between pools is cheap
+  relative to the decode it protects. Fast interconnect (NVLink/RDMA) is the
+  enabling condition.
+
+  Transfer 5.0 MB over NVLink ~600 GB/s  :  0.008 ms  (worth it)
+  Transfer 5.0 MB over RDMA/IB ~50 GB/s  :  0.100 ms  (worth it)
+  Transfer 5.0 MB over PCIe ~25 GB/s     :  0.200 ms  (worth it)
+  [check] on fast interconnect, KV transfer is sub-millisecond
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise E.5 complete
+  You modeled the latency win and the transfer cost of disaggregation.
+  Now build the two-pool prototype and compare real latency CDFs.
+======================================================================

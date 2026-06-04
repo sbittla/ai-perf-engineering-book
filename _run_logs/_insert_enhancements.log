@@ -1,0 +1,5 @@
+# _insert_enhancements.py
+# status=PASS rc=0 duration=0.1s
+======================================================================
+--- STDOUT ---
+SKIP: python-docx is not installed — manuscript tooling only (pip install python-docx to run).

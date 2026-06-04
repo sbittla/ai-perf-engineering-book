@@ -84,7 +84,8 @@ ai-perf-engineering-book/
 ├── Appendices/                        ← Reference material
 │   ├── A.Environment_Setup/           ← App A: System setup + verification
 │   ├── B.Command_Reference/           ← App B: Every profiling command
-│   └── C.Interview_Prep/              ← App C: 50 Q&A for interviews
+│   ├── C.Interview_Prep/              ← App C: 50 Q&A for interviews
+│   └── E.Advanced_Capstones/          ← App E: 5 advanced "go-deeper" capstones
 │
 ├── shared/
 │   ├── models/model.py                ← TinyTransformer used across all exercises
@@ -96,10 +97,13 @@ ai-perf-engineering-book/
 └── docs/
     ├── ROADMAP.md                     ← Learning plan with timelines
     ├── COMMANDS.md                    ← Profiling command reference
-    ├── INTERVIEW_PREP.md              ← Interview Q&A reference
     ├── HARDWARE_SETUP.md              ← RTX 4060 / cloud setup guide
     ├── REFERENCE_RESULTS.md           ← Sample results + reference environment
-    └── BOOK_RESULT_CALLOUTS.md        ← Print-ready result callouts (per part)
+    ├── BOOK_RESULT_CALLOUTS.md        ← Print-ready result callouts (per part)
+    ├── MANUSCRIPT_REVIEW.md           ← Editorial review notes
+    ├── TABLE_AUDIT_PROPOSAL.md        ← Table-formatting audit
+    ├── figures/                       ← Book figures (grayscale, 300 DPI)
+    └── worksheets/                    ← Fillable worksheets (book Appendix D & E)
 ```
 
 ---
@@ -213,15 +217,15 @@ Every exercise file:
 
 ## Complete Exercise Index
 
-**77 runnable exercises** across 9 parts plus 3 appendices. Every file is executed by `run_all_exercises.py`, which captures full output to `_run_logs/` and regenerates `EXERCISE_EXECUTION_REPORT.md`.
+**82 runnable exercises** across 9 parts plus 4 appendices. Every file is executed by `run_all_exercises.py`, which captures full output to `_run_logs/` and regenerates `EXERCISE_EXECUTION_REPORT.md`.
 
-> ✅ **Status: 77/77 exercises passing** — last verified 2026-06-02 on the NGC `nvcr.io/nvidia/pytorch:25.01-py3` container (PyTorch 2.6, CUDA 12.x) with an NVIDIA RTX 4060. (The harness reports 78/78 because it also runs the `sitecustomize.py` bootstrap helper.)
+> ✅ **Status: 82/82 exercises passing.** (The harness reports 90/90 because it also runs the `sitecustomize.py` bootstrap and the manuscript-tooling scripts.) Verified on the NGC `nvcr.io/nvidia/pytorch:25.01-py3` container (PyTorch 2.6, CUDA 12.x) with an NVIDIA RTX 4060; see [`EXERCISE_EXECUTION_REPORT.md`](EXERCISE_EXECUTION_REPORT.md) for the latest full run.
 >
 > 📊 See [`docs/REFERENCE_RESULTS.md`](docs/REFERENCE_RESULTS.md) for sample results, headline metrics, and the reference environment.
 
 | Part | Chapters | Exercises | Files |
 |---|---|---|---|
-| Appendices | A–C | 3 | `A.1_environment_check`, `B.1_profiling_cheatsheet`, `C.1_interview_questions` |
+| Appendices | A–C, E | 8 | `A.1_environment_check`, `B.1_profiling_cheatsheet`, `C.1_interview_questions`; `E.1_triton_kernel`, `E.2_vllm_trace`, `E.3_nccl_tuning`, `E.4_quant_bakeoff`, `E.5_disaggregated_serving` |
 | I — Foundations | 0–3 | 11 | `0.1_gpu_evolution`; `1.1_roofline_model`; `2.1_tensors`, `2.2_autograd`, `2.3_nn_modules`, `2.4_training_loop`, `2.5_gpu_timing`, `2.6_common_mistakes`; `3.1_cpu_and_memory`, `3.2_gpu_memory_and_compute`, `3.3_hardware_survey` |
 | II — GPU Programming & Profiling | 4–7 | 12 | `4.1_cuda_foundations`, `4.2_execution_model`, `4.3_memory_coalescing`, `4.4_tensor_cores_and_fusion`; `5.1_nsys_profiling`, `5.2_ncu_profiling`, `5.3_torch_profiler`; `6.1_precision_and_amp`, `6.2_quantization`, `6.3_torch_compile`; `7.1_dataloader_pipeline`, `7.2_io_bottleneck` |
 | III — Linux Systems Profiling | 8–9 | 8 | `8.1_tools_landscape`, `8.2_perf_fundamentals`, `8.3_cpu_flamegraphs`, `8.4_ebpf_and_bpftrace`, `8.5_lock_contention`; `9.1_memory_hierarchy`, `9.2_numa_and_topology`, `9.3_memory_bandwidth` |

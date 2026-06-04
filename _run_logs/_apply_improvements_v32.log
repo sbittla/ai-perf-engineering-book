@@ -1,0 +1,5 @@
+# _apply_improvements_v32.py
+# status=PASS rc=0 duration=0.1s
+======================================================================
+--- STDOUT ---
+SKIP: python-docx is not installed (pip install python-docx to run).

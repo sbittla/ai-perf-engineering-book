@@ -1,0 +1,48 @@
+# Appendices/E.Advanced_Capstones/E.4_quant_bakeoff.py
+# status=PASS rc=0 duration=0.1s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise E.4 - Quantization Bake-Off (accuracy/latency/memory Pareto)
+======================================================================
+
+-- Section 1: Weight Memory --
+
+  Weight memory = params * bits / 8. This sets how big a model fits and how many
+  bytes the bandwidth-bound decode step must read per token.
+
+         variant      GB
+            FP16   14.00
+             FP8    7.00
+     INT8 (W8A8)    7.00
+      INT4 (AWQ)    3.50
+  [check] memory shrinks monotonically as bit-width falls
+
+-- Section 2: Decode Latency --
+
+  Decode reads the full weight set per token, so per-token time ~ weight bytes /
+  bandwidth. Lower precision => fewer bytes => proportionally faster decode.
+
+         variant   ms/token   speedup
+            FP16      51.85     1.00x
+             FP8      25.93     2.00x
+     INT8 (W8A8)      25.93     2.00x
+      INT4 (AWQ)      12.96     4.00x
+  [check] lower precision speeds up bandwidth-bound decode
+
+-- Section 3: Pareto Frontier + SLA Pick --
+
+  Plot accuracy-drop (lower better) against latency (lower better). A variant is
+  on the frontier if nothing else is better on BOTH axes. Pick by the binding
+  SLA: max acceptable accuracy drop and max acceptable latency.
+
+  Pareto-optimal variants: FP16, FP8, INT4 (AWQ)
+  SLA [tight quality, loose latency  ] -> FP8
+  SLA [loose quality, tight latency  ] -> INT4 (AWQ)
+  [check] SLA selects the right precision from the frontier
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise E.4 complete
+  You built the precision Pareto frontier and chose by SLA. Now measure
+  real accuracy/latency/VRAM for each variant and redraw it with your data.
+======================================================================
