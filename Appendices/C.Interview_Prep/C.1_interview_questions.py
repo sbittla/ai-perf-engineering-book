@@ -134,22 +134,22 @@ Caches frequently-accessed global memory.
 HBM (High Bandwidth Memory): off-chip DRAM, 40–3200GB depending on GPU tier,
 ~600 cycle latency, 272–3500 GB/s bandwidth.
 
-Most AI workloads are HBM-bandwidth-limited. Every kernel-level optimisation
+Most AI workloads are HBM-bandwidth-limited. Every kernel-level optimization
 (tiling, fusion, reuse) aims to maximise computation per byte of HBM access."""
     },
     {
         "cat": 1, "cat_name": "GPU Architecture",
-        "q": "What is SM occupancy vs SM utilisation, and why are they different?",
+        "q": "What is SM occupancy vs SM utilization, and why are they different?",
         "a": """\
 SM occupancy: ratio of active warps to peak-possible warps. A scheduling
 metric — measures how well the SM can hide latency.
 
-SM utilisation (sm__throughput.avg.pct_of_peak_sustained_elapsed): fraction
+SM utilization (sm__throughput.avg.pct_of_peak_sustained_elapsed): fraction
 of cycles where at least one instruction is executing. A throughput metric.
 
-A kernel can have low occupancy but high utilisation if its arithmetic intensity
+A kernel can have low occupancy but high utilization if its arithmetic intensity
 is high enough that the SM never stalls (e.g., small, register-heavy kernels).
-A kernel can have high occupancy but low utilisation if warps frequently stall
+A kernel can have high occupancy but low utilization if warps frequently stall
 waiting for memory.
 
 Profile both and cross-reference."""
@@ -200,7 +200,7 @@ Decode: generate one token per step, autoregressive. Batch=1 → GEMM degenerate
 to matrix-vector product → memory-bandwidth-bound (reads all weights each step).
 Throughput dominated by how fast HBM can deliver KV cache + weights.
 
-They need different optimisation strategies:
+They need different optimization strategies:
   Prefill:  larger batch, chunked prefill, FlashAttention
   Decode:   continuous batching, KV quantisation, speculative decoding"""
     },
@@ -370,8 +370,8 @@ Use to find which PyTorch layer (embedding, attention, FFN) is the hotspot, and
 to export Chrome traces for visual inspection.
 
 ncu (Nsight Compute): hardware counter granularity inside a specific kernel.
-Use last, once you know exactly which kernel to optimise. Measures occupancy,
-DRAM utilisation, shared memory efficiency. Cost: 10–100× slowdown."""
+Use last, once you know exactly which kernel to optimize. Measures occupancy,
+DRAM utilization, shared memory efficiency. Cost: 10–100× slowdown."""
     },
     {
         "cat": 3, "cat_name": "Profiling Tools",
@@ -390,7 +390,7 @@ nsys: use NVTX markers
 
   Or:  torch.cuda.nvtx.range_push("my_region") / range_pop()
 
-These appear as coloured bands on the nsys GPU timeline."""
+These appear as colored bands on the nsys GPU timeline."""
     },
     {
         "cat": 3, "cat_name": "Profiling Tools",
@@ -445,7 +445,7 @@ Use to confirm that a fix actually reduced time in the expected function."""
         "q": "What are NVTX markers and how do they appear in nsys?",
         "a": """\
 NVTX (NVIDIA Tools eXtension) lets you inject named ranges and instant markers
-into the CUDA timeline. nsys captures them and displays them as coloured bands
+into the CUDA timeline. nsys captures them and displays them as colored bands
 overlaid on the GPU kernel timeline.
 
 Usage:
@@ -523,9 +523,9 @@ those. Output is text-only."""
     },
     {
         "cat": 3, "cat_name": "Profiling Tools",
-        "q": "What is the .item() synchronisation trap?",
+        "q": "What is the .item() synchronization trap?",
         "a": """\
-tensor.item() forces a GPU→CPU synchronisation: PyTorch must wait for all
+tensor.item() forces a GPU→CPU synchronization: PyTorch must wait for all
 pending GPU work to finish, copy the scalar value to CPU, and return it.
 
 If called inside the training loop (e.g., to accumulate a running loss), it
@@ -547,7 +547,7 @@ Other sneaky syncs: tensor.tolist(), print(tensor), logging tensor values."""
         "cat": 4, "cat_name": "Distributed Systems",
         "q": "Why does NCCL matter for multi-GPU training?",
         "a": """\
-NCCL (NVIDIA Collective Communications Library) provides optimised collective
+NCCL (NVIDIA Collective Communications Library) provides optimized collective
 operations (AllReduce, AllGather, ReduceScatter) that use NVLink (GPU-to-GPU),
 PCIe, and InfiniBand — keeping data on GPU throughout.
 
@@ -583,9 +583,9 @@ fit in VRAM; add pipeline parallel when even with TP the model is too large."""
         "a": """\
 DDP (DistributedDataParallel): every GPU holds the FULL model. After backward,
 gradients are AllReduced across GPUs. Memory per GPU:
-  ~params + grads + optimiser_states ≈ 3× params in FP32
+  ~params + grads + optimizer_states ≈ 3× params in FP32
 
-FSDP (FullyShardedDataParallel): shards params, grads, AND optimiser states
+FSDP (FullyShardedDataParallel): shards params, grads, AND optimizer states
 across N GPUs. Before each forward, AllGather reconstructs the full layer on each
 GPU. After backward, ReduceScatter distributes gradients back.
   Memory per GPU ≈ 3× params / N
@@ -771,7 +771,7 @@ For prefill at batch=32, seq=512:
     },
     {
         "cat": 5, "cat_name": "Benchmarking",
-        "q": "How do you characterise an AI workload before optimising?",
+        "q": "How do you characterise an AI workload before optimizing?",
         "a": """\
 Standard workload characterisation protocol:
 
@@ -781,9 +781,9 @@ Standard workload characterisation protocol:
 4. Latency distribution: P50/P95/P99 at target batch size, 20+ iterations
 5. Bottleneck identification: ncu roofline per hotspot kernel
 6. Memory footprint: weights + activations + KV cache + gradient buffers
-7. CPU utilisation: should be <20% during GPU compute (DataLoader not starving)
+7. CPU utilization: should be <20% during GPU compute (DataLoader not starving)
 8. Thermal check: sustained vs burst throughput — look for >10% throughput drop
-9. Cross-hardware: same script on baseline and optimised config
+9. Cross-hardware: same script on baseline and optimized config
 
 Report every experiment with: GPU, batch, dtype, seq_len, warmup, percentiles."""
     },
@@ -803,7 +803,7 @@ Production (real-workload) benchmarks:
   − Harder to reproduce; depends on traffic sampling
 
 Best practice: run both. Synthetic benchmarks for hardware selection and op
-optimisation; real-workload benchmarks for capacity planning and SLO validation.
+optimization; real-workload benchmarks for capacity planning and SLO validation.
 Always report which dataset/distribution you used."""
     },
     {
@@ -812,14 +812,14 @@ Always report which dataset/distribution you used."""
         "a": """\
 A correct speedup report requires:
   1. Baseline: what you're comparing against (model, GPU, batch, dtype, seq_len)
-  2. Optimised: what changed (ONE change per experiment)
+  2. optimized: what changed (ONE change per experiment)
   3. Metric: throughput (higher=better) or latency (lower=better)
   4. Statistical summary: mean ± std and P99, not just mean
   5. Conditions: warmup iterations, number of measurement iterations, duration
   6. Reproducibility: random seed, torch.backends.cudnn.deterministic if needed
 
-Speedup = optimised_throughput / baseline_throughput
-       or baseline_latency / optimised_latency
+Speedup = optimized_throughput / baseline_throughput
+       or baseline_latency / optimized_latency
 
 Do NOT report: speedup without baseline numbers, cherry-picked best run,
 metric that wasn't the bottleneck (reporting FLOPs when you're memory-bound)."""
@@ -869,16 +869,16 @@ For benchmarks: run for 120s, report mean of last 60s."""
         "a": """\
 M/D/1: Poisson arrivals (M), deterministic service time (D), single server (1).
 
-  Average latency = service_time × (1 + utilisation / (2 × (1 - utilisation)))
+  Average latency = service_time × (1 + utilization / (2 × (1 - utilization)))
 
-Where utilisation = arrival_rate / service_rate = RPS / max_RPS.
+Where utilization = arrival_rate / service_rate = RPS / max_RPS.
 
-At 50% utilisation: latency ≈ 1.5× service_time
-At 80% utilisation: latency ≈ 3× service_time
-At 90% utilisation: latency ≈ 5.5× service_time
+At 50% utilization: latency ≈ 1.5× service_time
+At 80% utilization: latency ≈ 3× service_time
+At 90% utilization: latency ≈ 5.5× service_time
 
-Lesson: a GPU serving system at 80% utilisation has 3× higher tail latency than
-at low load. Provision for maximum 70–75% utilisation to meet P99 SLOs.
+Lesson: a GPU serving system at 80% utilization has 3× higher tail latency than
+at low load. Provision for maximum 70–75% utilization to meet P99 SLOs.
 
 Real systems are closer to M/M/1 (random service) which is worse; M/D/1 gives
 the best-case queue latency bound."""

@@ -339,7 +339,7 @@ print(f"""
     1. KV cache grows linearly with seq_len × batch × n_layers.
     2. Decode latency grows linearly with seq_len (more K,V to load each step).
     3. Sliding window caps memory but loses long-range context.
-    4. PagedAttention matches full cache quality with better memory utilisation.
+    4. PagedAttention matches full cache quality with better memory utilization.
     5. The OOM threshold for seq=2048 on a {GPU_VRAM_GB:.0f}GB GPU is ~{max_concurrent_requests(GPU_VRAM_GB, MODEL_WEIGHTS_GB, 2048, **LLAMA7B)} concurrent requests.
 
   NEXT STEP: Run 18.2_memory_budget_planning.py to apply this analysis

@@ -1,0 +1,159 @@
+# V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_throughput_latency_curve.py
+# status=PASS rc=0 duration=2.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 14.2 — Throughput-Latency Curves
+============================================================
+  Device: cuda
+
+── Section 1: The Throughput-Latency Tradeoff ──
+
+  SINGLE REQUEST (batch=1):
+    Low latency: request processed immediately, ~5 ms.
+    Low throughput: GPU processes 1 request at a time = 200 req/s.
+    GPU utilization: ~10% (for decode-style workloads).
+
+  LARGE BATCH (batch=128):
+    High throughput: 128 requests in ~15 ms = 8,533 req/s.
+    High latency: each request waits for the batch to fill.
+    GPU utilization: ~90%.
+
+  The key insight: you cannot have BOTH minimum latency AND maximum throughput
+  simultaneously. The T-L curve shows the achievable trade-off space.
+
+  LITTLE'S LAW:  L = λ × W
+    L = average number of requests in the system
+    λ = arrival rate (requests/second)
+    W = average time in system (latency)
+
+  At low load (λ small): W ≈ service time (latency is just processing time).
+  Near capacity (λ → μ): queue builds → W → ∞ (latency explodes).
+  The "knee" is where λ/μ ≈ 0.7–0.8 (70–80% utilization).
+
+  ✓ Section 1 passed — throughput and latency are fundamentally coupled
+
+── Section 2: Batch Size Sweep — Measuring the T-L Curve ──
+
+  The simplest way to trace the T-L curve is to sweep batch size.
+  For each batch size B:
+    - Latency   = time to complete one forward pass (affects one user waiting)
+    - Throughput = B / latency  (samples processed per second)
+
+  TODO 1: Implement tl_sweep() that runs the model across batch_sizes,
+  measures latency (mean and P99) and throughput for each, and returns
+  a list of dicts with keys: batch, latency_mean_ms, p99_ms, throughput_sps.
+
+
+   Batch   Latency (ms)    P99 (ms)    Throughput   P99/P50
+  ──────  ─────────────  ──────────  ────────────  ────────
+       1           0.20        0.27          5087/s      1.36
+       2           0.21        0.63          9527/s      3.00
+       4           0.17        0.25         23149/s      1.45
+       8           0.19        0.42         41576/s      2.16
+      16           0.21        0.33         74808/s      1.54
+      32           0.21        0.42        152112/s      1.97
+      64           0.22        0.30        292839/s      1.37
+     128           0.26        0.64        485816/s      2.42
+  ✓ Section 2 passed — T-L curve collected across batch sizes
+
+── Section 3: Finding the Knee — Optimal Operating Point ──
+
+  The "knee" of the T-L curve is the batch size where adding more
+  throughput starts costing disproportionate latency.
+
+  DEFINITION: knee is where the marginal latency cost per unit of
+  additional throughput starts increasing rapidly (second derivative > 0).
+
+  A practical heuristic for the knee:
+    Find the smallest batch where P99 > P50 × 2.
+    The batch just below that is the knee.
+
+  For latency-sensitive SLOs, operate at or below the knee.
+  For throughput-maximising use cases, operate above the knee.
+
+  TODO 2: Implement find_knee() that returns the batch size at the knee,
+  defined as the largest batch where p99 / latency_mean < threshold.
+
+  Knee point: batch=64
+    Latency  : 0.22 ms  (P99: 0.30 ms)
+    Throughput: 292839 samples/sec
+
+  Pareto frontier (max throughput within latency budget):
+   Budget (ms)   Best batch    Throughput
+  ────────────  ───────────  ────────────
+             5ms          128      485816/s
+            10ms          128      485816/s
+            20ms          128      485816/s
+            50ms          128      485816/s
+           100ms          128      485816/s
+           200ms          128      485816/s
+  ✓ Section 3 passed — knee detected and Pareto frontier computed
+
+── Section 4: Simulating Request Rate Sweep ──
+
+  In serving systems, latency depends on the ARRIVAL RATE of requests,
+  not just the batch size. As arrival rate approaches system capacity,
+  a queue builds and latency explodes.
+
+  We model this with a simple M/D/1 queue (Poisson arrivals, deterministic service):
+    Service rate μ = 1 / service_time
+    utilization ρ = λ / μ  (λ = arrival rate)
+    Mean latency W = service_time + (ρ × service_time) / (2 × (1 - ρ))
+
+  This formula captures the exponential latency increase near capacity.
+
+  TODO 3: Implement md1_latency_ms() that returns mean latency from the M/D/1 formula.
+  Handle ρ >= 1.0 by returning infinity (system overloaded).
+
+  Service time (batch=1): 0.19 ms → capacity = 5179 req/s
+
+    Load (req/s)    ρ (util)    Latency (ms)
+  ──────────────  ──────────  ──────────────
+           517.9        0.10            0.20
+          1035.7        0.20            0.22
+          2071.4        0.40            0.26
+          2589.3        0.50            0.29
+          3107.2        0.60            0.34
+          3625.0        0.70            0.42
+          4142.9        0.80            0.58
+          4660.8        0.90            1.06
+          4919.7        0.95            2.03
+          5178.6        1.00  ∞ (overloaded)
+
+  Latency at 50% load: 0.29 ms → at 80% load: 0.58 ms (2.0× worse)
+  ✓ Section 4 passed — M/D/1 queueing model shows latency explosion near capacity
+
+── Section 5: Benchmark Report Format ──
+
+  MLPerf Inference requires a specific report format. Even if you are not
+  submitting to MLPerf, this format is a useful standard:
+
+    Scenario: Offline (maximise throughput) or Server (SLO on P99 latency)
+    Metric:   Offline: samples/sec;  Server: samples/sec subject to P99 < SLO
+
+  TODO 4: Implement benchmark_report() that prints the summary table below
+  and returns the recommended operating point (dict) based on the SLO.
+
+
+  Benchmark Report — SERVER scenario  (P99 SLO: 50.0 ms)
+   Batch    P50 (ms)    P99 (ms)    Tput (sps)    SLO OK
+  ──────  ──────────  ──────────  ────────────  ────────
+       1        0.20        0.27          5087         ✓
+       2        0.21        0.63          9527         ✓
+       4        0.17        0.25         23149         ✓
+       8        0.19        0.42         41576         ✓
+      16        0.21        0.33         74808         ✓
+      32        0.21        0.42        152112         ✓
+      64        0.22        0.30        292839         ✓
+     128        0.26        0.64        485816         ✓
+
+  Recommended: batch=128  throughput=485816 sps  P99=0.64 ms
+  ✓ Section 5 passed — benchmark report generated with SLO-aware recommendation
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 14.2 complete!
+  You can now sweep batch sizes, trace T-L curves, find the
+  knee, apply queuing theory, and generate benchmark reports.
+  Next: V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py
+============================================================

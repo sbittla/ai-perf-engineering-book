@@ -42,7 +42,7 @@ tools = [
     ("nsys profile",    "System timeline, API trace",        "rocprof --sys-trace",          "Good"),
     ("ncu",             "Per-kernel hardware counters",       "rocprofv3 --pmc",              "Partial"),
     ("torch.profiler",  "PyTorch op attribution",            "torch.profiler (same API)",    "Full"),
-    ("nvidia-smi",      "Live GPU utilisation",              "rocm-smi",                     "Full"),
+    ("nvidia-smi",      "Live GPU utilization",              "rocm-smi",                     "Full"),
     ("nvitop",          "Rich TUI monitor",                  "amdgpu_top / rocm-smi watch",  "Partial"),
     ("py-spy",          "CPU flamegraph (Python)",           "py-spy (identical)",           "Full"),
     ("perf / eBPF",     "Linux systems profiling",           "perf / eBPF (identical)",      "Full"),
@@ -80,7 +80,7 @@ rocprofv3_examples = [
         "rocprofv3 --pmc TCC_EA_RDREQ_32B,TCC_EA_WRREQ_32B python infer.py",
     ),
     (
-        "Flat memory wavefronts (bandwidth utilisation)",
+        "Flat memory wavefronts (bandwidth utilization)",
         "rocprofv3 --pmc TA_FLAT_READ_WAVEFRONTS,TA_FLAT_WRITE_WAVEFRONTS python infer.py",
     ),
     (
@@ -95,9 +95,9 @@ for desc, cmd in rocprofv3_examples:
 
 print("""
   rocm-smi monitoring equivalents (≈ nvidia-smi):
-    rocm-smi                           # live utilisation
+    rocm-smi                           # live utilization
     watch -n 0.5 rocm-smi             # continuous (≈ watch nvidia-smi)
-    rocm-smi --showuse --showmemuse    # GPU + memory utilisation
+    rocm-smi --showuse --showmemuse    # GPU + memory utilization
     rocm-smi --showpower               # power consumption
     rocm-smi --showtemp                # temperature
 """)
@@ -166,7 +166,7 @@ differences = [
         [
             "FlashAttention-2 available for ROCm via flash-attn with ROCm wheels.",
             "FlashAttention-3 (Hopper-specific) has NO ROCm equivalent.",
-            "Use composable_kernel ROCm-optimised attention as alternative.",
+            "Use composable_kernel ROCm-optimized attention as alternative.",
         ],
     ),
     (

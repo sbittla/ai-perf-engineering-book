@@ -1,0 +1,137 @@
+# I.Foundations/3.The_AI_Hardware_Stack/3.3_hardware_survey.py
+# status=PASS rc=0 duration=3.5s
+======================================================================
+--- STDOUT ---
+=================================================================
+  Exercise 03 — GPU Hardware Survey
+=================================================================
+  Device: cuda
+
+── Section 1: GPU Properties ──
+
+  torch.cuda.get_device_properties() returns an object with all the
+  static specs of the GPU.  This is the Python equivalent of
+  nvidia-smi --query-gpu=... --format=csv
+
+  GPU name                : NVIDIA GeForce RTX 4060 Laptop GPU
+  Streaming Multiprocessors: 24
+  VRAM                    : 8.6 GB
+  CUDA Compute Capability : 8.9
+  Clock rate (MHz)        : 2250
+  Memory clock (MHz)      : 8001
+  L2 cache size           : 34 MB
+  Max threads per SM      : 1536
+  ✓ Section 1 passed
+
+── Section 2: Your GPU's Ridge Point ──
+
+  The ridge point separates memory-bound from compute-bound operations.
+  ridge_point = peak_FP16_FLOP/s  /  HBM_bandwidth_bytes/s
+
+  Published specs by architecture:
+    Ampere (A100 SXM):  312 TFLOP/s FP16,  2,000 GB/s → ridge=156 FLOPs/byte
+    Hopper  (H100 SXM): 989 TFLOP/s FP16,  3,350 GB/s → ridge=295 FLOPs/byte
+    Ada     (RTX 4090): 165 TFLOP/s FP16,  1,008 GB/s → ridge=164 FLOPs/byte
+    Turing  (T4):        65 TFLOP/s FP16,    300 GB/s → ridge=217 FLOPs/byte
+
+  Matched spec table: 4060
+
+  Peak FP16 FLOP/s : 51.5 TFLOP/s
+  HBM bandwidth    : 272 GB/s
+  Ridge point      : 189.3 FLOPs/byte
+
+  Operations with AI < 189: memory-bandwidth bound
+  Operations with AI > 189: compute bound (Tensor Cores useful)
+  ✓ Section 2 passed
+
+── Section 3: Measuring MFU (Model FLOPs utilization) ──
+
+  MFU = observed FLOP/s  /  peak FLOP/s.
+
+  We measure a large FP16 GEMM that is well into compute-bound territory
+  (high arithmetic intensity), then compute how close we are to peak.
+
+  On a well-utilized GPU with properly aligned dimensions:
+    MFU > 70%  → excellent
+    MFU 40–70% → typical optimized code
+    MFU < 30%  → investigate (small batch? FP32? wrong dtype?)
+
+  Matrix size     : 4096×4096  FP16
+  Avg time        : 5.025 ms
+  FLOPs/call      : 137.4 GFLOP
+  Observed        : 27.4 TFLOP/s
+  Peak            : 51.5 TFLOP/s
+  MFU             : 53.1%
+  Result: good — typical for real workloads (not just bare GEMM)
+  ✓ Section 3 passed
+
+── Section 4: GPU Runtime Monitoring ──
+
+  GPUs throttle when they exceed their temperature or power limit.
+  Throttled clock = lower throughput = misleading benchmarks.
+
+  Always check for thermal throttling before trusting benchmark numbers:
+    nvidia-smi dmon -s pcut -d 1   (poll every 1 second)
+    nvidia-smi --query-gpu=temperature.gpu,clocks.sm,power.draw --format=csv
+
+  Temperature      : 74 °C
+  SM clock         : 2520 MHz  (max: 3105 MHz)
+  Clock throttle   : 18.8%  (WARNING: throttling detected)
+  Power draw       : 73.29 W  / [N/A] W
+  GPU utilization  : 78%
+  Memory used      : 318 / 8188 MB
+  ✓ Section 4 passed
+
+── Section 5: Multi-GPU Topology ──
+
+  For multi-GPU systems, the interconnect between GPUs determines
+  how efficiently distributed training and inference can scale.
+
+  NVLink (NVx in nvidia-smi topo matrix) : 600–900 GB/s
+  PCIe   (PIX in nvidia-smi topo matrix) : 32–64 GB/s
+
+  Rule: NVLink allows near-linear DDP scaling; PCIe saturates quickly.
+
+  GPUs available: 1
+  Single GPU system (NVIDIA GeForce RTX 4060 Laptop GPU)
+  Multi-GPU topology only visible on multi-GPU machines.
+  In a cloud multi-GPU instance: nvidia-smi topo --matrix
+
+  ✓ Section 5 passed
+
+── Section 6: Your Hardware Summary ──
+
+  Summarise the key performance numbers for your GPU.
+  This is the reference card you will use throughout Parts II–V.
+
+
+  ┌─────────────────────────────────────────────────────┐
+  │  Hardware: NVIDIA GeForce RTX 4060 Laptop GPU       │
+  │  SMs: 24    VRAM: 9 GB   CC: 8.9          │
+  │  Peak FP16 :   51.5 TFLOP/s                         │
+  │  HBM BW    :    272 GB/s                            │
+  │  Ridge pt  :  189.3 FLOPs/byte                      │
+  │  Bare GEMM :  53.1% MFU                              │
+  └─────────────────────────────────────────────────────┘
+
+  Keep these numbers.  Every profiling result in this book
+  should be interpreted relative to these ceilings.
+
+  ✓ Section 6 passed
+
+=================================================================
+  ALL SECTIONS COMPLETE — Exercise 03 (Chapter 3) done!
+
+  You have completed all exercises in Part I — Foundations.
+  Before continuing to Part II, verify:
+    I.Foundations/1.What_Is_AI_Performance_Engineering/1.1_roofline_model.py   ✓
+    I.Foundations/2.PyTorch_Fundamentals/2.1_tensors.py  ✓
+    I.Foundations/2.PyTorch_Fundamentals/2.2_autograd.py ✓
+    I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py ✓
+    I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py ✓
+    I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py ✓
+    I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py ✓
+    I.Foundations/3.The_AI_Hardware_Stack/3.1_cpu_and_memory.py ✓
+    I.Foundations/3.The_AI_Hardware_Stack/3.2_gpu_memory_and_compute.py ✓
+    I.Foundations/3.The_AI_Hardware_Stack/3.3_hardware_survey.py ✓
+=================================================================

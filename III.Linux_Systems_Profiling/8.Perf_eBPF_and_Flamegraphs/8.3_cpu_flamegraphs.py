@@ -6,7 +6,7 @@ Covers book section 8.2:
   • What a flamegraph shows — x-axis = time, y-axis = call depth
   • Identifying hotspots: wide frames at the top of a stack
   • Generating flamegraphs with perf+FlameGraph and py-spy
-  • Differential flamegraphs for verifying optimisations
+  • Differential flamegraphs for verifying optimizations
   • Classifying flamegraph frames by width percentage
 
 Run:  python III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py
@@ -55,8 +55,8 @@ print("""
     the time is distributed among many callee functions — investigate
     each sub-frame individually.
 
-  COLOUR is usually arbitrary (not meaningful) in standard flamegraphs.
-  Some tools colour-code by library (kernel = orange, user = yellow, JIT = green).
+  color is usually arbitrary (not meaningful) in standard flamegraphs.
+  Some tools color-code by library (kernel = orange, user = yellow, JIT = green).
 
   Example: ASCII flamegraph of a PyTorch training pipeline:
   ─────────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ def find_hotspot(frame_widths: dict) -> str:
     Example: find_hotspot({"forward": 45, "backward": 35, "dataload": 20})
     should return "forward" because 45 is the largest value.
     """
-    pass  # YOUR CODE HERE → return max(frame_widths, key=frame_widths.get)
+    return max(frame_widths, key=frame_widths.get)
 
 
 test_frames = {"forward": 45, "backward": 35, "dataload": 20}
@@ -176,7 +176,10 @@ def mixed_workload() -> None:
 #     4. Assert that the Stats object is not None
 #   The Stats constructor validates the profile — if profiling failed it will raise.
 
-profile = None  # YOUR CODE HERE → profile = cProfile.Profile()
+profile = cProfile.Profile()
+profile.enable()
+mixed_workload()
+profile.disable()
 
 assert profile is not None, (
     "profile must be a cProfile.Profile() object. Did you implement TODO 2?"
@@ -207,16 +210,16 @@ print("  ✓ Section 2 passed — cProfile ran successfully on mixed workload")
 print("\n── Section 3: Differential Flamegraph ──")
 print("""
   A differential flamegraph overlays two profiles captured before and
-  after an optimisation.  It shows which functions got faster (blue)
+  after an optimization.  It shows which functions got faster (blue)
   and which got slower (red).
 
-  This is critically important for verifying optimisations:
-    1. You optimise a specific function, e.g., remove a sleep.
+  This is critically important for verifying optimizations:
+    1. You optimize a specific function, e.g., remove a sleep.
     2. You take a new profile.
     3. The differential flamegraph shows that only the target function
        changed (blue), while everything else stayed the same (grey).
 
-  A common pitfall: optimising function A shifts CPU time to function B,
+  A common pitfall: optimizing function A shifts CPU time to function B,
   making B appear red.  Without a differential flamegraph, you might
   conclude B got slower.  The differential shows the shift is relative —
   B's absolute time did not change, but its fraction grew.
@@ -254,7 +257,13 @@ def profile_fn(fn) -> float:
 
     Hint: pstats.Stats has a .total_tt attribute after sort_stats is called.
     """
-    pass  # YOUR CODE HERE → return total_time_seconds
+    pr = cProfile.Profile()
+    pr.enable()
+    fn()
+    pr.disable()
+    stats = pstats.Stats(pr, stream=io.StringIO())
+    stats.sort_stats("cumulative")
+    return stats.total_tt
 
 
 slow_fn = lambda: time.sleep(0.02)
@@ -341,9 +350,14 @@ def classify_frame(width_pct: float) -> str:
     Classify a flamegraph frame by its width percentage:
       width_pct > 20  → "hotspot"     (major consumer of CPU time)
       width_pct > 5   → "contributing" (notable but not dominant)
-      else            → "noise"        (< 5% — too small to optimise)
+      else            → "noise"        (< 5% — too small to optimize)
     """
-    pass  # YOUR CODE HERE → return classification string
+    if width_pct > 20:
+        return "hotspot"
+    elif width_pct > 5:
+        return "contributing"
+    else:
+        return "noise"
 
 
 assert classify_frame(35) == "hotspot",      f"35% → 'hotspot', got '{classify_frame(35)}'"

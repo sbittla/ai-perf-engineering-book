@@ -1,0 +1,155 @@
+# IV.LLM_Inference_Systems/13.Distributed_Inference/13.2_nccl_collectives.py
+# status=PASS rc=0 duration=2.5s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 13.2 — NCCL Collectives for Distributed Inference
+============================================================
+  Device: cuda
+
+── Section 1: What NCCL Does and Why ──
+
+  NCCL (pronounced "nickel") is NVIDIA's library for high-bandwidth
+  GPU-to-GPU collective communication. PyTorch distributed uses NCCL
+  as its backend for GPU operations.
+
+  NCCL COLLECTIVES:
+    AllReduce  : Each rank has a tensor. Sum (or max/min) across all ranks.
+                 Each rank ends up with the SAME reduced result.
+                 Used by: tensor parallelism (sum partial matmul outputs)
+
+    AllGather  : Each rank has a shard of size S. All ranks receive the
+                 full concatenated tensor of size N × S.
+                 Used by: FSDP (reconstruct full parameters before forward)
+
+    Broadcast  : Rank 0 sends a tensor; all other ranks receive it.
+                 Used by: distributing the model or configuration from rank 0.
+
+    ReduceScatter: Reduce + scatter in one step (used by FSDP backward).
+
+  WHY NOT JUST USE TCP?
+    • NVLink: 600 GB/s between A100s in the same node (vs 25 GB/s PCIe)
+    • InfiniBand: 400 Gb/s between nodes (vs 100 Gb/s Ethernet)
+    • NCCL uses these high-bandwidth paths automatically.
+    • NCCL fuses multiple small messages into large transfers (better bandwidth).
+
+  ✓ Section 1 passed — NCCL is the backbone of distributed GPU training/inference
+
+── Section 2: Ring-AllReduce — The Algorithm That Scales ──
+
+  Naive AllReduce: rank 0 collects all tensors (bottleneck on rank 0).
+  Ring-AllReduce: each rank sends to the next in a ring, two phases:
+    Phase 1 (ReduceScatter): N-1 steps, each sends 1/N of tensor.
+    Phase 2 (AllGather):     N-1 steps, each forwards received shard.
+
+  Total data sent per GPU: 2 × (N-1)/N × tensor_bytes ≈ 2 × tensor_bytes
+  This is INDEPENDENT of N (for large N) — ring scales perfectly!
+
+  EFFECTIVE BUS BANDWIDTH formula (NCCL benchmark definition):
+    bus_bw = (2 × tensor_bytes × (N-1)/N) / (time × N)
+
+  LATENCY vs BANDWIDTH:
+    Small tensors: dominated by latency (∝ N, number of hops)
+    Large tensors: dominated by bandwidth (nearly independent of N)
+    Cross-over at ≈ 1 MB for NVLink; ≈ 10 MB for InfiniBand
+
+  TODO 1: Implement ring_allreduce_time_ms() below.
+
+  AllReduce time for a 256 MB tensor (Llama-7B hidden, batch=1, seq=512):
+
+    N GPUs   NVLink (ms)     PCIe (ms)       IB (ms)
+  ────────  ────────────  ────────────  ────────────
+         2          3.61         67.14         42.98
+         4          5.44        100.73         64.49
+         8          6.41        117.59         75.31
+        16          7.02        126.14         80.84
+
+  NVLink 18.6× faster than PCIe for AllReduce
+  ✓ Section 2 passed — ring AllReduce time model working
+
+── Section 3: AllGather — Reconstructing Sharded Parameters ──
+
+  AllGather is used when each GPU holds a shard of a tensor and all GPUs
+  need the full tensor (e.g., FSDP before a forward pass).
+
+  RING-ALLGATHER:
+    Volume per GPU: (N-1)/N × full_tensor_bytes
+    ≈ full_tensor_bytes for large N
+
+  AllGather sends (N-1)/N of the tensor vs AllReduce 2×(N-1)/N.
+  AllGather is roughly half the volume of AllReduce.
+
+  TODO 2: Implement ring_allgather_time_ms() below.
+
+  AllGather vs AllReduce (256 MB, 4 GPUs, NVLink):
+    AllGather : 2.714 ms
+    AllReduce : 5.439 ms  (AllReduce = 2× AllGather volume)
+  ✓ Section 3 passed — AllGather is cheaper than AllReduce per byte
+
+── Section 4: Communication Budget in a Transformer Layer ──
+
+  With tensor parallelism degree N, each transformer layer requires:
+    2 AllReduce operations (after attention output proj and FFN down proj)
+
+  Each AllReduce tensor: batch × seq_len × d_model × 2 bytes
+
+  For Llama-7B (d_model=4096), batch=1, seq=512, 4 GPUs:
+    Tensor per AllReduce = 1 × 512 × 4096 × 2 = 4 MB
+    Time per AllReduce   ≈ ring_allreduce_time_ms(4 MB, 4, 600)
+    Time per layer       ≈ 2 × above
+
+  Compare to compute per layer (Section 13.1 formula):
+    FLOPs per layer (attn+FFN) ≈ 12 × d_model² × batch × seq_len
+    Time per layer on A100      = FLOPs / (312 TFLOPS per GPU × N)
+
+  N=2: compute=0.165ms  comm=0.172ms  ratio=1.0  ⚠ comm overhead
+  N=4: compute=0.083ms  comm=0.308ms  ratio=0.3  ⚠ comm overhead
+  N=8: compute=0.041ms  comm=0.496ms  ratio=0.1  ⚠ comm overhead
+
+  Compute/comm degrades from 1.0× (N=2) to 0.1× (N=8)
+  ✓ Section 4 passed — communication overhead grows with TP degree
+
+── Section 5: Benchmarking NCCL in Practice ──
+
+  NCCL-TESTS (NVIDIA official benchmark):
+    git clone https://github.com/NCCL/nccl-tests
+    make MPI=0 CUDA_HOME=/usr/local/cuda
+    ./build/all_reduce_perf -b 8 -e 256M -f 2 -g 4
+
+  Output columns:
+    size        : tensor size in bytes
+    count       : number of elements
+    time        : algorithm time (μs)
+    algbw       : algorithm bandwidth = size / time (GB/s)
+    busbw       : bus bandwidth = algbw × 2(N-1)/N (effective NVLink/IB usage)
+
+  TARGET VALUES (A100 8-GPU NVLink):
+    busbw AllReduce   : 240+ GB/s  (out of 300 GB/s theoretical per GPU)
+    busbw AllGather   : 270+ GB/s
+    If measured busbw < 50% of theoretical → check NVLink topology
+
+  PYTORCH DIRECT MEASUREMENT (single node, CPU-level timing):
+    import torch.distributed as dist
+    dist.init_process_group("nccl")
+    tensor = torch.randn(256*1024*1024//4, device="cuda")  # 256 MB
+    dist.barrier()
+    t0 = time.perf_counter()
+    dist.all_reduce(tensor)
+    torch.cuda.synchronize()
+    bw_gbps = (256e6 * 2 * (N-1)/N) / (time.perf_counter() - t0) / 1e9
+    print(f"AllReduce bus bandwidth: {bw_gbps:.1f} GB/s")
+
+  WHAT TO DO WHEN NCCL IS THE BOTTLENECK:
+    1. Reduce tensor parallel degree (N) to lower communication volume
+    2. Enable NCCL socket tuning: NCCL_SOCKET_IFNAME=eth0
+    3. Switch to overlapping comm+compute (--overlap-grad-reduce in Megatron)
+    4. Use pipeline parallelism to shift the communication off the critical path
+
+  ✓ Section 5 passed — NCCL benchmarking and tuning strategy understood
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 13.2 complete!
+  You understand AllReduce and AllGather algorithms,
+  their bandwidth models, and how to benchmark NCCL.
+  Next: IV.LLM_Inference_Systems/13.Distributed_Inference/13.3_fsdp_and_pipeline.py
+============================================================

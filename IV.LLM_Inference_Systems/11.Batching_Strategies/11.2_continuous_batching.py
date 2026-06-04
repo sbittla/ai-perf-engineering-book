@@ -217,7 +217,7 @@ print("""
   Beyond a point, concurrency is limited by available KV cache VRAM.
   vLLM's --max-num-seqs sets the maximum concurrency.
 
-  Too low: GPU underutilised (few real tokens per step)
+  Too low: GPU underutilized (few real tokens per step)
   Too high: KV cache OOM, requests can't start
 """)
 
@@ -236,7 +236,7 @@ assert res32["throughput_tps"] > res1["throughput_tps"], \
     "Higher concurrency should yield higher throughput"
 print(f"\n  Concurrency=32 is {res32['throughput_tps']/res1['throughput_tps']:.1f}× "
       f"faster than concurrency=1")
-print("  ✓ Section 4 passed — higher concurrency improves GPU utilisation")
+print("  ✓ Section 4 passed — higher concurrency improves GPU utilization")
 
 
 # ─────────────────────────────────────────────────────────────

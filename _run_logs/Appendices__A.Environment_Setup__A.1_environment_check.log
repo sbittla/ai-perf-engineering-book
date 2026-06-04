@@ -1,0 +1,119 @@
+# Appendices/A.Environment_Setup/A.1_environment_check.py
+# status=PASS rc=0 duration=11.1s
+======================================================================
+--- STDOUT ---
+====================================================================
+  APPENDIX A — Environment Setup Verification
+====================================================================
+
+  Platform : Linux x86_64
+  Device   : cuda
+
+────────────────────────────────────────────────────────────────────
+Section 1 — Python and PyTorch
+────────────────────────────────────────────────────────────────────
+
+CONCEPT: Version requirements for this book
+  • Python 3.10+  — match statements, improved type hints
+  • PyTorch 2.0+  — torch.compile requires 2.x
+  • CUDA 12.x     — needed for Tensor Core features used in Part II
+
+  Python    : 3.12 (/usr/bin/python3)
+  PyTorch   : 2.11.0+cu130
+  CUDA      : 13.0
+  GPU count : 1
+
+✓ Section 1 passed
+
+────────────────────────────────────────────────────────────────────
+Section 2 — GPU Capabilities
+────────────────────────────────────────────────────────────────────
+
+CONCEPT: GPU spec determines which optimizations apply
+  • Compute capability 7.0+ → Tensor Cores (FP16)
+  • Compute capability 8.0+ → BF16 Tensor Cores, TF32
+  • Compute capability 8.9+ → FP8 (Ada Lovelace, e.g. RTX 4060)
+
+  GPU name       : NVIDIA GeForce RTX 4060 Laptop GPU
+  VRAM           : 8.6 GB
+  Compute cap    : 8.9
+  SM count       : 24
+  Tensor Cores   : Yes (FP16)
+  BF16 support   : True
+  torch.compile  : Yes (requires CUDA 12+)
+
+  LLM memory feasibility on 9GB VRAM:
+    ✓ GPT-2 (124M, FP16)           needs 0.2 GB
+    ✗ Llama-7B (FP16)              needs 14.0 GB
+    ✓ Llama-7B (INT8)              needs 7.0 GB
+    ✓ Llama-7B (INT4/GPTQ)         needs 3.5 GB
+    ✗ Llama-13B (FP16)             needs 26.0 GB
+    ✓ Llama-13B (INT4/GPTQ)        needs 6.5 GB
+
+✓ Section 2 passed
+
+────────────────────────────────────────────────────────────────────
+Section 3 — Required Python Packages
+────────────────────────────────────────────────────────────────────
+
+CONCEPT: Book exercise dependencies
+  Core packages are mandatory. Optional packages unlock specific features.
+
+  Required packages:
+    ✓ torch                2.11.0+cu130
+    ✓ numpy                2.3.5
+    ✓ matplotlib           3.10.0
+    ✓ tqdm                 4.67.1
+
+  Optional packages:
+    ✓ transformers         5.9.0  — HuggingFace models (Ch 10–13)
+    ✗ nvitop               missing — pip install nvitop  — live GPU dashboard
+    ✗ py_spy               missing — pip install py-spy  — CPU flamegraphs (Appendix B)
+    ✗ docx                 missing — pip install python-docx  — document generator scripts
+
+✓ Section 3 passed
+
+────────────────────────────────────────────────────────────────────
+Section 4 — Profiling Tools
+────────────────────────────────────────────────────────────────────
+
+CONCEPT: Profiling tool chain (Parts II and III)
+  nsys  → GPU timeline (system level, ms granularity)
+  ncu   → kernel hardware counters (nanosecond granularity)
+  py-spy → Python CPU flamegraphs (no sudo needed)
+  perf  → Linux hardware events (IPC, cache miss rate)
+
+  ✓ nsys (Nsight Systems)        NVIDIA Nsight Systems version 2024.6.2.225-246235244400v0
+  ✓ ncu  (Nsight Compute)        NVIDIA (R) Nsight Compute Command Line Profiler
+  ✓ perf                         WARNING: perf not found for kernel 6.6.114.1-microsoft
+  ✓ py-spy                       py-spy 0.4.2
+  ✓ nvitop                       Traceback (most recent call last):
+  ✓ flamegraph.pl                USAGE: /root/FlameGraph/flamegraph.pl [options] infile > out
+
+  Install missing tools:
+    nsys / ncu  : ships with CUDA Toolkit, or apt install nsight-systems
+    py-spy      : pip install py-spy
+    perf        : sudo apt install linux-tools-generic
+    flamegraph  : git clone https://github.com/brendangregg/FlameGraph ~/FlameGraph
+
+✓ Section 4 passed
+
+────────────────────────────────────────────────────────────────────
+Section 5 — Timing Baseline
+────────────────────────────────────────────────────────────────────
+
+CONCEPT: Establishing a timing reference
+  We verify that CUDA events work correctly (or fall back to wall-clock time).
+  All exercise files use this pattern for GPU timing.
+
+  1024×1024 matmul : 5.73 ms  (375 GFLOPS on cuda)
+  VRAM used   : 16.9 MB
+
+✓ Section 5 passed
+
+====================================================================
+  ALL SECTIONS PASSED
+  Environment ready for all book exercises (device=cuda)
+
+  Next: Appendices/B.Command_Reference/B.1_profiling_cheatsheet.py
+====================================================================

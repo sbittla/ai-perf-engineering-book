@@ -47,7 +47,7 @@ print("""
   a text report:
     nsys stats /tmp/5.1_nsys_output.nsys-rep
 
-  Look for: NVTX ranges appearing as coloured bands above the GPU kernels.
+  Look for: NVTX ranges appearing as colored bands above the GPU kernels.
   If the GPU row shows gaps between your NVTX ranges, the GPU was idle.
 """)
 
@@ -57,7 +57,7 @@ print("""
 print("── Section 1: NVTX Markers ──")
 print("""
   NVTX (NVIDIA Tools Extension) adds named ranges to the profiler timeline.
-  Range push/pop pairs appear as coloured bands labelled with your string.
+  Range push/pop pairs appear as colored bands labelled with your string.
 
   Pattern:
     torch.cuda.nvtx.range_push("phase_name")
@@ -144,8 +144,12 @@ if DEVICE == "cuda":
 
         s = torch.cuda.Event(enable_timing=True)
         e = torch.cuda.Event(enable_timing=True)
-        # YOUR CODE HERE: s.record(); forward pass; e.record(); synchronize; accumulate
-        pass  # remove this and implement the above
+        s.record()
+        with torch.no_grad():
+            mlp(x)
+        e.record()
+        torch.cuda.synchronize()
+        gpu_ms_total += s.elapsed_time(e)
 
 wall_end = time.perf_counter()
 wall_ms  = (wall_end - wall_start) * 1000
@@ -165,7 +169,7 @@ print("""
   typically due to:
     - Slow DataLoader (disk/network I/O bound)
     - CPU-side preprocessing bottleneck
-    - Synchronisation barriers (e.g. loss.item() in the inner loop)
+    - synchronization barriers (e.g. loss.item() in the inner loop)
 
   A low idle fraction (<10%) means the GPU is the bottleneck —
   time to profile kernels with ncu (Exercise 5.2).
@@ -173,7 +177,7 @@ print("""
 
 # TODO 3: Compute idle_fraction = (wall_ms - gpu_ms_total) / wall_ms.
 #   Handle the edge case where wall_ms = 0 (set idle_fraction = 0.0).
-idle_fraction = None  # YOUR CODE HERE
+idle_fraction = (wall_ms - gpu_ms_total) / wall_ms if wall_ms > 0 else 0.0
 
 if idle_fraction is None:
     idle_fraction = 0.0  # fallback for CPU-only

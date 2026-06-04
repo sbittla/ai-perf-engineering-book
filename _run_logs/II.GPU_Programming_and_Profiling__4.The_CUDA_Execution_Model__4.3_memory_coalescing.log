@@ -1,0 +1,102 @@
+# II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_memory_coalescing.py
+# status=PASS rc=0 duration=2.4s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 4.2 — Memory Coalescing and the GPU Memory Hierarchy
+============================================================
+  Device: cuda
+
+── Section 1: Memory Coalescing ──
+
+  When 32 threads in a warp all access CONSECUTIVE memory addresses
+  (stride 1), the GPU can serve all 32 reads in a single 128-byte
+  memory transaction.  This is a coalesced access.
+
+  When threads access memory with a stride (e.g. stride=8 means each
+  thread skips 7 elements), the GPU must issue multiple transactions
+  to service the warp, dramatically reducing effective bandwidth.
+
+  We measure bandwidth for strides 1, 2, 4, 8, 16, 32 using index-gather
+  on a large float32 tensor.
+
+  Bandwidth (GB/s) = bytes_read / (time_s)
+                   = (n_elements * 4 bytes) / (time_ms / 1000) / 1e9
+
+  stride= 1      56.5 GB/s   (4.751 ms)
+  stride= 2      49.2 GB/s   (2.730 ms)
+  stride= 4      35.0 GB/s   (1.915 ms)
+  stride= 8      22.2 GB/s   (1.512 ms)
+  stride=16      22.1 GB/s   (0.760 ms)
+  stride=32      22.1 GB/s   (0.380 ms)
+  ✓ Section 1 passed — stride-1 access has highest bandwidth
+
+── Section 2: GPU Memory Hierarchy ──
+
+  Inside the GPU there is a memory hierarchy analogous to the CPU:
+
+    Registers  →  L1 / Shared memory  →  L2 cache  →  HBM (global)
+
+  Small tensors fit entirely in L1 or L2 cache — repeated reads are
+  fast.  Large tensors spill to HBM and experience full memory latency.
+
+  We measure torch.sum() throughput for tensors of increasing size to
+  observe the cache transition:
+    < 1 MB  : likely L1/L2 hit  → high effective bandwidth
+    1–40 MB : L2 hit            → moderate bandwidth
+    > 40 MB : DRAM (HBM) bound  → capped by HBM bandwidth
+
+  L2 cache size: 34 MB (from device properties)
+
+     0.01 MB       0.3 GB/s  [L1/L2 hit]
+     0.10 MB       2.2 GB/s  [L1/L2 hit]
+     1.00 MB      14.6 GB/s  [L2 hit]
+    10.00 MB     481.1 GB/s  [L2 hit]
+    64.00 MB     244.3 GB/s  [DRAM]
+   256.00 MB     248.7 GB/s  [DRAM]
+  ✓ Section 2 passed — memory tier classification complete
+
+── Section 3: Row-major vs Column-major Access ──
+
+  PyTorch tensors are row-major (C-contiguous) by default.
+  This means row elements are stored consecutively in memory.
+
+  Accessing M[i, :] (a full row) reads a contiguous block → coalesced.
+  Accessing M[:, i] (a full column) reads every 1024th element → strided.
+
+  For transformer weight matrices that must be accessed both ways
+  (Q/K/V projections need both input features and output features),
+  layout choices affect bandwidth efficiency.
+
+  We time 128 repeated slices of rows vs columns on a (1024, 1024) FP16 matrix.
+
+  Row-major slice (M[i, :]) : 2.659 ms total (128 iters)
+  Col-major slice (M[:, i]) : 2.927 ms total (128 iters)
+  Ratio col/row             : 1.10x slower
+  ✓ Section 3 passed — row-major access is faster due to coalescing
+
+── Section 4: Layout Implication — contiguous() for matmul ──
+
+  When a tensor is non-contiguous (e.g. after .t() or .permute()), the
+  CUDA matmul kernels may not be able to use their most optimized paths.
+  Calling .contiguous() copies the data into a new contiguous buffer.
+  This copy has a cost, but the subsequent matmul may be faster enough
+  to justify it.
+
+  We create a transposed (non-contiguous) tensor and compare matmul
+  timing with and without .contiguous().  The key assertion is that
+  .contiguous() correctly reports is_contiguous() = True.
+
+  B_transposed.is_contiguous(): False
+  B_cont.is_contiguous(): True
+  matmul non-contiguous : 0.086 ms
+  matmul contiguous     : 0.087 ms
+  (results may be similar — modern cuBLAS handles both paths)
+  ✓ Section 4 passed — .contiguous() produces a contiguous tensor
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 4.2 complete!
+  You now understand memory coalescing, cache tiers, layout access
+  patterns, and the contiguous() API for matmul optimization.
+  Next: II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py
+============================================================

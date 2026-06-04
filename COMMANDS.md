@@ -204,13 +204,13 @@ ltrace -e malloc -p $(pgrep python) 2>&1 | head -30
 # CPU states + memory + swap (1 second intervals)
 vmstat 1 30
 
-# Disk I/O throughput and utilisation
+# Disk I/O throughput and utilization
 iostat -xz 1
 
-# CPU utilisation history
+# CPU utilization history
 sar -u 1 60
 
-# Memory utilisation history
+# Memory utilization history
 sar -r 1 60
 
 # Per-partition NVMe stats

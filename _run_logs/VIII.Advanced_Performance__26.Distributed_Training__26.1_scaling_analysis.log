@@ -1,0 +1,43 @@
+# VIII.Advanced_Performance/26.Distributed_Training/26.1_scaling_analysis.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 26.1 - Distributed Training: Scaling Analysis
+======================================================================
+
+-- Section 1: Ring AllReduce Cost --
+
+  Ring AllReduce of S bytes across N GPUs moves ~2(N-1)/N * S bytes per GPU,
+  so time ~= 2(N-1)/N * S / B for interconnect bandwidth B.
+
+  NVLink ~600 GB/s       7B bf16 grads, 8 GPUs:      40.8 ms / step
+  InfiniBand ~50 GB/s    7B bf16 grads, 8 GPUs:     490.0 ms / step
+  [check] AllReduce cost scales inversely with interconnect bandwidth
+
+-- Section 2: ZeRO Per-GPU Memory --
+
+  Adam training state per parameter (mixed precision, rough): ~2 bytes weights
+  + ~2 grads + ~12 optimizer (fp32 master + m + v) = ~16 bytes/param.
+  DDP replicates all of it; ZeRO shards progressively across N GPUs.
+
+  ddp    (7B, 8 GPUs):   112.0 GB / GPU
+  zero1  (7B, 8 GPUs):    38.5 GB / GPU
+  zero2  (7B, 8 GPUs):    26.2 GB / GPU
+  zero3  (7B, 8 GPUs):    14.0 GB / GPU
+  [check] memory falls monotonically DDP -> ZeRO-1 -> 2 -> 3
+
+-- Section 3: Scaling Efficiency --
+
+  Efficiency = (speedup on N GPUs) / N. 1.0 is perfect; keep it >= 0.8.
+
+  measured throughput: {1: 100, 2: 190, 4: 360, 8: 640}
+  efficiency:          {1: 1.0, 2: 0.95, 4: 0.9, 8: 0.8}
+  Amdahl ceiling @5% serial, 8 GPUs: 5.93x
+  [check] efficiency computed; 8-GPU efficiency >= 0.80
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise 26.1 complete
+  You modeled AllReduce cost, ZeRO memory by stage, and scaling
+  efficiency with an Amdahl ceiling.
+======================================================================

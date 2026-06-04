@@ -1,0 +1,42 @@
+# VIII.Advanced_Performance/27.Observability/27.1_observability_metrics.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 27.1 - Production Observability
+======================================================================
+
+-- Section 1: DCGM GPU Telemetry --
+
+  DCGM / dcgm-exporter publishes SM activity, Tensor-Core activity, HBM
+  bandwidth, power, temperature. SM activity is the first thing to check:
+  a low value means the GPU is starved (DataLoader / batching), not compute-bound.
+
+  gpu0: SM active  72%  -> healthy
+  gpu1: SM active  68%  -> healthy
+  gpu2: SM active  18%  -> STARVED (investigate input pipeline / batching)
+  gpu3: SM active  74%  -> healthy
+  [check] flagged the starved GPU from SM-activity telemetry
+
+-- Section 2: p99 Latency from a Histogram --
+
+  Prometheus stores latency as cumulative histogram buckets; p99 is interpolated
+  from them (histogram_quantile). Here we compute it directly from bucket counts.
+
+  p50 =    100 ms     p99 =   1000 ms
+  [check] p99 computed from histogram buckets
+
+-- Section 3: SLO Burn and Capacity --
+
+  SLO: p99 TTFT < 500 ms for 99% of requests. Alert on how fast we burn the
+  1% error budget, not on raw spikes. Capacity: stay left of the latency knee.
+
+  40 slow / 1000 reqs  ->  error-budget burn = 4.0x
+  target 18000 tok/s at knee 6500 tok/s -> need 3 replicas
+  [check] error-budget burn and replica count computed
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise 27.1 complete
+  You triaged GPU telemetry, computed p99 from a histogram, and turned
+  an SLO into a burn alert and a capacity (replica) decision.
+======================================================================

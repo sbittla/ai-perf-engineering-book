@@ -56,7 +56,7 @@ def measure_access_time(arr: np.ndarray, indices: np.ndarray) -> float:
     """
     TODO 1: Implement this function.
     Sum arr[indices] using a Python loop (not numpy vectorisation).
-    This exposes the per-access cost because Python cannot batch-optimise it.
+    This exposes the per-access cost because Python cannot batch-optimize it.
     Return elapsed time in milliseconds.
 
     Steps:
@@ -67,7 +67,12 @@ def measure_access_time(arr: np.ndarray, indices: np.ndarray) -> float:
       elapsed_ms = (time.perf_counter() - t0) * 1000
       return elapsed_ms
     """
-    pass  # YOUR CODE HERE → return elapsed_ms
+    t0 = time.perf_counter()
+    total = 0
+    for i in indices:
+        total += arr[i]
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    return elapsed_ms
 
 
 # Build test arrays
@@ -129,7 +134,12 @@ def sequential_sum(arr: np.ndarray) -> float:
     Return the elapsed time in milliseconds.
     Run the sum 5 times and return the minimum (to reduce OS noise).
     """
-    pass  # YOUR CODE HERE → return min_elapsed_ms
+    min_elapsed_ms = float("inf")
+    for _ in range(5):
+        t0 = time.perf_counter()
+        _ = arr.sum()
+        min_elapsed_ms = min(min_elapsed_ms, (time.perf_counter() - t0) * 1000)
+    return min_elapsed_ms
 
 
 def random_gather(arr: np.ndarray, idx: np.ndarray) -> float:
@@ -138,7 +148,12 @@ def random_gather(arr: np.ndarray, idx: np.ndarray) -> float:
     Gather arr[idx] and sum the result (arr[idx].sum()).
     Return the elapsed time in milliseconds (minimum over 5 runs).
     """
-    pass  # YOUR CODE HERE → return min_elapsed_ms
+    min_elapsed_ms = float("inf")
+    for _ in range(5):
+        t0 = time.perf_counter()
+        _ = arr[idx].sum()
+        min_elapsed_ms = min(min_elapsed_ms, (time.perf_counter() - t0) * 1000)
+    return min_elapsed_ms
 
 
 # 256 MB float32 array — larger than any typical L3 cache
@@ -219,7 +234,13 @@ def time_conditional_sum(arr: np.ndarray, threshold: float = 0.5) -> tuple:
     Return (elapsed_ms, result_value) so we can verify both arrays
     give the same sum (within floating point tolerance).
     """
-    pass  # YOUR CODE HERE → return (elapsed_ms, result_value)
+    min_elapsed_ms = float("inf")
+    result_value = 0.0
+    for _ in range(5):
+        t0 = time.perf_counter()
+        result_value = arr[arr > threshold].sum()
+        min_elapsed_ms = min(min_elapsed_ms, (time.perf_counter() - t0) * 1000)
+    return min_elapsed_ms, float(result_value)
 
 
 unsorted_result = time_conditional_sum(unsorted_arr, THRESHOLD)
@@ -306,7 +327,13 @@ def interpret_ipc(instructions: float, cycles: float) -> str:
       IPC < 1.0  → "memory-bound"
       else       → "balanced"
     """
-    pass  # YOUR CODE HERE → return classification string
+    ipc = instructions / cycles
+    if ipc > 2.0:
+        return "compute-bound"
+    elif ipc < 1.0:
+        return "memory-bound"
+    else:
+        return "balanced"
 
 
 assert interpret_ipc(3e9, 1e9) == "compute-bound", (

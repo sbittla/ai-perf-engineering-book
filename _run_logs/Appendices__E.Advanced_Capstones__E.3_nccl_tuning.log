@@ -1,0 +1,53 @@
+# Appendices/E.Advanced_Capstones/E.3_nccl_tuning.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise E.3 - Multi-Node NCCL Tuning (ring vs tree model)
+======================================================================
+
+-- Section 1: Ring AllReduce Bandwidth --
+
+  Ring AllReduce moves 2*(N-1)/N * S bytes per GPU and takes 2*(N-1) steps.
+  Small messages are dominated by per-step latency; large messages approach
+  the link's streaming bandwidth (the 'bus bandwidth').
+
+       msg    ring us   bus GB/s
+        1K      150.0       0.01
+       64K      152.5       0.81
+        1M      189.3      10.38
+       64M     2666.6      47.19
+     1024M    40415.3      49.81
+  [check] large messages approach link bandwidth (bw-bound)
+
+-- Section 2: Tree vs Ring --
+
+  A tree AllReduce completes in ~2*log2(N) steps instead of 2*(N-1). For small,
+  latency-bound messages that is a large win; for big messages ring's higher
+  bandwidth utilization wins. NCCL_ALGO lets you force one or the other.
+
+       msg    ring us    tree us   winner
+        1K      150.0       40.0     tree
+        8K      150.3       40.3     tree
+       64K      152.5       42.6     tree
+      512K      169.7       61.0     tree
+        4M      307.3      207.8     tree
+       64M     2666.6     2724.4     ring
+  Crossover near        : ~65536K bytes
+  [check] tree wins small (latency), ring wins large (bandwidth)
+
+-- Section 3: The Node-Boundary Cliff --
+
+  Inside a node, NVLink (~600 GB/s) carries the collective; once it crosses to a
+  second node over InfiniBand (~50 GB/s) the same AllReduce gets ~10x slower.
+  That step-down is the efficiency cliff you see going from 8 to 16 GPUs.
+
+  8 GPU  (NVLink 600 GB/s) :    3.16 ms
+  16 GPU (IB     50 GB/s)  :   40.42 ms  (13x slower)
+  [check] the node boundary, not GPU count, causes the cliff
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise E.3 complete
+  You modeled ring vs tree and located the node-boundary cliff. Now
+  measure it with nccl-tests and tune NCCL_ALGO / topology to recover it.
+======================================================================

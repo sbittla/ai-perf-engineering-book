@@ -5,7 +5,7 @@
 Covers book sections 20.5, 20.6:
   • Consumer Blackwell GPU comparison: RTX 4060 vs 4090 vs RTX 5090 (Table 20.4)
   • Computing the RTX 5090 roofline ridge point
-  • Updated ncu metric names for FP8 and FP4 Tensor Core utilisation
+  • Updated ncu metric names for FP8 and FP4 Tensor Core utilization
   • Three profiling adaptations required on Blackwell hardware
 
 Run:
@@ -63,7 +63,7 @@ for label, vals in specs:
 # TODO 1: Compute the bandwidth speedup of RTX 5090 over RTX 4060.
 rtx5090_bw = 1_792
 rtx4060_bw = 272
-bw_speedup = None  # YOUR CODE HERE → rtx5090_bw / rtx4060_bw
+bw_speedup = rtx5090_bw / rtx4060_bw
 
 assert bw_speedup is not None, "compute bw_speedup"
 assert 6.0 < bw_speedup < 7.0, f"BW speedup should be ~6.6×, got {bw_speedup:.1f}"
@@ -84,8 +84,8 @@ print("""
 
 # TODO 2: Compute ridge points for RTX 4060 and RTX 5090.
 #   ridge = fp16_tflops * 1000 / bw_gbs   (FLOP/byte)
-rtx4060_ridge = None  # YOUR CODE HERE → 136 * 1000 / 272
-rtx5090_ridge = None  # YOUR CODE HERE → 838 * 1000 / 1792
+rtx4060_ridge = 136 * 1000 / 272
+rtx5090_ridge = 838 * 1000 / 1792
 
 assert rtx4060_ridge is not None, "compute rtx4060_ridge"
 assert rtx5090_ridge is not None, "compute rtx5090_ridge"
@@ -108,7 +108,7 @@ print("  ✓ Section 2 passed")
 print("\n── Section 3: Updated ncu Metric Names for Blackwell ──")
 print("""
   Three ncu metrics needed for Blackwell profiling.
-  Use these to measure Tensor Core utilisation for each precision.
+  Use these to measure Tensor Core utilization for each precision.
 """)
 
 ncu_metrics = [

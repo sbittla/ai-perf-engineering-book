@@ -5,8 +5,8 @@ I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py  ─  Chapter 2: The
 Covers book section 2.6.
 
 Each section demonstrates a real mistake and has you:
-  (a) observe the wrong behaviour (the bug is pre-coded so you can see it)
-  (b) fix it and verify the correct behaviour
+  (a) observe the wrong behavior (the bug is pre-coded so you can see it)
+  (b) fix it and verify the correct behavior
 
 Run:  python I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py
 All sections must print ✓.
@@ -44,7 +44,13 @@ t_wrong_ms = (time.time() - t0) * 1000
 if DEVICE == "cuda":
     # TODO 1: Measure the TRUE GPU time using CUDA events.
     #   start = torch.cuda.Event(enable_timing=True) ...
-    t_correct_ms = None  # YOUR CODE HERE
+    start = torch.cuda.Event(enable_timing=True)
+    end   = torch.cuda.Event(enable_timing=True)
+    start.record()
+    C = torch.mm(A, B)
+    end.record()
+    torch.cuda.synchronize()
+    t_correct_ms = start.elapsed_time(end)
 
     assert t_correct_ms is not None and t_correct_ms > 0, "measure with CUDA events"
     print(f"  time.time() result : {t_wrong_ms:.3f} ms  ← CPU submission, not GPU time")
@@ -86,7 +92,7 @@ outputs_differ_in_train = not torch.allclose(out_bad1, out_bad2)
 
 # TODO 2: Switch mdl to eval mode, then run two forward passes.
 #   Verify that both outputs are identical (deterministic).
-pass  # YOUR CODE HERE  → mdl.eval()
+mdl.eval()
 with torch.no_grad():
     out_good1 = mdl(x_inp)
     out_good2 = mdl(x_inp)
@@ -120,7 +126,7 @@ grad_step2_bug = w.grad.item()   # accumulated: 6.0
 
 # TODO 3: Zero the gradient, then do a fresh backward.
 #   w.grad.zero_()  or use optimizer.zero_grad(set_to_none=True)
-pass  # YOUR CODE HERE  → w.grad.zero_()
+w.grad.zero_()
 (w * 3.0).sum().backward()
 grad_step2_fixed = w.grad.item()   # should be 3.0
 
@@ -135,13 +141,21 @@ print("  ✓ Mistake 3 fixed")
 # ─────────────────────────────────────────────────────────────
 # MISTAKE 4: Calling .item() inside the training loop
 # ─────────────────────────────────────────────────────────────
-print("\n── Mistake 4: Synchronising GPU Inside the Training Loop ──")
+print("\n── Mistake 4: synchronizing GPU Inside the Training Loop ──")
 print("""
-  loss.item() and tensor.cpu() both SYNCHRONISE the CPU with the GPU
+  loss.item() and tensor.cpu() both synchronize the CPU with the GPU
   — the CPU blocks until all pending GPU work finishes.  In a tight
   inner loop this serialises the pipeline and can cut throughput by 50%+.
 
-  Fix: accumulate the raw tensor, call .item() every N steps.
+  Why it stalls: CUDA kernels are enqueued asynchronously, so the host
+  normally keeps launching work while the GPU executes earlier kernels —
+  overlapping data prep with compute.  A synchronous .item()/.cpu() forces
+  the host thread to wait until the GPU drains its entire stream queue and
+  surfaces the scalar back across the PCIe bus, collapsing that overlap into
+  a sequential, single-threaded bottleneck.
+
+  Fix: accumulate the raw tensor (total += loss.detach()), then call .item()
+  once every N steps (or at epoch end).
 """)
 
 # Simulate a training loop that logs loss every step (WRONG) vs every 50 (RIGHT)
@@ -166,8 +180,10 @@ running = torch.tensor(0.0, device=DEVICE)
 for step in range(STEPS):
     out  = dummy_model(x_dummy)
     loss = dummy_loss(out, y_dummy)
-    # YOUR CODE HERE: add loss to running (no .item()), call .item() every 50 steps
-    pass
+    # Add loss to running (no .item()), call .item() every 50 steps
+    running = running + loss.detach()
+    if (step + 1) % 50 == 0:
+        _ = running.item()
 if DEVICE == "cuda":
     torch.cuda.synchronize()
 t_fixed = (time.perf_counter() - t_fixed_start) * 1000
@@ -192,7 +208,7 @@ model5 = nn.Linear(4, 4).to(DEVICE)
 x5     = torch.randn(8, 4, device=DEVICE)
 
 # TODO 5: Create a zeros mask of shape (8, 4) DIRECTLY on DEVICE (device=DEVICE)
-mask = None  # YOUR CODE HERE  → torch.zeros(8, 4, device=DEVICE)
+mask = torch.zeros(8, 4, device=DEVICE)
 
 # Check that the mask is on the correct device (no implicit PCIe copy)
 assert mask is not None,                 "mask is None"
@@ -223,8 +239,8 @@ else:
     def mm_fp32(): return torch.mm(A_fp32, B_fp32)
 
     # TODO 6: Create A_fp16 and B_fp16 as float16 versions of A_fp32 and B_fp32
-    A_fp16 = None  # YOUR CODE HERE  → A_fp32.half()
-    B_fp16 = None  # YOUR CODE HERE  → B_fp32.half()
+    A_fp16 = A_fp32.half()
+    B_fp16 = B_fp32.half()
 
     def mm_fp16(): return torch.mm(A_fp16, B_fp16)
 
@@ -281,7 +297,7 @@ for i in range(8):
         times.append((time.perf_counter() - t0) * 1000)
 
 # TODO 7: Compute the steady-state average using runs 4–7 (discard first 3)
-steady_avg = None  # YOUR CODE HERE  → sum(times[4:]) / len(times[4:])
+steady_avg = sum(times[4:]) / len(times[4:])
 first_run  = times[0]
 
 assert steady_avg is not None and steady_avg > 0, "compute steady_avg"
@@ -312,7 +328,20 @@ for bs in [1, 8, 32]:
     #   Use at least 5 warmup + 20 timed iterations
     #   latencies[bs]   = avg latency in ms
     #   throughputs[bs] = bs / (latency_ms / 1000)  samples per second
-    pass  # YOUR CODE HERE
+    for _ in range(5):
+        with torch.no_grad():
+            model8(xbs)
+    if DEVICE == "cuda":
+        torch.cuda.synchronize()
+    t0 = time.perf_counter()
+    for _ in range(20):
+        with torch.no_grad():
+            model8(xbs)
+    if DEVICE == "cuda":
+        torch.cuda.synchronize()
+    latency_ms = (time.perf_counter() - t0) / 20 * 1000
+    latencies[bs]   = latency_ms
+    throughputs[bs] = bs / (latency_ms / 1000)
 
 for bs in [1, 8, 32]:
     if bs in latencies:
@@ -389,15 +418,16 @@ else:
 
     mem_peak = torch.cuda.memory_allocated() / 1e6
 
-    # Free alternating tensors (creates holes in the pool)
-    for i in range(0, len(tensors), 2):
+    # Free alternating tensors (creates holes in the pool).
+    # Delete from the end so earlier indices don't shift as we go.
+    for i in range(len(tensors) - 1, -1, -2):
         del tensors[i]
 
     mem_fragmented = torch.cuda.memory_allocated() / 1e6
     mem_reserved   = torch.cuda.memory_reserved()  / 1e6
 
     # TODO 10: Empty the cache to return reserved memory to the OS pool
-    pass  # YOUR CODE HERE  → torch.cuda.empty_cache()
+    torch.cuda.empty_cache()
 
     mem_after_empty = torch.cuda.memory_reserved() / 1e6
 

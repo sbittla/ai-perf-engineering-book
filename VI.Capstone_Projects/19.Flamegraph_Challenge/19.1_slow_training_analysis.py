@@ -48,7 +48,7 @@ print("""
 
   Bug 1: loss.item() called inside the training step
     loss.item() calls torch.Tensor.item() which:
-      - Forces synchronisation between CPU and GPU
+      - Forces synchronization between CPU and GPU
       - Means the CPU must wait for the GPU to finish the forward/backward
       - Introduces ~50–200 µs CPU-GPU sync overhead PER STEP
       - In a tight training loop: adds up to seconds over many batches
@@ -305,7 +305,7 @@ print("""
 
   DIFFERENTIAL FLAMEGRAPH (before vs after):
     py-spy record -o before.json -- python 19.1_slow_training_analysis.py
-    py-spy record -o after.json  -- python 19.2_optimised_training.py
+    py-spy record -o after.json  -- python 19.2_optimized_training.py
     Use speedscope or brendangregg/FlameGraph to diff them
 """)
 
@@ -366,5 +366,5 @@ print("  Three bottlenecks found:")
 print(f"    Bug 1 (.item() sync)    : {item_overhead_ms:.3f} ms overhead/step")
 print(f"    Bug 2 (blocking H2D)    : {nonblocking_overhead_ms:.3f} ms overhead/step")
 print(f"    Bug 3 (grad in eval)    : {eval_overhead_ms:.3f} ms overhead/eval call")
-print("  Next: VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimised_training.py")
+print("  Next: VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimized_training.py")
 print("=" * 60)

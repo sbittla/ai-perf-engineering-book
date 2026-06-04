@@ -1,0 +1,101 @@
+# VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py
+# status=PASS rc=0 duration=11.6s
+======================================================================
+--- STDOUT ---
+============================================================
+  Capstone 16.2 — Precision and torch.compile Ladder
+============================================================
+  Device: cuda
+
+── Section 1: Load the Baseline Snapshot ──
+
+  The baseline from 16.1 provides the FP32 reference numbers.
+  Every optimization rung will compute its speedup relative to FP32.
+  If the baseline file doesn't exist, we establish it here.
+
+  Loaded baseline: TPS(FP32)=400.6 tok/s
+  FP32 reference TTFT (prompt=256): 3.650 ms
+  ✓ Section 1 passed — baseline loaded
+
+── Section 2: FP16 Precision ──
+
+  FP16 (half precision) uses 2 bytes per value vs 4 for FP32:
+    • Model weights occupy half the VRAM
+    • Memory bandwidth per token load is halved
+    • On Tensor Core GPUs: 2× throughput (FP16 matmul path)
+
+  On CPU: FP16 is typically SLOWER because x86 CPUs lack native FP16
+  arithmetic and emulate it in software. The speedup only appears on GPU.
+
+  TODO 1: Measure TTFT for FP16 and BF16 models.
+  Create models with dtype=torch.float16 and dtype=torch.bfloat16.
+  Compute speedup relative to FP32 baseline.
+
+  Dtype        TTFT mean (ms)    Speedup   VRAM (MB)
+  ──────────  ───────────────  ─────────  ──────────
+  float32               3.650       1.00×         N/A
+  float16               3.681       0.99×         309
+  bfloat16              3.163       1.15×         308
+
+  FP16 speedup on GPU: 0.99×  (expected 1.5–2.5×)
+  ✓ Section 2 passed — precision speedup measured
+
+── Section 3: torch.compile ──
+
+  torch.compile (introduced in PyTorch 2.0) traces the model's computation
+  graph and passes it to TorchInductor, which generates fused Triton kernels.
+
+  KEY TRADE-OFFS:
+    + Reduces kernel launch overhead (fewer, larger kernels)
+    + Enables operator fusion (e.g. LayerNorm + attention QKV in one kernel)
+    + Eliminates Python interpreter overhead for the forward pass
+    - Compilation takes 30–120 seconds on first call (paid once per session)
+    - Dynamic shapes cause recompilation — use static input shapes
+    - Some models do not benefit (already memory-bandwidth-bound at batch=1)
+
+  COMPILE MODES:
+    "default"         : balance compile time vs runtime performance
+    "reduce-overhead" : more aggressive fusion; longer compile
+    "max-autotune"    : exhaustive kernel search; 10+ min compile time
+
+  TODO 2: Compile the FP32 model with mode="reduce-overhead".
+  Measure: (a) time to first result (includes compilation), (b) steady-state TTFT.
+  Report compile overhead = first_call_ms - steady_state_ms.
+
+  First call (includes compilation): 1624 ms
+  Steady-state TTFT                : 5.155 ms
+  Compile overhead                 : 1618 ms
+  Speedup vs eager FP32            : 0.71×
+
+  Compile amortised after ~1618500 inferences (at 3.6 ms/call saving 0.00 ms)
+  ✓ Section 3 passed — compile overhead and speedup measured
+
+── Section 4: Full optimization Ladder ──
+
+  We now assemble the complete before/after table. Each rung shows
+  the cumulative improvement from the previous rung.
+
+  READING THE TABLE:
+    Rung 1 = FP32 eager baseline (1.00×)
+    Rung 2 = FP16 (precision benefit)
+    Rung 3 = FP16 + compile (fusion benefit ON TOP of FP16)
+    Each rung's speedup is relative to FP32 baseline.
+
+
+  Rung    Config                   TTFT (ms)    Speedup
+  ──────  ──────────────────────  ──────────  ─────────
+  1       FP32 eager                   3.650      1.00×
+  2       FP16 eager                   3.681      0.99×
+  3       FP32 + compile               5.155      0.71×
+  4       FP16 + compile               2.268      1.61×
+
+  Best configuration: FP16 + compile  (1.61× over FP32 eager)
+
+  Snapshot saved to: /tmp/capstone16_optimized.json
+  ✓ Section 4 passed — optimization ladder built
+
+============================================================
+  ALL SECTIONS PASSED — Capstone 16.2 complete!
+  Best result: FP16 + compile → 1.61× over FP32 baseline
+  Next: VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py
+============================================================

@@ -1,14 +1,17 @@
 # Appendices
 
-Three reference appendices for the AI Systems Performance Engineering book.
+Reference appendices for the AI Systems Performance Engineering book. (Appendices D and F
+in the print book are narrative — production case studies and a "keeping current" guide —
+so they have no exercises here; their fillable worksheets live in [`../docs/worksheets/`](../docs/worksheets).)
 
 ## Appendix Map
 
-| Appendix | Topic | File |
+| Appendix | Topic | File(s) |
 |----------|-------|------|
 | A — Environment Setup | Verify the full dev environment | `A.1_environment_check.py` |
 | B — Command Reference | Profiling cheatsheet + torch.profiler demo | `B.1_profiling_cheatsheet.py` |
 | C — Interview Prep | 50 Q&A across 5 categories | `C.1_interview_questions.py` |
+| E — Advanced Capstones | 5 "go-deeper" capstone specs as runnable analytic exercises | `E.1`–`E.5` |
 
 ## Quick Start
 
@@ -61,4 +64,26 @@ Source reference: `docs/COMMANDS.md`
 | 4 — Distributed Systems | Q31–40 | NCCL, FSDP vs DDP, tensor/pipeline parallel, gradient checkpointing |
 | 5 — Benchmarking | Q41–50 | 5 mistakes, throughput-latency curves, arithmetic intensity, thermal throttling |
 
-Source reference: `docs/INTERVIEW_PREP.md`
+Source reference: book Appendix C.
+
+## Appendix E — Advanced Capstones
+
+Five "go-deeper" capstone specifications from the book, delivered as runnable, CPU-only
+analytic exercises. Each models the performance characteristics of an advanced topic so you
+can reason about it before running the full version on real hardware (book Appendix E).
+
+| Exercise | Topic |
+|----------|-------|
+| `E.1_triton_kernel.py` | Triton kernel optimization — fusion traffic + roofline prediction |
+| `E.2_vllm_trace.py` | vLLM internals — continuous-batching scheduler + PagedAttention block table |
+| `E.3_nccl_tuning.py` | Multi-node NCCL — ring vs tree, bus bandwidth, the node-boundary cliff |
+| `E.4_quant_bakeoff.py` | Precision Pareto — accuracy vs latency vs memory across FP16/FP8/INT8/INT4 |
+| `E.5_disaggregated_serving.py` | Disaggregated prefill/decode — inter-token latency model + KV-transfer cost |
+
+```bash
+python Appendices/E.Advanced_Capstones/E.1_triton_kernel.py
+python Appendices/E.Advanced_Capstones/E.2_vllm_trace.py
+python Appendices/E.Advanced_Capstones/E.3_nccl_tuning.py
+python Appendices/E.Advanced_Capstones/E.4_quant_bakeoff.py
+python Appendices/E.Advanced_Capstones/E.5_disaggregated_serving.py
+```

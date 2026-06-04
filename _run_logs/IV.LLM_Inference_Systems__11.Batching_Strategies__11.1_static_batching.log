@@ -1,0 +1,103 @@
+# IV.LLM_Inference_Systems/11.Batching_Strategies/11.1_static_batching.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 11.1 — Static Batching and Padding Waste
+============================================================
+
+── Section 1: How Static Batching Works ──
+
+  Static batching groups requests into a fixed-size batch.
+  All requests in the batch are processed together for exactly
+  max(output_lengths) decode steps. Shorter requests are padded
+  with dummy tokens once they finish — the GPU still computes
+  on those positions (wasted work).
+
+  TIMELINE (batch of 4, output lengths [10, 50, 100, 200]):
+    Steps 0–10   : all 4 sequences active
+    Steps 11–50  : seq 0 done, padding → 3 real + 1 padded
+    Steps 51–100 : seqs 0,1 done           → 2 real + 2 padded
+    Steps 101–200: seqs 0,1,2 done         → 1 real + 3 padded
+
+  Total token-steps computed  : 4 × 200 = 800
+  Real (non-padding) token-steps: 10+50+100+200 = 360
+  PADDING FRACTION: 1 - 360/800 = 55%  ← GPU wastes 55% of decode work
+
+  This gets worse with high variance in output lengths.
+
+  ✓ Section 1 passed — static batching pads all sequences to max length
+
+── Section 2: Padding Fraction Calculation ──
+
+  For a batch with output lengths L = [l_0, l_1, ..., l_{B-1}]:
+    Total token-steps  = B × max(L)
+    Real  token-steps  = sum(L)
+    Padding fraction   = 1 - sum(L) / (B × max(L))
+
+  TODO 1: Implement padding_fraction() below.
+
+  Example batch [10, 50, 100, 200]: padding fraction = 55.0%
+
+  Distribution                     Avg len   Max len     Padding
+  ──────────────────────────────  ────────  ────────  ──────────
+  All equal (no variance)              100       100        0.0%
+  Low variance  (95–105)               100       104        4.0%
+  Medium variance (50–150)             102       150       31.9%
+  High variance  (10–500)              239       489       51.1%
+  Worst case: 1 long + 15 short         41       500       91.9%
+  ✓ Section 2 passed — padding fraction grows with output length variance
+
+── Section 3: Simulating Static Batching Throughput ──
+
+  We model a server processing 128 requests with static batching.
+  Each decode step takes decode_ms_per_batch ms (linear in batch size).
+  Prefill is also linear in batch size (parallel, but takes batch * prefill_ms).
+
+  Throughput = total real tokens generated / total wall-clock seconds.
+
+  128 requests, prefill=20ms/req, decode=0.5ms/step
+  Output length distribution: mean=85, max=500, p99=500
+
+   Batch    Throughput    Padding%   Padded tokens
+  ──────  ────────────  ──────────  ──────────────
+       1        1359/s        0.0%               0
+       4        1939/s       55.3%          13,430
+       8        2244/s       70.2%          25,550
+      16        2640/s       78.1%          38,750
+      32        3048/s       83.0%          53,150
+
+  Padding grows from 0.0% (batch=1) to 83.0% (batch=32)
+  ✓ Section 3 passed — static batching throughput limited by padding waste
+
+── Section 4: Wasted Decode Steps ──
+
+  Each padded token-step costs GPU time (memory reads, compute) for a result
+  that is immediately discarded. On a real GPU:
+
+    Wasted DRAM reads  = padded_tokens × kv_bytes_per_token
+    Wasted FLOPs       = padded_tokens × 2 × d_model × seq_len
+
+  For Llama-7B with batch=32 and 50% padding, if the decode throughput is
+  10,000 real tok/s, the GPU is actually running at 20,000 token-steps/s
+  but throwing away half the work.
+
+  TODO 2: Compute wasted_pct for batch=32 scenario and confirm > 20%.
+
+  Batch=32: 53,150 padded token-steps out of 64,000 total
+  Wasted GPU work: 83.0%
+
+  WHAT THIS MEANS IN PRACTICE
+    If padding_fraction = 83.0%:
+      GPU effective utilization ≈ 17% (the rest is thrown away)
+      Throughput could improve 5.9× if padding were eliminated
+    → This is exactly what continuous batching achieves (Exercise 11.2)
+
+  ✓ Section 4 passed — padding fraction directly converts to lost throughput
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 11.1 complete!
+  You can now measure and explain padding waste in static batching.
+  The next exercise shows how continuous batching eliminates it.
+  Next: IV.LLM_Inference_Systems/11.Batching_Strategies/11.2_continuous_batching.py
+============================================================

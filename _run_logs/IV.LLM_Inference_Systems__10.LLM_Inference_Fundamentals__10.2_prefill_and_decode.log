@@ -1,0 +1,132 @@
+# IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_prefill_and_decode.py
+# status=PASS rc=0 duration=3.1s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 10.1 — Prefill vs Decode Phases
+============================================================
+  Device: cuda
+
+── Section 1: The Two-Phase Nature of LLM Inference ──
+
+  Every autoregressive LLM inference request has two distinct phases:
+
+  PREFILL PHASE
+    Input  : the full prompt  (e.g. 512 tokens)
+    Output : logits for each position + a populated KV cache
+    Shape  : (batch, seq_len, d_model) — many tokens at once
+    Bound  : COMPUTE-BOUND — large matrix multiplies dominate
+    Cost   : O(seq_len²) attention, but happens only once per request
+
+  DECODE PHASE
+    Input  : one new token at a time, reading the KV cache
+    Output : one new token per step
+    Shape  : (batch, 1, d_model) — single token per step
+    Bound  : MEMORY-BANDWIDTH-BOUND — reads entire KV cache every step
+    Cost   : O(seq_len) per step × n_new_tokens steps
+
+  This split explains why:
+    • Prefill throughput scales well with GPU compute (Tensor Cores)
+    • Decode throughput is limited by DRAM bandwidth
+    • Adding GPUs helps prefill far more than decode
+
+  ✓ Section 1 passed — prefill is compute-bound, decode is bandwidth-bound
+
+── Section 2: Simulating a Mini-Transformer ──
+
+  We build a minimal scaled-dot-product attention model.
+  It is small enough to run on CPU but captures the key shapes:
+
+    Prefill : forward(input_ids)       — shape (B, T, D)
+    Decode  : forward(input_ids[:,-1:]) — shape (B, 1, D)
+
+  In real LLMs the KV cache makes decode cheap (no recompute).
+  Here we simulate: prefill populates a KV buffer; decode reads it.
+
+  Model: 6.4M params
+  d_model=256  n_layers=4  n_heads=4
+  ✓ Section 2 passed — mini-transformer ready
+
+── Section 3: TTFT — Time To First Token ──
+
+  TTFT = wall-clock time from request arrival to the first generated token.
+
+  It equals the prefill time: the cost of processing the full input prompt
+  in a single forward pass to get the first output logit.
+
+  Users perceive TTFT as the "response start delay". A 500ms TTFT feels
+  sluggish; a 50ms TTFT feels instant. APIs that stream tokens show the
+  first token as soon as prefill completes.
+
+  TODO 1: Measure TTFT for prompt_len ∈ [128, 256, 512, 1024].
+  Use CUDA events on GPU, time.perf_counter on CPU.
+  Record how TTFT scales with prompt length.
+
+  Prompt  128 tokens → TTFT = 1.33 ms
+  Prompt  256 tokens → TTFT = 1.52 ms
+  Prompt  512 tokens → TTFT = 1.67 ms
+  Prompt 1024 tokens → TTFT = 1.83 ms
+
+  TTFT[1024] / TTFT[128] = 1.4× (longer prompt = more compute)
+  ✓ Section 3 passed — TTFT grows with prompt length
+
+── Section 4: TPS — Tokens Per Second During Decode ──
+
+  TPS = number of new tokens generated per second during the decode phase.
+
+  Each decode step:
+    1. Takes the last token (shape: B × 1)
+    2. Runs one forward pass using the stored KV cache
+    3. Samples the next token from the output logits
+    4. Appends the new token to the sequence
+
+  TPS is memory-bandwidth bound because every step reads the entire
+  KV cache (O(seq_len) bytes) even though it generates only one token.
+  Larger batch sizes help amortise the KV cache read cost.
+
+  Prompt length : 128 tokens
+  New tokens    : 50
+  Decode time   : 64.8 ms
+  Per-token     : 1.30 ms/token
+  TPS           : 771.4 tokens/sec
+
+  TTFT (prefill 128 tok) : 1.33 ms
+  Decode TPS                   : 771.4 tok/s
+  ✓ Section 4 passed — TPS is the decode throughput metric
+
+── Section 5: Decode Bottleneck Analysis ──
+
+  ARITHMETIC INTENSITY = FLOPs / bytes of memory traffic
+
+  For a linear layer  Weight: [D_out, D_in]:
+
+    Prefill (seq_len tokens):
+        FLOPs   = 2 × D_out × D_in × seq_len
+        Bytes   = D_out × D_in × dtype + seq_len × D_in × dtype   (weights + input)
+        AI      ≈ seq_len  (scales with batch/seq)
+
+    Decode (1 token):
+        FLOPs   = 2 × D_out × D_in
+        Bytes   = D_out × D_in × dtype + 1 × D_in × dtype         (weights + input)
+        AI      ≈ 1         (always reads full weights for 1 output)
+
+  The GPU ridge point (RTX 4090): ~300 TFLOP/s ÷ ~1 TB/s ≈ 300 FLOPs/byte.
+  Decode AI ≈ 1 FLOPs/byte — 300× below the ridge point.
+  Decode is ALWAYS memory-bandwidth bound on current hardware.
+
+  Phase          seq_len     AI (FLOPs/byte)
+  ────────────  ────────  ──────────────────
+  decode               1                 1.0 ← memory-bound
+  prefill              8                 7.8 ← memory-bound
+  prefill             64                51.2 ← compute-bound
+  prefill            512               170.7 ← compute-bound
+
+  Decode AI = 1.0 FLOPs/byte  (far below GPU ridge point)
+  ✓ Section 5 passed — decode is always memory-bandwidth bound
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 10.1 complete!
+  You now understand why LLM inference has two phases,
+  how TTFT and TPS are measured, and why decode is hard.
+  Next: IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_kv_cache.py
+============================================================

@@ -9,7 +9,7 @@ Covers book section 10.1:
   • Prefill: compute-bound, processes the entire prompt in one pass
   • Decode: memory-bandwidth bound, generates one token per step
   • Measuring Time To First Token (TTFT) and Tokens Per Second (TPS)
-  • Why decode is the hard optimisation target
+  • Why decode is the hard optimization target
 
 Run:  python IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_prefill_and_decode.py
 All sections must print ✓.
@@ -131,7 +131,8 @@ D_MODEL  = 256
 N_LAYERS = 4
 N_HEADS  = 4
 VOCAB    = 10_000
-model    = MiniTransformer(VOCAB, D_MODEL, N_LAYERS, N_HEADS).to(DEVICE)
+MAX_SEQ  = 1024
+model    = MiniTransformer(VOCAB, D_MODEL, N_LAYERS, N_HEADS, max_seq=MAX_SEQ).to(DEVICE)
 model.eval()
 print(f"  Model: {sum(p.numel() for p in model.parameters())/1e6:.1f}M params")
 print(f"  d_model={D_MODEL}  n_layers={N_LAYERS}  n_heads={N_HEADS}")
@@ -152,12 +153,12 @@ print("""
   sluggish; a 50ms TTFT feels instant. APIs that stream tokens show the
   first token as soon as prefill completes.
 
-  TODO 1: Measure TTFT for prompt_len ∈ [64, 128, 256, 512].
+  TODO 1: Measure TTFT for prompt_len ∈ [128, 256, 512, 1024].
   Use CUDA events on GPU, time.perf_counter on CPU.
   Record how TTFT scales with prompt length.
 """)
 
-prompt_lens = [64, 128, 256, 512]
+prompt_lens = [128, 256, 512, 1024]
 ttft_results = {}
 
 for prompt_len in prompt_lens:
@@ -168,39 +169,51 @@ for prompt_len in prompt_lens:
     input_ids = torch.randint(0, VOCAB, (1, prompt_len), device=DEVICE)
 
     # Warmup
-    with torch.no_grad():
-        _ = model(input_ids)
+    for _ in range(5):
+        with torch.no_grad():
+            _ = model(input_ids)
     if DEVICE == "cuda":
         torch.cuda.synchronize()
 
+    # A single forward at the shortest prompt is dominated by fixed
+    # kernel-launch overhead (~1 ms), so the prompt-length signal is easily
+    # buried in noise. Take the MIN over several iterations to isolate the real
+    # prefill cost; the wide prompt range (128 → 1024) makes the O(seq_len)
+    # prefill work clearly dominate that overhead at the long end.
+    ITERS = 20 if DEVICE == "cuda" else 5
     if DEVICE == "cuda":
-        s = torch.cuda.Event(enable_timing=True)
-        e = torch.cuda.Event(enable_timing=True)
-        s.record()
-        with torch.no_grad():
-            logits, kv_caches = model(input_ids)
-        e.record()
-        torch.cuda.synchronize()
-        ttft_ms = s.elapsed_time(e)
+        ttft_ms = float("inf")
+        for _ in range(ITERS):
+            s = torch.cuda.Event(enable_timing=True)
+            e = torch.cuda.Event(enable_timing=True)
+            s.record()
+            with torch.no_grad():
+                logits, kv_caches = model(input_ids)
+            e.record()
+            torch.cuda.synchronize()
+            ttft_ms = min(ttft_ms, s.elapsed_time(e))
     else:
-        t0 = time.perf_counter()
-        with torch.no_grad():
-            logits, kv_caches = model(input_ids)
-        ttft_ms = (time.perf_counter() - t0) * 1000
+        ttft_ms = float("inf")
+        for _ in range(ITERS):
+            t0 = time.perf_counter()
+            with torch.no_grad():
+                logits, kv_caches = model(input_ids)
+            ttft_ms = min(ttft_ms, (time.perf_counter() - t0) * 1000)
 
     ttft_results[prompt_len] = ttft_ms
     print(f"  Prompt {prompt_len:>4} tokens → TTFT = {ttft_ms:.2f} ms")
 
-# Verify TTFT grows with prompt length
-ttft_64  = ttft_results[64]
-ttft_512 = ttft_results[512]
+# Verify TTFT grows with prompt length (compare the extremes of the range)
+short_len, long_len = prompt_lens[0], prompt_lens[-1]
+ttft_short = ttft_results[short_len]
+ttft_long  = ttft_results[long_len]
 
 # On GPU timings are deterministic; on CPU cache effects can flip short sequences.
 if DEVICE == "cuda":
-    assert ttft_512 > ttft_64, \
-        f"TTFT should increase with prompt length: {ttft_64:.2f} ms vs {ttft_512:.2f} ms"
-ratio = ttft_512 / ttft_64 if ttft_64 > 0 else 1.0
-print(f"\n  TTFT[512] / TTFT[64] = {ratio:.1f}× (longer prompt = more compute)")
+    assert ttft_long > ttft_short, \
+        f"TTFT should increase with prompt length: {ttft_short:.2f} ms vs {ttft_long:.2f} ms"
+ratio = ttft_long / ttft_short if ttft_short > 0 else 1.0
+print(f"\n  TTFT[{long_len}] / TTFT[{short_len}] = {ratio:.1f}× (longer prompt = more compute)")
 print("  ✓ Section 3 passed — TTFT grows with prompt length")
 
 
@@ -285,7 +298,7 @@ print("  ✓ Section 4 passed — TPS is the decode throughput metric")
 
 
 # ─────────────────────────────────────────────────────────────
-# SECTION 5: Why decode is harder to optimise than prefill
+# SECTION 5: Why decode is harder to optimize than prefill
 # ─────────────────────────────────────────────────────────────
 print("\n── Section 5: Decode Bottleneck Analysis ──")
 print("""

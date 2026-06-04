@@ -1,0 +1,110 @@
+# II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.1_precision_and_amp.py
+# status=PASS rc=0 duration=6.6s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 6.1 — Numeric Precision and Automatic Mixed Precision
+============================================================
+  Device: cuda
+
+── Section 1: Memory Cost ──
+
+  The three floating-point dtypes used in AI training:
+
+  FP32 (torch.float32): 4 bytes/element
+    - 32-bit IEEE float: 1 sign + 8 exponent + 23 mantissa bits
+    - Standard training precision, full numerical range
+    - Default PyTorch dtype for new tensors
+
+  FP16 (torch.float16): 2 bytes/element
+    - 16-bit half-float: 1 sign + 5 exponent + 10 mantissa bits
+    - 2x memory savings vs FP32
+    - Limited dynamic range: overflows at ~65504 (gradients can explode)
+    - Requires GradScaler for stable training
+
+  BF16 (torch.bfloat16): 2 bytes/element
+    - 16-bit "brain float": 1 sign + 8 exponent + 7 mantissa bits
+    - Same exponent range as FP32 → no overflow risk
+    - Preferred for training on A100/H100 (Ampere+)
+    - Less precision than FP16 but more stable
+
+  FP32 (1024x1024): 4.2 MB (4 bytes/element)
+  FP16 (1024x1024): 2.1 MB (2 bytes/element)
+  BF16 (1024x1024): 2.1 MB (2 bytes/element)
+  ✓ Section 1 passed — dtype memory costs verified
+
+── Section 2: Throughput Benchmark ──
+
+  FP16 and BF16 matmuls on Tensor Core hardware are significantly faster
+  than FP32 because Tensor Cores have dedicated FP16/BF16 datapaths.
+
+  On an A100:
+    FP32 (no Tensor Cores): ~19 TFLOP/s
+    FP16 (Tensor Cores):   ~312 TFLOP/s → 16x faster!
+
+  We benchmark a (2048, 2048) matmul for all three dtypes.
+
+  FP32 matmul (2048x2048): 1.352 ms  (12.70 TFLOP/s)
+  FP16 matmul (2048x2048): 0.652 ms  (26.33 TFLOP/s)  2.1x speedup
+  BF16 matmul (2048x2048): 0.657 ms  (26.16 TFLOP/s)  2.1x speedup
+  ✓ Section 2 passed — FP16/BF16 are faster than FP32
+
+── Section 3: torch.autocast ──
+
+  torch.autocast (previously torch.cuda.amp.autocast) automatically casts
+  eligible operations to FP16 (or BF16) while keeping accumulations in FP32.
+  It is the recommended way to use mixed precision — you do NOT need to
+  manually cast tensors.
+
+  Rules for autocast:
+    - Matrix multiplications and convolutions → cast to FP16
+    - Reductions, LayerNorm, softmax → kept in FP32 for numerical stability
+    - Operations on integer tensors → unaffected
+
+  The primary win is SPEED: the FP16 matmuls/convs run on Tensor Cores.
+  Note that autocast is NOT primarily a memory optimization — in a forward
+  pass it keeps the FP32 master weights AND creates FP16 casts of them, so
+  peak memory is roughly equal to (or even slightly above) plain FP32. Real
+  memory savings come from storing the model itself in half precision
+  (model.half()) or from FP16 activations during *training* with checkpointing.
+
+  FP32 forward          : 2.539 ms
+  Autocast forward      : 1.758 ms  (1.44x faster)
+  FP32 peak memory      : 149.1 MB
+  Autocast peak memory  : 153.8 MB  (~equal — autocast trades memory for Tensor-Core speed)
+  ✓ Section 3 passed — autocast speeds up the forward pass via Tensor Cores
+
+── Section 4: GradScaler for AMP Training ──
+
+  FP16 has a limited dynamic range: values below ~6e-8 underflow to zero.
+  During backpropagation, gradients for small weights can be very small —
+  and in FP16 they silently become zero.  This corrupts learning.
+
+  The fix is loss scaling:
+    1. Before backward: multiply loss by a large scale factor (e.g. 65536)
+    2. After backward: divide all gradients by the scale factor
+    3. Before optimizer.step(): check for inf/nan in gradients
+       - If found: skip the step (gradient was invalid), reduce scale
+       - If not found: update weights, maybe increase scale
+
+  torch.cuda.amp.GradScaler implements this automatically.
+  You only need to change 4 lines vs the standard training loop:
+    1. scaler = GradScaler()
+    2. scaler.scale(loss).backward()   instead of loss.backward()
+    3. scaler.step(optimizer)          instead of optimizer.step()
+    4. scaler.update()                 at the end of each step
+
+  GradScaler initial scale : 65536.0
+  Loss value               : 2.3366
+  ✓ Section 4 passed — GradScaler AMP training step implemented
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 6.1 complete!
+  You now understand FP16/BF16 memory savings, throughput gains,
+  torch.autocast usage, and the GradScaler training pattern.
+  Next: II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.2_quantization.py
+============================================================
+
+--- STDERR ---
+/workspace/II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.1_precision_and_amp.py:304: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler()

@@ -304,8 +304,19 @@ report = {
         "pin_memory": round(speedup_p, 2),
         "fast_augment": round(speedup_all, 2),
     },
+    # ── Hypothesis log ───────────────────────────────────────────
+    # Fill these BEFORE running each fix to train your mental model.
+    # If actual_speedup / hypothesis_speedup is outside [0.5, 2.0],
+    # your bottleneck model was wrong — revisit the profiler data.
+    "hypotheses": {
+        "workers_speedup":      None,   # YOUR ESTIMATE before applying fix 1
+        "pin_memory_speedup":   None,   # YOUR ESTIMATE before applying fix 2
+        "fast_augment_speedup": None,   # YOUR ESTIMATE before applying fix 3
+    },
 }
-with open("/tmp/capstone17_report.json", "w") as f:
+import tempfile as _tmp, os as _os
+_snap = _os.path.join(_tmp.gettempdir(), "capstone17_report.json")
+with open(_snap, "w") as f:
     json.dump(report, f, indent=2)
 
 print(f"""

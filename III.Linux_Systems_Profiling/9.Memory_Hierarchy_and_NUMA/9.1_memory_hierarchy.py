@@ -39,12 +39,12 @@ print("""
 
   Stride-1 (sequential):
     arr[0], arr[1], …, arr[15] → 1 cache line loaded, 16 values used
-    100% cache line utilisation.  The hardware prefetcher detects the
+    100% cache line utilization.  The hardware prefetcher detects the
     sequential pattern and pre-fetches the next line before you ask.
 
   Stride-16 (one float per cache line):
     arr[0], arr[16], arr[32], … → 1 cache line per float
-    Only 1 of 16 values per cache line is used. 6.25% utilisation.
+    Only 1 of 16 values per cache line is used. 6.25% utilization.
     No spatial locality — prefetcher cannot help.
     Effective bandwidth is 16× lower than stride-1.
 
@@ -72,7 +72,17 @@ def stride_bandwidth(arr: np.ndarray, stride: int) -> float:
         bandwidth_gbs  = bytes_accessed / elapsed_seconds / 1e9
     Run 5 warmup iterations and then 5 timed iterations, return the best.
     """
-    pass  # YOUR CODE HERE → return bandwidth_gbs
+    for _ in range(5):          # warmup
+        _ = arr[::stride].sum()
+    bytes_accessed = arr[::stride].nbytes
+    best_bw = 0.0
+    for _ in range(5):
+        t0 = time.perf_counter()
+        _ = arr[::stride].sum()
+        elapsed = time.perf_counter() - t0
+        if elapsed > 0:
+            best_bw = max(best_bw, bytes_accessed / elapsed / 1e9)
+    return best_bw
 
 
 # 256 MB float32 array — bigger than typical L3
@@ -144,7 +154,12 @@ def classify_cache_tier(size_bytes: int, l3_bytes: int) -> str:
       size_bytes < l3_bytes      → "L3"
       else                       → "DRAM"
     """
-    pass  # YOUR CODE HERE → return tier string
+    if size_bytes < 1 * 1024 * 1024:
+        return "L1/L2"
+    elif size_bytes < l3_bytes:
+        return "L3"
+    else:
+        return "DRAM"
 
 
 # Standard L3 assumption for a typical workstation (adjust for your hardware)
@@ -203,35 +218,54 @@ print("""
   between consecutive elements in the same column.  That is 256 cache
   lines skipped per element access — every single access is a cache miss.
 
-  A.sum(axis=1):  sum across each row — accesses elements sequentially
-                  within each row.  Cache friendly.
-  A.sum(axis=0):  sum down each column — stride = row_size.  Cache unfriendly.
+  A SUBTLETY ABOUT np.sum:  numpy's reduction kernel walks the buffer in
+  cache-friendly blocks and SIMD-vectorizes the accumulator regardless of
+  the axis, so A.sum(axis=0) and A.sum(axis=1) BOTH read memory sequentially
+  and show nearly identical bandwidth.  np.sum is the wrong tool to expose
+  the layout penalty.
 
-  FIX: transpose first, then sum rows.
-    np.ascontiguousarray(A.T).sum(axis=1)
-    This forces a copy into a new row-major layout, then the sum is
-    sequential.  The copy cost is paid once; subsequent access is fast.
+  To actually pay the strided-access cost we force a column-major GATHER:
+    row-major (friendly)  : A.copy()                    — sequential read
+    col-major (unfriendly): np.ascontiguousarray(A.T)   — one row-stride hop
+                                                           per element copied
+  This is exactly the access pattern .contiguous() exists to avoid, and it
+  is dramatically slower (often >10×).
 
   PYTORCH EQUIVALENT:
-    tensor.T.contiguous().sum(dim=1)   # copy + sequential
-    tensor.T.sum(dim=1)                # may use non-contiguous BLAS path
+    tensor.contiguous()        # cheap when already row-major
+    tensor.T.contiguous()      # pays the strided gather, like A.T above
 """)
 
 def measure_layout_bandwidth(N: int) -> tuple:
     """
     TODO 3: Implement this function.
-    Create a float32 numpy matrix of shape (N, N).
-    Measure the bandwidth (GB/s) for:
-      row_bw: A.sum(axis=1)                    — row-major, cache friendly
-      col_bw: A.sum(axis=0)                    — column access, cache unfriendly
+    Create a float32 numpy matrix of shape (N, N) and measure the effective
+    bandwidth (GB/s) of cache-friendly vs cache-unfriendly traversal:
+      row_bw: A.copy()                  — sequential, row-major (cache friendly)
+      col_bw: np.ascontiguousarray(A.T) — strided column gather (cache unfriendly)
 
     For each, run 3 warmup and then time 5 iterations, take minimum.
-    bytes_read = N * N * 4 (all elements read once in both cases)
-    bandwidth = bytes_read / min_time / 1e9
+    bytes_moved = N * N * 4 (all elements touched once)
+    bandwidth   = bytes_moved / min_time / 1e9
 
     Return (row_bw, col_bw) as a tuple of floats.
     """
-    pass  # YOUR CODE HERE → return (row_bw_gbs, col_bw_gbs)
+    A = np.random.rand(N, N).astype(np.float32)
+    bytes_moved = N * N * 4
+
+    def _bw(fn):
+        for _ in range(3):
+            _ = fn()
+        best = float("inf")
+        for _ in range(5):
+            t0 = time.perf_counter()
+            _ = fn()
+            best = min(best, time.perf_counter() - t0)
+        return bytes_moved / best / 1e9
+
+    row_bw = _bw(lambda: A.copy())                    # sequential, cache friendly
+    col_bw = _bw(lambda: np.ascontiguousarray(A.T))   # strided gather, cache unfriendly
+    return row_bw, col_bw
 
 
 row_bw, col_bw = measure_layout_bandwidth(4096)
@@ -240,14 +274,15 @@ assert col_bw is not None and col_bw > 0, "col_bw must be > 0"
 assert row_bw > col_bw * 1.1, (
     f"Row-major bandwidth ({row_bw:.1f} GB/s) should be > 1.1× column "
     f"bandwidth ({col_bw:.1f} GB/s) for a 4096×4096 matrix. "
-    "Check that you are summing axis=1 for row and axis=0 for col."
+    "row_bw should be A.copy() (sequential) and col_bw the transposed "
+    "gather np.ascontiguousarray(A.T) (strided)."
 )
 
 print(f"  4096×4096 float32 matrix ({4096*4096*4/1e6:.0f} MB):")
-print(f"    Row-major A.sum(axis=1):  {row_bw:.1f} GB/s  (cache friendly)")
-print(f"    Column A.sum(axis=0):     {col_bw:.1f} GB/s  (cache unfriendly)")
-print(f"    Speedup (row/col):        {row_bw/col_bw:.1f}×")
-print("  ✓ Section 3 passed — row bandwidth > column bandwidth by > 1.1×")
+print(f"    Row-major copy A.copy():         {row_bw:.1f} GB/s  (cache friendly)")
+print(f"    Column gather ascontig(A.T):     {col_bw:.1f} GB/s  (cache unfriendly)")
+print(f"    Slowdown (row/col):              {row_bw/col_bw:.1f}×")
+print("  ✓ Section 3 passed — sequential bandwidth > strided gather by > 1.1×")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -293,9 +328,9 @@ transposed = base.T   # logical transpose — no copy, just stride swap
 # TODO 4: Check is_contiguous() on the transposed tensor.
 # Then call .contiguous() on it and check that the result IS contiguous.
 
-is_cont_transposed = None   # YOUR CODE HERE → transposed.is_contiguous()
-made_contiguous = None      # YOUR CODE HERE → transposed.contiguous()
-is_cont_after = None        # YOUR CODE HERE → made_contiguous.is_contiguous()
+is_cont_transposed = transposed.is_contiguous()
+made_contiguous = transposed.contiguous()
+is_cont_after = made_contiguous.is_contiguous()
 
 assert is_cont_transposed is not None, (
     "is_cont_transposed must be set. Did you implement TODO 4? "

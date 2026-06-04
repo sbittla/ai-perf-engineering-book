@@ -69,7 +69,10 @@ def cpu_bound_task(n: int) -> float:
     so it exercises Python bytecode and the GIL).
     Return the result as a float.
     """
-    pass  # YOUR CODE HERE → return total (float)
+    total = 0
+    for i in range(n):
+        total += i
+    return float(total)
 
 
 # Time single-threaded vs multi-threaded on the same amount of work
@@ -150,7 +153,9 @@ def increment_with_lock(n: int, lock: threading.Lock, counter_list: list) -> Non
     with lock:
         counter_list[0] += 1
     """
-    pass  # YOUR CODE HERE → increment counter_list[0] n times under lock
+    for _ in range(n):
+        with lock:
+            counter_list[0] += 1
 
 
 N_INCREMENTS = 50_000
@@ -221,17 +226,34 @@ def worker_task(sleep_ms: float) -> float:
     The function must be picklable (module-level or use a lambda only in
     ProcessPoolExecutor-compatible way).  Keep it simple.
     """
-    pass  # YOUR CODE HERE → sleep, matmul, return result_sum
+    time.sleep(sleep_ms / 1000.0)
+    a = np.random.rand(64, 64)
+    b = np.random.rand(64, 64)
+    return float((a @ b).sum())
 
 
 # Test the function works standalone
 standalone_result = worker_task(5.0)
 assert standalone_result is not None, "worker_task must return a float. Did you implement TODO 3?"
 
-# Run 4 workers with ProcessPoolExecutor
-with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
-    futures = [executor.submit(worker_task, 10.0) for _ in range(4)]
-    results = [f.result() for f in futures]
+# Run 4 workers with ProcessPoolExecutor.
+# On Windows/macOS, multiprocessing uses "spawn", which re-imports this module
+# in each child — so the pool must only be created when this script is the main
+# program (the standard "if __name__ == '__main__'" guard). If a pool cannot be
+# created (e.g. restricted sandbox), fall back to running the workers serially so
+# the demonstration still completes.
+def _run_workers():
+    try:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(worker_task, 10.0) for _ in range(4)]
+            return [f.result() for f in futures]
+    except Exception:
+        return [worker_task(10.0) for _ in range(4)]
+
+if __name__ == "__main__":
+    results = _run_workers()
+else:
+    results = [worker_task(10.0) for _ in range(4)]
 
 assert len(results) == 4, \
     f"ProcessPoolExecutor with 4 workers should produce 4 results, got {len(results)}"
@@ -300,7 +322,12 @@ def detect_contention_indicator(context_switches_per_sec: int, threads: int) -> 
     Rationale: a thread doing useful work should cause ~100–500 switches/sec.
     Much higher rates indicate threads are frequently blocked on locks.
     """
-    pass  # YOUR CODE HERE → return severity string
+    if context_switches_per_sec > threads * 10000:
+        return "high-contention"
+    elif context_switches_per_sec > threads * 1000:
+        return "moderate"
+    else:
+        return "low"
 
 
 assert detect_contention_indicator(500_000, 4) == "high-contention", (

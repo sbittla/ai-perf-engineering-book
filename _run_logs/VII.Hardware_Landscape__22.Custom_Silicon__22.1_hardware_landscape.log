@@ -1,0 +1,182 @@
+# VII.Hardware_Landscape/22.Custom_Silicon/22.1_hardware_landscape.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 22.1 — Custom Silicon and CXL Memory
+======================================================================
+
+── Section 1: Intel Gaudi 3 ──
+
+  Intel Gaudi 3 (2024) is Intel's production-grade AI accelerator,
+  designed as a lower-cost alternative to NVIDIA A100/H100 for LLM
+  training and inference at scale. Key differentiators:
+
+  • 128 Tensor Processor Cores (TPC) for mixed-precision GEMM
+  • 96 GB HBM2e memory at 3.7 TB/s bandwidth (3 stacks per die)
+  • 24× 200 GbE RDMA ports (24 TB/s bisection for cluster communication)
+    — Uses Ethernet for inter-node, not InfiniBand; simpler ops/networking
+  • Native BF16 and FP8 support; no FP4 as of Gaudi 3
+  • Programming: Intel Habana SynapseAI SDK; PyTorch via habana_frameworks
+
+  Specification           Value
+  ──────────────────────  ────────────────────────────────────────
+  TPC cores               128
+  VRAM (GB)               96
+  HBM BW (TB/s)           3.7
+  Network                 24× 200 GbE RDMA  (24 TB/s bisection)
+  Peak BF16 TFLOP/s       1835
+  Peak FP8 TOPS           3670
+  TDP (W)                 600
+  Programming             SynapseAI / habana_frameworks PyTorch
+
+  Gaudi 3 ridge point: 496 FLOP/byte
+  Compare: H100 ≈ 591, MI300X ≈ 247, Gaudi 3 ≈ 496
+
+  PyTorch on Gaudi 3:
+    import habana_frameworks.torch.core as htcore
+    device = 'hpu'                     # Gaudi device string (not 'cuda')
+    model  = model.to(device)
+    with torch.autocast('hpu', dtype=torch.bfloat16):
+        output = model(input.to(device))
+    htcore.mark_step()                 # explicit graph step (lazy execution)
+
+  ✓ Section 1 passed
+
+── Section 2: AWS Trainium 2 and Inferentia 3 ──
+
+  AWS custom silicon targets the cost-sensitive cloud workload.
+  Two chips: Trainium 2 for training, Inferentia 3 for inference.
+
+
+  AWS Trainium 2:
+    Purpose             LLM training at scale (trn2 instances)
+    Peak BF16           ~85 TFLOP/s per chip (×16 chips per trn2.48xl)
+    Memory              HBM2e, 96 GB per chip
+    Interconnect        NeuronLink 2 — 768 GB/s peer BW
+    SDK                 AWS Neuron SDK (torch_neuronx)
+    Key benefit         ~3× lower training cost vs equivalent H100 on AWS
+
+  AWS Inferentia 3:
+    Purpose             High-throughput LLM inference (inf3 instances)
+    Peak INT8           ~190 TOPS per chip
+    Memory              HBM + on-chip SRAM (compiler-managed)
+    Interconnect        NeuronLink — 384 GB/s
+    SDK                 AWS Neuron SDK (optimum-neuron)
+    Key benefit         Lowest inference cost-per-token on AWS for production
+
+  PyTorch compilation for Neuron (ahead-of-time, not JIT):
+    import torch_neuronx
+    traced = torch.jit.trace(model, example_input)
+    neuron_model = torch_neuronx.trace(traced, example_input)
+    neuron_model.save('model.pt')
+
+  Neuron models must be compiled per batch size and sequence length.
+  Dynamic shapes are not supported — set fixed input shapes at compile time.
+
+  ✓ Section 2 passed
+
+── Section 3: Apple Silicon — Unified Memory Inference ──
+
+  Apple M-series chips use unified memory: CPU and GPU share the same
+  physical DRAM. No PCIe H2D copy exists. Memory bandwidth is
+  shared but very high (~400 GB/s on M3 Max; ~546 GB/s on M4 Max).
+
+  Key advantage for LLM inference:
+  • M3 Max: 128 GB unified memory — fits Llama 3 70B in FP16 (140 GB: too close)
+  • M3 Max: 64 GB — fits Llama 3 70B FP8 (70 GB at limit)
+  • M4 Max: 128 GB — fits Llama 3 70B FP8 (70 GB with 58 GB for KV)
+
+  Chip            Year    CPU    GPU  Max RAM GB     BW GB/s    ANE TOPS
+  ────────────  ──────  ─────  ─────  ──────────  ──────────  ──────────
+  M2 Ultra        2023     24     60         192         800        31.6
+  M3 Max          2023     16     40         128         400        18.0
+  M4 Max          2024     16     40         128         546        38.0
+  M4 Ultra        2025     32     80         512        1092        76.0
+
+  Llama 3 70B FP16 (140 GB) fits M4 Max 128 GB: False  (need FP8 ≈70 GB or M4 Ultra 512 GB)
+
+  Running on Apple Silicon: False
+  MLX usage: pip install mlx; device = 'mps' in PyTorch
+  ✓ Section 3 passed
+
+── Section 4: Intel AMX — CPU Matrix Acceleration ──
+
+  Intel AMX (Advanced Matrix Extensions) adds 2D tile registers to Xeon
+  processors (Sapphire Rapids, Emerald Rapids, Granite Rapids) for
+  INT8 and BF16 matrix multiply at ≈10 TFLOP/s BF16 per socket.
+
+  AMX use cases:
+  • CPU-side LLM inference when GPU is unavailable or too expensive
+  • INT8 quantized inference: AMX-INT8 ≈ 30× faster than scalar INT8
+  • Small-batch inference where GPU idle overhead dominates
+
+  PyTorch uses AMX automatically via oneDNN backend (no code changes
+  needed). Verify AMX is active: ONEDNN_VERBOSE=1 python infer.py
+  should show 'brgemm:amx' in the kernel dispatch log.
+
+  AMX detected   : False
+  (AMX not detected — requires Intel Sapphire Rapids Xeon or newer)
+
+  AMX performance reference (Xeon Sapphire Rapids, single socket):
+    AMX-BF16 : ~14 TFLOP/s  (vs 1.2 TFLOP/s AVX-512 FP32)
+    AMX-INT8  : ~27 TOPS     (vs ~2.5 TOPS AVX-512 INT8)
+    Typical LLM decode (7B INT8): ~15 tokens/s on a 96-core Sapphire Rapids
+
+  When to use CPU inference instead of GPU:
+    • Batch size = 1, latency-sensitive, GPU startup overhead > serving time
+    • Cost-optimized deployment using existing on-prem Xeon fleet
+    • Models small enough to fit in L3 cache (< ~96 MB for hot weights)
+
+  ✓ Section 4 passed
+
+── Section 5: CXL Memory — Pooling and Disaggregation ──
+
+  CXL (Compute Express Link) is a PCIe 5.0-based cache-coherent
+  interconnect that allows hosts to address external memory attached
+  via CXL as if it were local DRAM.
+
+  AI infrastructure implications:
+  • CXL memory expanders (e.g. Samsung CMS, Micron CXL) add terabytes
+    of DRAM to a server without adding CPU sockets.
+  • For LLM serving: KV cache can overflow to CXL memory at ~50–100 GB/s
+    instead of to NVMe SSD at ~7 GB/s — 10–15× faster KV swap.
+  • For model storage: 405B model weights in FP8 (202 GB) can be held
+    in CXL memory pool and streamed to GPU on demand.
+
+  CXL memory is cache-coherent — CPU can read/write it with load/store
+  instructions. GPU cannot access CXL memory directly; DMA transfers
+  via CPU still required.
+
+  Property                  Value
+  ────────────────────────  ──────────────────────────────────────────────────
+  Interface                 PCIe 5.0 (CXL 2.0/3.0)
+  Max bandwidth             ~128 GB/s per CXL link (PCIe 5.0 ×16)
+  Latency vs DRAM           ~200–400 ns (vs ~80 ns DDR5)
+  Capacity                  Up to 1–2 TB per expander
+  CPU access                cache-coherent load/store (NUMA node)
+  GPU access                via CPU DMA only (not direct)
+  Primary use               KV cache overflow, model weight pre-staging
+
+  CXL for KV swap: 14× faster than NVMe SSD (100 GB/s vs 7 GB/s)
+
+  CXL in practice today (2025):
+  • Supported on Intel Sapphire Rapids, AMD EPYC Genoa servers.
+  • Linux 6.x exposes CXL memory as NUMA nodes.
+  • NUMA binding: numactl --membind=<cxl_node> python serve.py
+  • vLLM and SGLang: experimental CXL-backed KV cache offload.
+
+  ✓ Section 5 passed
+
+======================================================================
+  ALL SECTIONS COMPLETE — Exercise 22.1 done!
+
+  Key takeaways:
+    Intel Gaudi 3 ridge point : 496 FLOP/byte
+    CXL vs NVMe KV swap       : 14× faster
+    AMX-BF16 on Xeon          : ~14 TFLOP/s (useful for CPU inference)
+    Apple M4 Max              : 128 GB unified memory, 546 GB/s BW
+
+  This completes Part VII — The 2024–2026 Hardware Landscape.
+  Return to Appendix A for environment setup if starting a new platform.
+======================================================================

@@ -1,0 +1,82 @@
+# I.Foundations/3.The_AI_Hardware_Stack/3.1_cpu_and_memory.py
+# status=PASS rc=0 duration=8.9s
+======================================================================
+--- STDOUT ---
+=================================================================
+  Exercise 01 — CPU Architecture & PCIe Transfers
+=================================================================
+  Device: cuda
+
+── Section 1: CPU Cache Effects ──
+
+  The CPU has a multilevel cache: L1 (~32 KB, ~4 cycles) →
+  L2 (~512 KB, ~12 cycles) → L3 (~32 MB, ~40 cycles) → DRAM (~200 cycles).
+
+  Sequential access (stride-1) stays in L1/L2 cache → fast.
+  Random access scatters reads across DRAM → slow (cache misses).
+
+  For DataLoaders: random shuffling of large datasets causes L3 misses
+  and reduces throughput.  Prefetching and larger shuffle buffers help.
+
+  Small tensor (128 KB — fits in L1/L2):
+    Sequential : 1.0 ms   Random: 0.6 ms
+  Large tensor (256 MB — exceeds L3, hits DRAM):
+    Sequential : 0.3 ms   Random: 3.9 ms
+  Sequential vs random speedup (large) : 11.6×
+  Interpretation: random access on DRAM-resident data is 11.6× slower
+  ✓ Section 1 passed
+
+── Section 2: DataLoader Sequential vs Shuffled Access ──
+
+  shuffle=True in DataLoader randomises the sample order each epoch.
+  For large datasets that don't fit in RAM, this causes DRAM misses.
+  Practical mitigations: pre-shuffle once, use WebDataset (sequential
+  streaming), or buffer-shuffle (shuffle only within a window).
+
+  Sequential loader : 35.4 ms  (cache-friendly)
+  Shuffled loader   : 38.8 ms  (random access — more cache misses)
+  Note: this small dataset fits in L3 — difference is small.
+  On a 100 GB dataset the difference can be 10–50×.
+  ✓ Section 2 passed
+
+── Section 3: PCIe Transfer Bandwidth ──
+
+  PCIe 4.0 ×16: theoretical 32 GB/s bidirectional.
+  Practical effective bandwidth: 12–20 GB/s (protocol overhead).
+  Measuring it directly shows you how expensive tensor.to('cuda') is.
+    
+      Size   HtoD (GB/s)   DtoH (GB/s)   Time HtoD
+  --------  ------------  ------------  ----------
+       1 MB          5.27          1.40       0.19 ms
+       8 MB          8.52          1.58       0.94 ms
+      32 MB          9.25          1.69       3.46 ms
+     128 MB          9.50          1.84      13.47 ms
+     512 MB          9.16          1.65      55.89 ms
+  ✓ Section 3 passed — compare your numbers to PCIe spec
+
+── Section 4: Pinned Memory (pin_memory=True) ──
+
+  Pageable memory: CPU can swap pages → GPU DMA must copy to a pinned
+                   staging buffer first, then DMA. Two copies total.
+  Pinned memory:  page-locked → GPU DMA reads directly.  One copy.
+
+  DataLoader pin_memory=True pre-allocates output tensors as pinned.
+  Combined with non_blocking=True, copies overlap with GPU compute.
+    
+  Transfer size          : 64 MB
+  Pageable → GPU         : 6.96 ms
+  Pinned   → GPU         : 5.25 ms
+  Pinned speedup         : 1.33×
+  Expected: ~1.5–2× faster with pinned memory
+  ✓ Section 4 passed
+
+=================================================================
+  ALL SECTIONS COMPLETE — Exercise 01 (Chapter 3) done!
+
+  Key takeaways:
+    • Random memory access on DRAM-resident data is 5–20× slower
+      than sequential — explains DataLoader shuffle overhead
+    • PCIe effective bandwidth: 12–20 GB/s (not the 32 GB/s spec)
+    • Pinned memory cuts CPU→GPU transfer time by ~2×
+    • Use pin_memory=True + non_blocking=True in every DataLoader
+=================================================================

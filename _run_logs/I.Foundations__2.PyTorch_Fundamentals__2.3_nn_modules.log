@@ -1,0 +1,95 @@
+# I.Foundations/2.PyTorch_Fundamentals/2.3_nn_modules.py
+# status=PASS rc=0 duration=2.6s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 03 — nn.Module & Neural Networks
+============================================================
+  Device: cuda
+
+── Section 1: Built-in Layers ──
+
+  nn.Linear(in, out) is the fundamental building block.
+  nn.Sequential chains layers: output of each feeds the next.
+  This is the workhorse for feedforward networks.
+
+  mlp params: 3498  output shape: torch.Size([4, 10])
+  ✓ Section 1 passed
+
+── Section 2: Custom nn.Module ──
+
+  Subclass nn.Module when nn.Sequential is not enough:
+  residual connections, attention, or any branching topology.
+  Rules:
+    • Define all sub-layers in __init__ (so they are registered)
+    • Implement the forward pass in forward()
+    • Never call forward() directly — use model(x) so hooks run
+
+  ✓ Section 2 passed — ResidualBlock works, gradients flow
+
+── Section 3: train() vs eval() ──
+
+  Two layers behave DIFFERENTLY in train vs eval mode:
+    Dropout:   zeros random activations during training (regularisation),
+               disabled during eval (deterministic output).
+    BatchNorm: uses batch statistics during training,
+               uses frozen running stats during eval.
+  ALWAYS call model.eval() before inference or benchmarking.
+
+  Train mode zero fraction : 0.89  (expect ~0.9 with p=0.9)
+  Eval  mode zero fraction : 0.00  (expect 0.0)
+  Eval mode deterministic  : True
+  ✓ Section 3 passed
+
+── Section 4: Saving & Loading ──
+
+  Save state_dict (weights only) — NOT the whole model object.
+  The model object depends on class definition; state_dict is portable.
+
+  ✓ Section 4 passed
+
+── Section 5: Model on Device ──
+
+  model.to(device) moves ALL registered parameters and buffers.
+  Plain Python attributes (floats, plain tensors) are NOT moved.
+  Call .to(device) ONCE at startup — never move back mid-training.
+
+  ✓ Section 5 passed  (device=cuda)
+
+── Section 6: Parameters vs Buffers ──
+
+  Not every tensor-shaped thing inside a Module is automatically tracked.
+    nn.Parameter   → learnable, shows in model.parameters(), moves with .to()
+    register_buffer → non-learnable, in state_dict, moves with .to()
+    plain tensor   → invisible to parameters(), does NOT move with .to()
+
+  Common mistake: positional embeddings created as plain tensors stay on CPU
+  even after model.to('cuda'). Use register_buffer instead.
+
+  Buffer 'pos' device : cuda:0
+  'scale' device      : cpu  ← stays on CPU despite .to()
+  ✓ Section 6 passed
+
+── Section 7: Module Introspection ──
+
+  Before profiling, always understand the model you are profiling.
+  Three tools: str(model), model.parameters(), model.named_parameters()
+
+  Total params    : 235,146
+  Trainable params: 235,146
+  Model size (FP32): 0.897 MB
+
+  Named parameters:
+    0.weight                        shape=torch.Size([256, 784])  dtype=torch.float32
+    0.bias                          shape=torch.Size([256])  dtype=torch.float32
+    2.weight                        shape=torch.Size([128, 256])  dtype=torch.float32
+    2.bias                          shape=torch.Size([128])  dtype=torch.float32
+    4.weight                        shape=torch.Size([10, 128])  dtype=torch.float32
+    4.bias                          shape=torch.Size([10])  dtype=torch.float32
+  ✓ Section 7 passed
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 03 complete!
+  You now know how to build, inspect, save, and deploy PyTorch models.
+  Next: I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py
+============================================================

@@ -1,0 +1,103 @@
+# II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.1_dataloader_pipeline.py
+# status=PASS rc=0 duration=3.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 7.1 — DataLoader Pipeline Tuning
+============================================================
+  Device: cuda
+
+── Section 1: num_workers=0 Bottleneck ──
+
+  With num_workers=0, data loading runs synchronously on the MAIN thread.
+  The GPU completes a batch, then waits for the CPU to load the next one.
+  The GPU is idle for the entire duration of the DataLoader call.
+
+  With num_workers > 0, worker processes load and preprocess the NEXT
+  batch in the background while the GPU computes the CURRENT batch.
+  This is called double-buffering (or N-buffering for prefetch_factor > 1).
+
+  Rule of thumb: set num_workers = number of CPU cores / 2, capped at 8.
+  For NFS/S3-backed datasets, num_workers may need to be higher (16–32)
+  to saturate the storage bandwidth.
+
+  We simulate I/O latency with time.sleep(0.0005) = 0.5ms per item.
+  With batch_size=8 and single worker: 4ms loading per batch.
+  With 4 workers:    <1ms loading per batch (parallel).
+
+  Single worker (num_workers=0): 227.9 ms for 40 batches
+  Multi  worker (num_workers=4): 140.0 ms for 40 batches
+  Speedup: 1.63x
+  ✓ Section 1 passed — multi-worker DataLoader is faster
+
+── Section 2: pin_memory and non_blocking ──
+
+  The CPU→GPU transfer has two parts:
+    1. Copy from pageable CPU memory to a pinned (page-locked) CPU buffer
+    2. DMA from pinned buffer to GPU
+
+  With pin_memory=True in DataLoader, step 1 happens in the worker
+  processes.  The main thread receives tensors already in pinned memory
+  and the GPU's DMA engine can start immediately.
+
+  With .to(device, non_blocking=True), the DMA transfer runs asynchronously.
+  The CPU can launch the NEXT batch's preprocessing while the GPU DMA
+  copies the current batch.
+
+  Combined: pin_memory=True + non_blocking=True is the fastest CPU→GPU
+  path for DataLoader output.  Always use both together.
+
+  Regular (pageable) .to(device): 1.188 ms
+  Pinned  (non_blocking=True)   : 0.183 ms
+  ✓ Section 2 passed — pin_memory transfer verified
+
+── Section 3: prefetch_factor ──
+
+  prefetch_factor (default=2 when num_workers>0) controls how many
+  batches each worker pre-loads AHEAD of what the main process has
+  requested.
+
+  prefetch_factor=1: each worker loads exactly what is needed next
+  prefetch_factor=4: each worker pre-loads 4 batches ahead
+
+  For high-latency storage (NFS, S3, spinning disk), a higher
+  prefetch_factor fills the pipeline and hides the I/O latency.
+  For fast local SSD, prefetch_factor=2 is usually sufficient.
+
+  We simulate 5ms I/O per item to make prefetching visibly beneficial.
+
+  prefetch_factor=1: 283 ms for 20 batches
+  prefetch_factor=4: 257 ms for 20 batches
+  (Higher prefetch buffers more batches ahead, hiding I/O latency)
+  ✓ Section 3 passed — prefetch_factor comparison complete
+
+── Section 4: The .item() Anti-Pattern ──
+
+  loss.item() does two things:
+    1. Forces the CPU to wait for the GPU to finish (GPU synchronization)
+    2. Copies the scalar value from GPU to CPU
+
+  If called inside the inner training loop (every step), it serialises
+  the entire pipeline: the GPU cannot start the next step until the CPU
+  has received the loss value from the current step.
+
+  The fix: accumulate loss as a TENSOR, call .item() once at the end.
+    BAD:  total += loss.item()   # sync every step
+    GOOD: total += loss.detach() # no sync, tensor accumulation
+    GOOD: total.item()           # single sync at the end
+
+  On GPU, the difference can be 2–5x throughput.
+  On CPU, the difference is smaller (no GPU sync) but still measurable
+  due to Python function call overhead.
+
+  .item() in loop (BAD)          : 95.0 ms for 100 steps
+  .detach() + single .item() (GOOD): 26.1 ms for 100 steps
+  Speedup from removing .item()   : 3.64x
+  ✓ Section 4 passed — .item() anti-pattern demonstrated
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 7.1 complete!
+  You now know how to tune num_workers, use pin_memory,
+  tune prefetch_factor, and avoid the .item() anti-pattern.
+  Next: II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.2_io_bottleneck.py
+============================================================

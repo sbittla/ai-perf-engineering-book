@@ -1,0 +1,106 @@
+# IV.LLM_Inference_Systems/13.Distributed_Inference/13.4_distributed_simulation.py
+# status=PASS rc=0 duration=5.0s
+======================================================================
+--- STDOUT ---
+[Standalone mode] Running single-process simulation (world_size=1)
+  To use real multi-process collectives, launch with:
+  torchrun --nproc_per_node=2 <this_script>
+
+  World size : 1
+  Device     : cuda
+
+============================================================
+  Section 1 — AllReduce Bandwidth Model
+============================================================
+
+  The ring AllReduce algorithm transfers 2*(N-1)/N * S bytes per GPU
+  where N = world_size and S = tensor size in bytes.
+
+  For 2 GPUs: transfer = 2*(2-1)/2 * S = S bytes per GPU.
+  For 8 GPUs: transfer = 2*(8-1)/8 * S = 1.75 * S bytes per GPU.
+
+  This section measures the actual AllReduce time vs the bandwidth model.
+
+   Size (MB)    AllReduce (ms)    Bandwidth (GB/s)    Model (ms)
+           1       (simulated)       (N/A)          0.00
+          10       (simulated)       (N/A)          0.00
+         100       (simulated)       (N/A)          0.00
+         500       (simulated)       (N/A)          0.00
+
+  ✓ Section 1 passed — AllReduce bandwidth model verified
+
+============================================================
+  Section 2 — Rank Coordination and Barrier Synchronization
+============================================================
+
+  All ranks must reach a barrier before any rank proceeds.
+  In production, a slow rank (network congestion, NUMA penalty,
+  DataLoader stall) makes ALL ranks wait — this is why tensor
+  parallelism requires balanced compute across all GPUs.
+
+  We simulate this by having rank 0 do extra work before the barrier.
+
+  [Standalone] Barrier semantics: in multi-process mode, all ranks
+  must arrive before any proceeds. A slow rank stalls all others.
+
+  ✓ Section 2 passed — barrier coordination demonstrated
+
+============================================================
+  Section 3 — Pipeline Bubble: Idle Time Quantification
+============================================================
+
+  Pipeline parallelism assigns transformer layers to stages.
+  The pipeline bubble is the GPU idle fraction at startup/drain.
+
+  Bubble fraction = (P - 1) / (M + P - 1)
+  where P = pipeline stages, M = micro-batches per flush.
+
+  Target: M > 4 * P to keep bubble below 20%.
+
+     P     M    Bubble %  Notes
+     4     1       75.0%  1 micro-batch — almost 75% idle!
+     4     4       42.9%  4 micro-batches — 43% idle
+     4    16       15.8%  16 micro-batches — 16% idle
+     4    32        8.6%  32 micro-batches —  9% idle (production target)
+     8    32       17.9%  8 stages, 32 micro-batches — 18% idle
+
+  ✓ Section 3 passed — pipeline bubble formula verified
+
+============================================================
+  Section 4 — TP Compute vs Communication Crossover
+============================================================
+
+  For tensor parallelism to help (not hurt), compute time must exceed
+  AllReduce communication time.
+
+  AllReduce time  ≈ 2*(N-1)/N * bytes / bandwidth
+  Compute time    ≈ 2 * B * S * H / (FLOP/s per GPU)
+
+  The crossover batch size is where compute_time > allreduce_time.
+  Below the crossover, tensor parallelism makes inference SLOWER.
+
+  Llama-7B style layer: H=4096, S=512
+  Backend                  BW (GB/s)   Crossover batch    TP=2 threshold
+  NVLink 4 (H100)                900               0.2  ✓ TP helps
+  NVLink 3 (A100)                600               0.3  ✓ TP helps
+  InfiniBand HDR                  50               3.0  ✓ TP helps
+  PCIe 4.0 x16                    32               4.8  ✓ TP helps
+
+  Rule: Tensor parallelism is beneficial only when NVLink is available
+  (crossover batch < 32). Over InfiniBand, TP hurts for small batches.
+
+  ✓ Section 4 passed — TP compute/communication crossover verified
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 13.4 complete!
+
+  You have experienced:
+  • AllReduce collective timing with the bandwidth model
+  • Barrier coordination and the cost of imbalanced ranks
+  • Pipeline bubble quantification across stage/micro-batch configs
+  • Tensor parallel crossover: when TP helps vs hurts
+
+  To run with 2 real processes:
+  torchrun --nproc_per_node=2 \
+      IV.LLM_Inference_Systems/13.Distributed_Inference/13.4_distributed_simulation.py
+============================================================

@@ -1,0 +1,35 @@
+# VIII.Advanced_Performance/24.Triton/24.1_triton_kernels.py
+# status=PASS rc=0 duration=2.8s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 24.1 - Triton: Custom Fused GPU Kernels
+======================================================================
+
+  Triton+CUDA available: True
+
+-- Section 1: Vector-Add HBM Traffic --
+
+  Vector add (out = x + y) touches HBM 3 times per element: read x, read y,
+  write out. It is memory-bound; its purpose is to teach the block model.
+
+  n=1,000,000  HBM bytes (fp32) = 12,000,000  (12.0 MB)
+  [check] vector-add moves 3 * n * dtype_bytes through HBM
+
+-- Section 2: Kernel Fusion Reduces HBM Traffic --
+
+  A chain of K elementwise ops in eager PyTorch makes K HBM round-trips of the
+  full tensor (one kernel each). A single fused Triton kernel reads once,
+  computes all K in registers, and writes once: 2 round-trips total.
+
+  chain of 3 ops:  eager round-trips=6  fused=2  ->  3.0x less HBM traffic
+  [check] fusing 3 memory-bound ops cuts HBM traffic ~3x
+
+-- Section 3: Triton Vector-Add Kernel --
+  [check] Triton vector-add matches torch '+' numerically
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise 24.1 complete
+  You modeled vector-add HBM traffic, quantified the fusion win, and
+  exercised the Triton block/mask programming model.
+======================================================================

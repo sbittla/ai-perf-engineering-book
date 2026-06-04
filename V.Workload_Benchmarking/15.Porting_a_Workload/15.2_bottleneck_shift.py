@@ -5,8 +5,8 @@ V.Workload_Benchmarking/15.Porting_a_Workload/15.2_bottleneck_shift.py
 Chapter 15: Porting a Workload — Section 2: Bottleneck Shift
 =======================================================================
 Covers book section 15.2:
-  • Why the bottleneck CHANGES as you apply optimisations
-  • The optimisation ladder: CPU FP32 → GPU FP32 → GPU FP16 → torch.compile
+  • Why the bottleneck CHANGES as you apply optimizations
+  • The optimization ladder: CPU FP32 → GPU FP32 → GPU FP16 → torch.compile
   • How to measure each rung of the ladder
   • CPU-GPU overlap: when to worry about the Python overhead floor
   • Quantifying the bottleneck with arithmetic intensity at each step
@@ -33,11 +33,11 @@ print(f"  Device: {DEVICE}\n")
 # ─────────────────────────────────────────────────────────────
 print("── Section 1: The Bottleneck Shift ──")
 print("""
-  Every optimisation removes one bottleneck and exposes the next.
+  Every optimization removes one bottleneck and exposes the next.
   This is called the BOTTLENECK SHIFT. If you don't anticipate it,
   you will be surprised when your GPU FP16 model is still "slow".
 
-  THE OPTIMISATION LADDER (typical order for an inference workload):
+  THE optimization LADDER (typical order for an inference workload):
 
     Rung 1: CPU FP32 (baseline)
       Bottleneck: compute — CPUs have ~200 GFLOPS vs GPUs ~10 TFLOPS
@@ -48,7 +48,7 @@ print("""
       Speedup potential: 2–5× over GPU FP32
 
     Rung 3: GPU FP16 / BF16 (AMP)
-      Bottleneck: Tensor Core utilisation — need large tiles for peak
+      Bottleneck: Tensor Core utilization — need large tiles for peak
       Speedup potential: 1.5–2× over GPU FP32
 
     Rung 4: torch.compile (kernel fusion)
@@ -61,13 +61,13 @@ print("""
 
   KEY INSIGHT: at each rung, the LIMITING FACTOR changes.
   Measuring throughput alone won't tell you which rung you are on.
-  You must also measure: AI, memory bandwidth utilisation, SM utilisation.
+  You must also measure: AI, memory bandwidth utilization, SM utilization.
 """)
 print("  ✓ Section 1 passed — understand the bottleneck shift ladder")
 
 
 # ─────────────────────────────────────────────────────────────
-# SECTION 2: Benchmark helper for the optimisation ladder
+# SECTION 2: Benchmark helper for the optimization ladder
 # ─────────────────────────────────────────────────────────────
 print("\n── Section 2: Measuring Each Rung of the Ladder ──")
 print("""
@@ -140,9 +140,9 @@ print("  ✓ Section 2 passed — benchmark_config() works correctly")
 
 
 # ─────────────────────────────────────────────────────────────
-# SECTION 3: Running the full optimisation ladder
+# SECTION 3: Running the full optimization ladder
 # ─────────────────────────────────────────────────────────────
-print("\n── Section 3: The Full Optimisation Ladder ──")
+print("\n── Section 3: The Full optimization Ladder ──")
 print("""
   We now run every rung and build a comparison table.
   On CPU-only machines, we simulate the GPU rungs with dtype changes
@@ -214,7 +214,7 @@ for name, r in results.items():
 
 assert len(results) >= 1, "At least CPU FP32 result should exist"
 assert results["CPU FP32"]["tps"] > 0, "CPU baseline should have positive throughput"
-print("  ✓ Section 3 passed — optimisation ladder measured")
+print("  ✓ Section 3 passed — optimization ladder measured")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -226,21 +226,21 @@ print("""
   You need a diagnosis: what is the limiting resource?
 
   DIAGNOSIS QUESTIONS:
-    Q1: Is GPU SM utilisation < 50%?
+    Q1: Is GPU SM utilization < 50%?
         → CPU-bound: Python overhead, DataLoader, or too-small batch
     Q2: Is GPU memory bandwidth > 80% of peak?
         → Memory-bandwidth-bound: try FP16, reduce model size, fuse ops
-    Q3: Is GPU SM utilisation > 80% but throughput below roofline?
+    Q3: Is GPU SM utilization > 80% but throughput below roofline?
         → Compute-bound: try Tensor Cores (FP16), increase arithmetic intensity
     Q4: Does throughput scale linearly with batch?
-        → Good: compute-bound and properly utilising the GPU
+        → Good: compute-bound and properly utilizing the GPU
     Q5: Does throughput plateau early (e.g. batch=4)?
         → Memory-bound or GPU launch overhead dominates
 
   TODO 2: Implement throughput_scaling_ratio(model, device, d_model, batches)
   that benchmarks each batch size and returns the ratio
   (throughput at largest batch) / (throughput at smallest batch).
-  A ratio > 8× for 10× batch increase suggests good compute utilisation.
+  A ratio > 8× for 10× batch increase suggests good compute utilization.
 """)
 
 
@@ -273,7 +273,7 @@ ratio = throughput_scaling_ratio(test_model, DEVICE, D_MODEL, test_batches)
 print(f"\n  Scaling ratio (batch={test_batches[-1]} / batch={test_batches[0]}): {ratio:.1f}×")
 
 if ratio > 30:
-    diag = "strong compute scaling — good GPU utilisation"
+    diag = "strong compute scaling — good GPU utilization"
 elif ratio > 5:
     diag = "moderate scaling — approaching memory-bandwidth ceiling"
 else:
@@ -299,7 +299,7 @@ print("""
   the overhead of dispatching all the kernels.
 
   SYMPTOMS:
-    • GPU SM utilisation < 20% for batch=1
+    • GPU SM utilization < 20% for batch=1
     • Increasing batch from 1→2 gives < 1.5× throughput
     • profiler shows many tiny kernels with large gaps between them
 
@@ -384,7 +384,7 @@ print("  ✓ Section 5 passed — Python overhead floor measured")
 
 print("\n" + "=" * 60)
 print("  ALL SECTIONS PASSED — Exercise 15.2 complete!")
-print("  You can now run the optimisation ladder, diagnose the bottleneck")
+print("  You can now run the optimization ladder, diagnose the bottleneck")
 print("  at each rung, and measure the Python overhead floor.")
 print("  Next: V.Workload_Benchmarking/15.Porting_a_Workload/15.3_dataloader_at_scale.py")
 print("=" * 60)

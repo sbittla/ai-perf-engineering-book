@@ -243,7 +243,7 @@ CHEATSHEET = """
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│  NVIDIA-SMI  — live GPU utilisation                                 │
+│  NVIDIA-SMI  — live GPU utilization                                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │  watch -n 0.5 nvidia-smi                                            │
 │  nvidia-smi --query-gpu=util.gpu,memory.used --format=csv -l 1      │
@@ -282,8 +282,8 @@ CHEATSHEET = """
 │  I/O + SYSTEM MONITORING                                            │
 ├─────────────────────────────────────────────────────────────────────┤
 │  vmstat 1 30             # CPU states, memory, swap (wa = iowait)   │
-│  iostat -xz 1            # disk throughput + utilisation            │
-│  sar -u 1 60             # CPU utilisation history                  │
+│  iostat -xz 1            # disk throughput + utilization            │
+│  sar -u 1 60             # CPU utilization history                  │
 │  iowait > 20%  → disk bottleneck; swap si/so > 0 → memory pressure │
 └─────────────────────────────────────────────────────────────────────┘
 

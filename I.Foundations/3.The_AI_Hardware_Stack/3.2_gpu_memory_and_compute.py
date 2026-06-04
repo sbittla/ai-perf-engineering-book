@@ -6,7 +6,7 @@ Covers book section 3.3:
   • HBM bandwidth measurement (how fast can we saturate the memory bus?)
   • FP32 vs FP16 vs BF16 throughput — Tensor Core activation
   • Arithmetic intensity transition: when do Tensor Cores help?
-  • SM utilisation and occupancy concepts
+  • SM utilization and occupancy concepts
   • The GPU memory hierarchy: registers → shared → L2 → HBM
 
 Run:  python 3.2_gpu_memory_and_compute.py
@@ -63,12 +63,18 @@ if DEVICE == "cuda":
         # TODO 1: Measure the time for 20 iterations of C = A + B
         #   Use CUDA events (start.record(), ..., end.record(), synchronize)
         ITERS = 20
-        avg_ms = None  # YOUR CODE HERE
+        s = torch.cuda.Event(enable_timing=True)
+        e = torch.cuda.Event(enable_timing=True)
+        s.record()
+        for _ in range(ITERS): C = A + B
+        e.record()
+        torch.cuda.synchronize()
+        avg_ms = s.elapsed_time(e) / ITERS
 
         # TODO 2: Compute memory bandwidth in GB/s
         #   Bytes moved: read A (size_mb MB) + read B (size_mb MB) + write C (size_mb MB)
         #   bw_gb_s = (3 * size_mb / 1000) / (avg_ms / 1000)
-        bw_gb_s = None  # YOUR CODE HERE
+        bw_gb_s = (3 * size_mb / 1000) / (avg_ms / 1000)
 
         assert avg_ms  is not None, f"measure time for {size_mb} MB"
         assert bw_gb_s is not None, f"compute bandwidth for {size_mb} MB"
@@ -126,16 +132,16 @@ if DEVICE == "cuda":
     t_fp32, tf_fp32 = bench_matmul(torch.float32, label="FP32")
 
     # TODO 3: Benchmark FP16 matmul (torch.float16) — call bench_matmul
-    t_fp16, tf_fp16 = None, None  # YOUR CODE HERE
+    t_fp16, tf_fp16 = bench_matmul(torch.float16, label="FP16")
 
     # TODO 4: Benchmark BF16 matmul (torch.bfloat16) — call bench_matmul
-    t_bf16, tf_bf16 = None, None  # YOUR CODE HERE
+    t_bf16, tf_bf16 = bench_matmul(torch.bfloat16, label="BF16")
 
     assert t_fp16 is not None, "benchmark FP16"
     assert t_bf16 is not None, "benchmark BF16"
 
     # TODO 5: Compute FP16 speedup over FP32
-    fp16_speedup = None  # YOUR CODE HERE  → t_fp32 / t_fp16
+    fp16_speedup = t_fp32 / t_fp16
 
     assert fp16_speedup is not None, "compute fp16_speedup"
     print(f"\n  FP16 speedup over FP32: {fp16_speedup:.1f}×")
@@ -180,7 +186,7 @@ if DEVICE == "cuda":
     ref_times = {}
     for dim in dims_to_test:
         # TODO 6: Determine if dim is a multiple of 8
-        is_aligned = None  # YOUR CODE HERE  → dim % 8 == 0
+        is_aligned = dim % 8 == 0
 
         t = bench_dim(dim)
         base = ref_times.get(dim + 1, t)  # compare odd vs even
@@ -237,7 +243,7 @@ if DEVICE == "cuda":
     # TODO 7: Create a torch.compile'd version of the unfused sequence
     #   fused = torch.compile(unfused)
     #   Note: first call will be slow (compilation) — always warmup
-    fused = None  # YOUR CODE HERE  → torch.compile(unfused)
+    fused = torch.compile(unfused)
 
     assert fused is not None, "create compiled version"
 
@@ -259,7 +265,7 @@ if DEVICE == "cuda":
     t_fused   = time_fn(fused)
 
     # TODO 8: Compute speedup from fusion
-    fusion_speedup = None  # YOUR CODE HERE  → t_unfused / t_fused
+    fusion_speedup = t_unfused / t_fused
 
     assert fusion_speedup is not None, "compute fusion_speedup"
     print(f"  Tensor size    : {N * 4 / 1e6:.0f} MB  (float32)")
@@ -274,7 +280,7 @@ else:
 # ─────────────────────────────────────────────────────────────
 # SECTION 5: SM occupancy — keeping the GPU busy
 # ─────────────────────────────────────────────────────────────
-print("\n── Section 5: SM Occupancy and GPU Utilisation ──")
+print("\n── Section 5: SM Occupancy and GPU utilization ──")
 print("""
   SM occupancy = active warps / maximum warps per SM.
   High occupancy → the SM can hide memory latency by switching warps.
@@ -284,7 +290,7 @@ print("""
     • Small batch size (few active warps)
     • High register usage per thread (limits warps per SM)
     • Large shared memory allocation (limits blocks per SM)
-    • Synchronisation barriers (all warps wait together)
+    • synchronization barriers (all warps wait together)
 
   Practical impact: running a model with batch_size=1 at inference
   typically results in SM occupancy of 5–20%.  Continuous batching
@@ -324,15 +330,15 @@ if DEVICE == "cuda":
         avg_ms = s.elapsed_time(e) / ITERS
 
         # TODO 9: Compute throughput in samples/sec
-        throughput = None  # YOUR CODE HERE  → bs / (avg_ms / 1000)
+        throughput = bs / (avg_ms / 1000)
 
         assert throughput is not None, f"compute throughput for bs={bs}"
         throughputs[bs] = throughput
         rel = throughput / throughputs[1] if 1 in throughputs else 1.0
         print(f"  {bs:>6}  {avg_ms:>13.3f}  {throughput:>12.0f}/s  {rel:>13.1f}×")
 
-    print(f"\n  At bs=1: GPU is under-utilised (low SM occupancy)")
-    print(f"  At bs=256: GPU approaches full utilisation")
+    print(f"\n  At bs=1: GPU is under-utilized (low SM occupancy)")
+    print(f"  At bs=256: GPU approaches full utilization")
     print(f"  This is why continuous batching exists for LLM inference")
     print("  ✓ Section 5 passed")
 else:

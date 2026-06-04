@@ -7,7 +7,7 @@ Section 1: Diagnosing the Slow DataLoader
 =======================================================================
 Covers capstone section 17.1:
   • A deliberately slow DataLoader with three hidden bottlenecks
-  • Diagnosing each bottleneck: idle_pct, throughput, worker utilisation
+  • Diagnosing each bottleneck: idle_pct, throughput, worker utilization
   • Measuring GPU starvation quantitatively
   • Building the "before" baseline for the hunt
 
@@ -62,7 +62,7 @@ print("""
       → Fix: pin_memory=True (and non_blocking=True on .to(device))
 
     Bug 3: Slow augmentation (simulated with time.sleep)
-      → Real-world: CPU-heavy JPEG decode, resize, colour jitter
+      → Real-world: CPU-heavy JPEG decode, resize, color jitter
       → Simulated: each __getitem__ sleeps for 2 ms (bottleneck floor)
       → Fix: reduce augmentation cost, or move to GPU-side transforms
 

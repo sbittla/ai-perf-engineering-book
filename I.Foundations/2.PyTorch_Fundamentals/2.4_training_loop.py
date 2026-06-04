@@ -47,12 +47,12 @@ class SineDataset(Dataset):
 
     def __len__(self):
         # TODO 1: Return the number of samples in the dataset
-        pass  # YOUR CODE HERE
+        return len(self.x)
 
     def __getitem__(self, idx):
         # TODO 2: Return the (input, target) pair at index idx
         #   → (self.x[idx], self.y[idx])
-        pass  # YOUR CODE HERE
+        return self.x[idx], self.y[idx]
 
 ds = SineDataset(200)
 sample_x, sample_y = ds[0]
@@ -80,11 +80,11 @@ val_ds   = SineDataset(200)
 
 # TODO 3: Create a DataLoader for train_ds
 #   batch_size=32, shuffle=True, num_workers=0
-train_loader = None  # YOUR CODE HERE
+train_loader = DataLoader(train_ds, batch_size=32, shuffle=True, num_workers=0)
 
 # TODO 4: Create a DataLoader for val_ds
 #   batch_size=64, shuffle=False, num_workers=0
-val_loader = None  # YOUR CODE HERE
+val_loader = DataLoader(val_ds, batch_size=64, shuffle=False, num_workers=0)
 
 batch_x, batch_y = next(iter(train_loader))
 assert train_loader is not None,        "train_loader is None"
@@ -117,7 +117,11 @@ print("""
 # TODO 5: Build a 3-layer MLP for regression:
 #   Linear(1→64) → ReLU → Linear(64→64) → ReLU → Linear(64→1)
 # TODO 6: Move the model to DEVICE by chaining .to(DEVICE)
-model = None  # YOUR CODE HERE
+model = nn.Sequential(
+    nn.Linear(1, 64), nn.ReLU(),
+    nn.Linear(64, 64), nn.ReLU(),
+    nn.Linear(64, 1),
+).to(DEVICE)
 
 n_params = sum(p.numel() for p in model.parameters())
 print(f"  Model parameters: {n_params:,}")
@@ -151,23 +155,23 @@ for epoch in range(N_EPOCHS):
 
     for xb, yb in train_loader:
         # TODO 7: Move xb and yb to DEVICE
-        xb = None  # YOUR CODE HERE  → xb.to(DEVICE)
-        yb = None  # YOUR CODE HERE  → yb.to(DEVICE)
+        xb = xb.to(DEVICE)
+        yb = yb.to(DEVICE)
 
         # TODO 8: Zero the gradients (set_to_none=True is slightly faster)
-        pass  # YOUR CODE HERE
+        optimizer.zero_grad(set_to_none=True)
 
         # TODO 9: Forward pass — get predictions from model
-        pred = None  # YOUR CODE HERE
+        pred = model(xb)
 
         # TODO 10: Compute MSE loss
-        loss = None  # YOUR CODE HERE
+        loss = criterion(pred, yb)
 
         # TODO 11: Backward pass
-        pass  # YOUR CODE HERE
+        loss.backward()
 
         # TODO 12: Optimizer step
-        pass  # YOUR CODE HERE
+        optimizer.step()
 
         train_losses.append(loss.item())   # .item() syncs GPU — OK here (every 100 steps in prod)
 
@@ -226,7 +230,7 @@ total_norm_before = sum(
 ) ** 0.5
 
 # TODO 13: Clip gradients — torch.nn.utils.clip_grad_norm_(model_clip.parameters(), max_norm=1.0)
-pass  # YOUR CODE HERE
+torch.nn.utils.clip_grad_norm_(model_clip.parameters(), max_norm=1.0)
 
 total_norm_after = sum(
     p.grad.data.norm(2).item() ** 2
@@ -280,14 +284,15 @@ else:
             loss = criterion(pred, yb)
 
         # TODO 15: Scale and backward
-        pass  # YOUR CODE HERE  → scaler.scale(loss).backward()
+        scaler.scale(loss).backward()
 
         # (optional: unscale + clip before step)
         scaler.unscale_(opt_amp)
         torch.nn.utils.clip_grad_norm_(model_amp.parameters(), max_norm=1.0)
 
         # TODO 16: scaler.step() then scaler.update()
-        pass  # YOUR CODE HERE
+        scaler.step(opt_amp)
+        scaler.update()
 
         amp_losses.append(loss.item())
 

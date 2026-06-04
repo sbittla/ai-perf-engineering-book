@@ -29,7 +29,7 @@ python C.1_interview_questions.py --cat 5   # Benchmarking
 
 ### Category 1 — GPU Architecture (Q1–10)
 Warp divergence, compute vs memory-bound, roofline model, SM occupancy,
-memory coalescing, Tensor Cores, cache hierarchy, SM utilisation vs occupancy,
+memory coalescing, Tensor Cores, cache hierarchy, SM utilization vs occupancy,
 PCIe bottlenecks, TF32.
 
 ### Category 2 — LLM Inference Systems (Q11–20)
@@ -52,7 +52,7 @@ slow NCCL diagnosis, gradient checkpointing, sync vs async AllReduce.
 
 ### Category 5 — Benchmarking (Q41–50)
 The 5 benchmarking mistakes, throughput-latency curves, arithmetic intensity
-measurement, workload characterisation protocol, synthetic vs production
+measurement, workload characterization protocol, synthetic vs production
 benchmarks, correct speedup reporting, Python overhead floor, thermal
 throttling detection, M/D/1 queuing model, torch.compile benchmarking.
 

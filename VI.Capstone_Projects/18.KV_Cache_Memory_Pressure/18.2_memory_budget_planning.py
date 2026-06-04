@@ -141,14 +141,14 @@ print("""
     Max scale (throughput)| INT4      | 2048    | high
 
   TODO 1: Implement tradeoff_analysis(vram_gb, n_layers, n_heads, head_dim)
-  that returns a table of configurations optimised for each goal.
+  that returns a table of configurations optimized for each goal.
 """)
 
 
 def tradeoff_analysis(vram_gb: float, n_layers: int, n_heads: int,
                        head_dim: int) -> list:
     """
-    TODO 1: Return list of config dicts, each optimised for one goal.
+    TODO 1: Return list of config dicts, each optimized for one goal.
     Consider: (FP16, seq=2048), (INT8, seq=4096), (INT4, seq=2048 with more concurrent)
     For each, compute max_concurrent and total memory.
     """

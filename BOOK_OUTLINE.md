@@ -1,7 +1,7 @@
 # AI Systems Performance Engineering
 ## Course Outline — Kindle Direct Publishing Edition
 
-**Subtitle:** GPU Profiling, LLM Optimisation, and Production Benchmarking for Engineers
+**Subtitle:** GPU Profiling, LLM Optimization, and Production Benchmarking for Engineers
 
 **Target Reader:** Enterprise and cloud performance engineers transitioning into AI infrastructure and GPU systems roles. You already understand distributed systems, observability, and performance methodology. This book adds GPU systems depth.
 
@@ -212,7 +212,7 @@
 
 ---
 
-### Chapter 6: PyTorch Performance Optimisation
+### Chapter 6: PyTorch Performance Optimization
 
 **Learning Objectives**
 - Choose the right numeric precision for training vs inference
@@ -232,23 +232,23 @@
 3. `torch.compile`
    - What it does: graph capture → TorchInductor → Triton kernel generation
    - Compilation modes: `default`, `reduce-overhead`, `max-autotune`
-   - Warmup behaviour — compiled models need multiple warmup runs
+   - Warmup behavior — compiled models need multiple warmup runs
    - When it helps (transformers) and when it doesn't (dynamic shapes)
-4. Batch Size Optimisation
-   - Why larger batches improve GPU utilisation
+4. Batch Size Optimization
+   - Why larger batches improve GPU utilization
    - Memory vs throughput tradeoff
    - Finding the optimal batch size with a sweep
 
 **Code / Exercises**
-- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.1_precision_and_amp.py` — FP16/BF16/AMP benchmark
-- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.2_quantization.py` — INT8 / INT4 quantization
-- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimisation/6.3_torch_compile.py` — compile modes + batch size sweep
+- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.1_precision_and_amp.py` — FP16/BF16/AMP benchmark
+- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.2_quantization.py` — INT8 / INT4 quantization
+- `II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.3_torch_compile.py` — compile modes + batch size sweep
 
 **Est. Pages:** 28
 
 ---
 
-### Chapter 7: DataLoader Optimisation
+### Chapter 7: DataLoader Optimization
 
 **Learning Objectives**
 - Diagnose I/O bottlenecks that starve the GPU
@@ -272,8 +272,8 @@
    - When to augment on CPU vs GPU
 
 **Code / Exercises**
-- `II.GPU_Programming_and_Profiling/7.DataLoader_Optimisation/7.1_dataloader_pipeline.py` — num_workers, pin_memory, prefetch
-- `II.GPU_Programming_and_Profiling/7.DataLoader_Optimisation/7.2_io_bottleneck.py` — idle_pct diagnosis + fixes
+- `II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.1_dataloader_pipeline.py` — num_workers, pin_memory, prefetch
+- `II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.2_io_bottleneck.py` — idle_pct diagnosis + fixes
 
 **Est. Pages:** 22
 
@@ -298,7 +298,7 @@
    - What the x-axis and y-axis mean (width = time, height = call depth)
    - Generating: `perf record -g` → `stackcollapse-perf.pl` → `flamegraph.pl`
    - Reading: wide flat tops = hotspots; tall stacks = deep call chains
-   - Differential flamegraphs: before vs after an optimisation
+   - Differential flamegraphs: before vs after an optimization
 3. eBPF and `bpftrace`
    - What eBPF is and why it's safe for production
    - Key one-liners: file opens, syscall latency, block I/O
@@ -354,14 +354,14 @@
 
 **Learning Objectives**
 - Explain prefill vs decode phases and their different bottlenecks
-- Implement and measure KV cache behaviour
+- Implement and measure KV cache behavior
 - Calculate TTFT and TPS for a serving system
 
 **Topics**
 1. The Two Phases of LLM Inference
    - Prefill: process all input tokens in parallel — compute-bound
    - Decode: generate one token per step — memory-bandwidth-bound
-   - Why they need different optimisation strategies
+   - Why they need different optimization strategies
 2. Key Metrics
    - TTFT (Time To First Token) — dominated by prefill latency
    - TPS (Tokens Per Second) — dominated by decode throughput
@@ -507,15 +507,15 @@
    - Identify the "knee" — where latency starts degrading
 4. Characterising a Workload
    - Arithmetic intensity: FLOPs / bytes of memory traffic
-   - Compute utilisation: `sm__throughput.avg.pct_of_peak`
-   - Memory bandwidth utilisation: `dram__throughput.avg.pct_of_peak`
+   - Compute utilization: `sm__throughput.avg.pct_of_peak`
+   - Memory bandwidth utilization: `dram__throughput.avg.pct_of_peak`
    - Using the roofline model to classify your workload
 
 **Code / Exercises**
 - `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.1_measurement_basics.py` — warmup, statistics, Amdahl (read-and-run)
 - `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.2_benchmark_mistakes.py` — five common mistakes
 - `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_throughput_latency_curve.py` — T-L curve + knee detection
-- `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py` — 8-measurement characterisation report
+- `V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py` — 8-measurement characterization report
 
 **Est. Pages:** 22
 
@@ -541,7 +541,7 @@
 3. DataLoader Parallelism at Scale
    - Tuning `num_workers` for your I/O subsystem
    - CPU affinity and NUMA binding for workers
-   - Measuring worker utilisation
+   - Measuring worker utilization
 
 **Code / Exercises**
 - `V.Workload_Benchmarking/15.Porting_a_Workload/15.1_porting_checklist.py` — safe NumPy→CUDA porting with validation
@@ -554,28 +554,28 @@
 
 ## PART VI — Capstone Projects
 
-*Each capstone is a self-contained portfolio project: establish a baseline, profile, optimise, and document the before/after comparison.*
+*Each capstone is a self-contained portfolio project: establish a baseline, profile, optimize, and document the before/after comparison.*
 
 ---
 
-### Chapter 16: Capstone 1 — LLM Inference Optimisation Lab
+### Chapter 16: Capstone 1 — LLM Inference Optimization Lab
 
-**Goal:** Take a GPT-2 baseline from ~80 tok/s to 150+ tok/s using the full optimisation stack.
+**Goal:** Take a GPT-2 baseline from ~80 tok/s to 150+ tok/s using the full optimization stack.
 
 **Workflow**
 1. Establish baseline: `baseline_inference.py` — record TTFT, TPS, peak VRAM
 2. Profile with `nsys` — identify idle time and copy overhead
 3. Profile with `torch.profiler` — find the top 3 ops by CUDA time
-4. Apply optimisations in order:
+4. Apply optimizations in order:
    - FP16 precision → FP16 + `torch.compile` default → `torch.compile max-autotune`
 5. Benchmark each mode: `torch_compile_bench.py`
 6. Document speedup table: eager vs compiled, P50/P99 latency, compile time
 
 **Code / Exercises**
-- `VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.1_production_readiness.py` — research vs production gap (read-and-run)
-- `VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.2_baseline_inference.py` — TTFT, TPS, VRAM baseline
-- `VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.3_precision_and_compile.py` — FP16 + torch.compile ladder
-- `VI.Capstone_Projects/16.LLM_Inference_Optimisation/16.4_profiling_audit.py` — torch.profiler op attribution
+- `VI.Capstone_Projects/16.LLM_Inference_Optimization/16.1_production_readiness.py` — research vs production gap (read-and-run)
+- `VI.Capstone_Projects/16.LLM_Inference_Optimization/16.2_baseline_inference.py` — TTFT, TPS, VRAM baseline
+- `VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py` — FP16 + torch.compile ladder
+- `VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py` — torch.profiler op attribution
 
 **Est. Pages:** 18
 
@@ -583,10 +583,10 @@
 
 ### Chapter 17: Capstone 2 — DataLoader I/O Bottleneck Hunt
 
-**Goal:** Diagnose why `slow_dataloader.py` runs at 30% GPU utilisation, then fix it to reach 90%+.
+**Goal:** Diagnose why `slow_dataloader.py` runs at 30% GPU utilization, then fix it to reach 90%+.
 
 **Workflow**
-1. Run `slow_dataloader.py` — observe GPU utilisation with `nvidia-smi`
+1. Run `slow_dataloader.py` — observe GPU utilization with `nvidia-smi`
 2. Diagnose with `diagnose_io.sh` — `iostat`, `biolatency`, `opensnoop`
 3. Identify the bottlenecks: single worker, no pin_memory, CPU augmentation blocking
 4. Apply fixes in `fast_dataloader.py`: 8 workers, pin_memory, GPU augmentation
@@ -602,7 +602,7 @@
 
 ### Chapter 18: Capstone 3 — KV Cache Memory Pressure Experiment
 
-**Goal:** Measure GPU memory behaviour as concurrent requests fill the KV cache; identify the OOM threshold.
+**Goal:** Measure GPU memory behavior as concurrent requests fill the KV cache; identify the OOM threshold.
 
 **Workflow**
 1. Start the vLLM server: `kv_pressure_server.sh`
@@ -632,7 +632,7 @@
 
 **Code / Exercises**
 - `VI.Capstone_Projects/19.Flamegraph_Challenge/19.1_slow_training_analysis.py` — three hidden bottlenecks embedded
-- `VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimised_training.py` — all three fixes applied
+- `VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimized_training.py` — all three fixes applied
 
 **Est. Pages:** 18
 
@@ -661,7 +661,7 @@
 |------|---------|---------|
 | `nsys` | `nsys profile --stats=true python train.py` | Full GPU timeline |
 | `ncu` | `ncu --set basic --kernel-name gemm python train.py` | Kernel counters |
-| `nvidia-smi` | `nvidia-smi dmon -s u` | Real-time GPU utilisation |
+| `nvidia-smi` | `nvidia-smi dmon -s u` | Real-time GPU utilization |
 | `nvitop` | `nvitop` | Rich GPU dashboard |
 | `perf` | `perf stat -e cache-misses python workload.py` | CPU hardware events |
 | `bpftrace` | `opensnoop-bpfcc` | File open tracing |

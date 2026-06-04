@@ -1,0 +1,44 @@
+# Appendices/E.Advanced_Capstones/E.2_vllm_trace.py
+# status=PASS rc=0 duration=0.1s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise E.2 - vLLM Internals (scheduler + paged KV simulation)
+======================================================================
+
+-- Section 1: Static Batching --
+
+  Static batching runs a fixed batch to completion: every slot is occupied
+  until the LONGEST sequence in the batch finishes, wasting the freed slots.
+
+  Requests        : 8  | slots: 4
+  Total steps     : 110
+  Slot utilization:  51.4%  (useful tokens / slot-steps held)
+
+-- Section 2: Continuous Batching --
+
+  Continuous batching evicts a finished sequence the moment it emits its last
+  token and admits a waiting request into that slot the next step.
+
+  Total steps     : 62
+  Slot utilization:  91.1%
+  Step speedup vs static: 1.77x
+  [check] continuous batching finishes sooner with higher slot utilization
+
+-- Section 3: PagedAttention Block Allocation --
+
+  Each sequence's KV cache is stored in fixed-size blocks, allocated lazily as
+  the sequence grows - no up-front reservation of max_seq_len.
+
+  Block size            : 16 tokens
+  Blocks after prefill  : 3
+  Blocks at completion  : 7
+  Naive pre-reservation : 128 blocks (max_seq_len=2048)
+  Memory saved vs naive :  94.5%
+  [check] lazy paged allocation avoids reserving the worst-case context
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise E.2 complete
+  You simulated the scheduler and the block table. Now trace the real
+  vLLM engine and confirm these decisions in an nsys timeline.
+======================================================================

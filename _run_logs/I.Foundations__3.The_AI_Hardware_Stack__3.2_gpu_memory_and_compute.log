@@ -1,0 +1,138 @@
+# I.Foundations/3.The_AI_Hardware_Stack/3.2_gpu_memory_and_compute.py
+# status=PASS rc=0 duration=30.5s
+======================================================================
+--- STDOUT ---
+=================================================================
+  Exercise 02 — GPU Memory & Compute Internals
+=================================================================
+  Device: cuda
+
+── Section 1: HBM Bandwidth Measurement ──
+
+  A bandwidth-saturating kernel reads every byte of a large tensor once
+  and does minimal arithmetic.  The measured throughput approximates the
+  HBM bandwidth ceiling for memory-bound kernels.
+
+  vector_add: C = A + B  (reads 2N bytes, writes N bytes, 1 FLOP per element)
+  This is the standard 'STREAM benchmark' for GPUs.
+
+  GPU: NVIDIA GeForce RTX 4060 Laptop GPU
+
+      Size   BW (GB/s)   Time (ms)
+  --------  ----------  ----------
+      64 MB       232.9       0.824
+     256 MB       231.6       3.316
+    1024 MB       233.6      13.149
+
+  Peak measured HBM bandwidth: 233.6 GB/s
+  Compare to spec: look up 'NVIDIA GeForce RTX 4060 Laptop GPU memory bandwidth'
+  ✓ Section 1 passed
+
+── Section 2: FP32 vs FP16 vs BF16 Compute Throughput ──
+
+  Tensor Cores are special matrix multiply units:
+    FP32 (no TC): CUDA cores only — baseline throughput
+    TF32  (TC):   PyTorch enables by default on Ampere+, ~8× speedup
+    FP16  (TC):   ~16× speedup vs FP32 CUDA cores
+    BF16  (TC):   same throughput as FP16, same exponent range as FP32
+
+  Tensor Cores activate when:
+    (a) dtype is float16 or bfloat16  (or TF32 is enabled for float32)
+    (b) matrix dimensions are multiples of 8 (ideally 16 or 64)
+    (c) tensors are contiguous and aligned
+
+  Check: look for gemm, hmma, or h884 kernels in ncu output.
+
+  FP32      : 10.304 ms  →  13.3 TFLOP/s
+  FP16      : 5.029 ms  →  27.3 TFLOP/s
+  BF16      : 4.894 ms  →  28.1 TFLOP/s
+
+  FP16 speedup over FP32: 2.0×
+  Expected: 2–16× depending on GPU generation and Tensor Core support
+  ✓ Section 2 passed
+
+── Section 3: Matrix Size Alignment for Tensor Cores ──
+
+  Tensor Cores operate on tiles of specific sizes (multiples of 8 or 16).
+  Non-aligned dimensions get padded internally, wasting SM cycles.
+  Transformer architectures (GPT-2, LLaMA) are designed with dim=64×N
+  to stay aligned.
+
+  Compare: M=4096 (aligned) vs M=4095 (not aligned).
+
+     Dim   Aligned?   Time (ms)    Relative
+  ------  ---------  ----------  ----------
+     512        YES       0.021  baseline
+     511         no       0.028  1.32× slower
+    1024        YES       0.093  baseline
+    1023         no       0.122  1.31× slower
+    2048        YES       0.640  baseline
+    2047         no       0.789  1.23× slower
+  ✓ Section 3 passed — always use dimensions that are multiples of 8
+
+── Section 4: GPU Memory Hierarchy Concepts ──
+
+  GPU memory hierarchy (fastest to slowest):
+    Registers     : per-thread, ~8 MB total, >10,000 GB/s  — private
+    L1/Shared mem : per-SM,  128–256 KB, ~20,000 GB/s  — shared in block
+    L2 cache      : per-GPU, 40–60 MB,    ~5,000 GB/s  — shared by all SMs
+    HBM (global)  : per-GPU, 8–80 GB,   272–3,350 GB/s — main GPU memory
+
+  FlashAttention achieves its speedup by tiling attention computation to
+  fit Q, K, V tiles in shared memory — avoiding repeated HBM reads.
+  The speedup is not from doing fewer FLOPs; it is from doing fewer
+  bytes of HBM traffic.
+
+  Kernel fusion (torch.compile) achieves the same pattern:
+  instead of writing intermediate results to HBM and reading them back,
+  fused kernels keep intermediates in registers/shared memory.
+
+  Tensor size    : 16 MB  (float32)
+  Unfused (3 kernels) : 9.944 ms
+  Fused   (compiled)  : 0.308 ms
+  Fusion speedup      : 32.27×
+  Speedup comes from fewer HBM round-trips, not fewer FLOPs
+  ✓ Section 4 passed
+
+── Section 5: SM Occupancy and GPU utilization ──
+
+  SM occupancy = active warps / maximum warps per SM.
+  High occupancy → the SM can hide memory latency by switching warps.
+  Low occupancy  → the SM stalls waiting for memory, wasting cycles.
+
+  Causes of low occupancy:
+    • Small batch size (few active warps)
+    • High register usage per thread (limits warps per SM)
+    • Large shared memory allocation (limits blocks per SM)
+    • synchronization barriers (all warps wait together)
+
+  Practical impact: running a model with batch_size=1 at inference
+  typically results in SM occupancy of 5–20%.  Continuous batching
+  raises this to 50–80% by processing multiple requests together.
+
+  Measurement:  ncu --metrics sm__occupancy.avg.pct_of_peak_sustained_active
+                    python my_script.py
+
+   Batch   Latency (ms)      Throughput   Relative tput
+  ------  -------------  --------------  --------------
+       1          0.214          4672/s            1.0×
+       4          0.199         20088/s            4.3×
+      16          0.194         82584/s           17.7×
+      64          0.168        380263/s           81.4×
+     256          0.160       1598465/s          342.1×
+
+  At bs=1: GPU is under-utilized (low SM occupancy)
+  At bs=256: GPU approaches full utilization
+  This is why continuous batching exists for LLM inference
+  ✓ Section 5 passed
+
+=================================================================
+  ALL SECTIONS COMPLETE — Exercise 02 (Chapter 3) done!
+
+  Key takeaways:
+    • HBM is the memory bus — measure its bandwidth to know your ceiling
+    • FP16 Tensor Cores give 2–16× speedup — use them with AMP
+    • Matrix dimensions must be multiples of 8 for full Tensor Core use
+    • Kernel fusion (torch.compile) reduces HBM traffic — the real speedup
+    • Small batch → low SM occupancy → wasted GPU — use continuous batching
+=================================================================

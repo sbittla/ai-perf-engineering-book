@@ -233,7 +233,7 @@ print(f"  Wasted GPU work: {wasted_pct:.1f}%")
 print(f"""
   WHAT THIS MEANS IN PRACTICE
     If padding_fraction = {res32['padding_fraction']:.1%}:
-      GPU effective utilisation ≈ {100 - wasted_pct:.0f}% (the rest is thrown away)
+      GPU effective utilization ≈ {100 - wasted_pct:.0f}% (the rest is thrown away)
       Throughput could improve {1/(1-res32['padding_fraction']):.1f}× if padding were eliminated
     → This is exactly what continuous batching achieves (Exercise 11.2)
 """)

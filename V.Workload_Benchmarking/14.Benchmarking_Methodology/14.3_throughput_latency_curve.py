@@ -69,12 +69,12 @@ print("""
   SINGLE REQUEST (batch=1):
     Low latency: request processed immediately, ~5 ms.
     Low throughput: GPU processes 1 request at a time = 200 req/s.
-    GPU utilisation: ~10% (for decode-style workloads).
+    GPU utilization: ~10% (for decode-style workloads).
 
   LARGE BATCH (batch=128):
     High throughput: 128 requests in ~15 ms = 8,533 req/s.
     High latency: each request waits for the batch to fill.
-    GPU utilisation: ~90%.
+    GPU utilization: ~90%.
 
   The key insight: you cannot have BOTH minimum latency AND maximum throughput
   simultaneously. The T-L curve shows the achievable trade-off space.
@@ -86,7 +86,7 @@ print("""
 
   At low load (λ small): W ≈ service time (latency is just processing time).
   Near capacity (λ → μ): queue builds → W → ∞ (latency explodes).
-  The "knee" is where λ/μ ≈ 0.7–0.8 (70–80% utilisation).
+  The "knee" is where λ/μ ≈ 0.7–0.8 (70–80% utilization).
 """)
 print("  ✓ Section 1 passed — throughput and latency are fundamentally coupled")
 
@@ -228,7 +228,7 @@ print("""
 
   We model this with a simple M/D/1 queue (Poisson arrivals, deterministic service):
     Service rate μ = 1 / service_time
-    Utilisation ρ = λ / μ  (λ = arrival rate)
+    utilization ρ = λ / μ  (λ = arrival rate)
     Mean latency W = service_time + (ρ × service_time) / (2 × (1 - ρ))
 
   This formula captures the exponential latency increase near capacity.
@@ -271,7 +271,7 @@ for load_frac in load_levels:
     rho = arrival * (SERVICE_TIME_MS / 1000)
     print(f"  {arrival:>14.1f}  {rho:>10.2f}  {W_str:>14}")
 
-# Verify latency at 80% utilisation > latency at 50%
+# Verify latency at 80% utilization > latency at 50%
 W_50 = md1_latency_ms(0.50 * capacity, SERVICE_TIME_MS)
 W_80 = md1_latency_ms(0.80 * capacity, SERVICE_TIME_MS)
 assert W_80 > W_50, f"Higher load → higher latency: {W_50:.2f} vs {W_80:.2f}"

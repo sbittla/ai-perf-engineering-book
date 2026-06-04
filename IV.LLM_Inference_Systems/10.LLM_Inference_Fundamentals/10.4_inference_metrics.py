@@ -167,12 +167,12 @@ print("  ✓ Section 3 passed — e2e latency = TTFT + decode time")
 print("\n── Section 4: Throughput vs Latency Tradeoff ──")
 print("""
   Increasing batch size improves THROUGHPUT (tokens/sec across all requests)
-  because the GPU is better utilised. But it also increases TTFT for each
+  because the GPU is better utilized. But it also increases TTFT for each
   individual request, because requests must wait for others in the batch.
 
   This is the fundamental tradeoff in LLM serving:
-    Small batch → low latency, low GPU utilisation
-    Large batch → high GPU utilisation, high latency
+    Small batch → low latency, low GPU utilization
+    Large batch → high GPU utilization, high latency
 
   The optimal operating point depends on your SLO:
     • Latency-sensitive API: keep batch small (TTFT < 200ms)

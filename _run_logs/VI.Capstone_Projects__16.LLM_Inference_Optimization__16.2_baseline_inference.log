@@ -1,0 +1,114 @@
+# VI.Capstone_Projects/16.LLM_Inference_Optimization/16.2_baseline_inference.py
+# status=PASS rc=0 duration=6.0s
+======================================================================
+--- STDOUT ---
+============================================================
+  Capstone 16.1 — LLM Inference Baseline
+============================================================
+  Device: cuda
+
+── Section 1: Mini GPT-2 Style Transformer ──
+
+  For this capstone we use a compact GPT-2-style transformer that
+  is large enough to show meaningful timing differences but small
+  enough to run anywhere — including CPU-only machines.
+
+  ARCHITECTURE:
+    Vocab size : 32,000 (matches LLaMA tokenizer)
+    n_layers   : 4       (vs GPT-2's 12)
+    n_heads    : 8
+    d_model    : 512
+    d_ff       : 2048    (4× d_model, standard FFN ratio)
+
+  This is a 28M parameter model. A production GPT-2 (117M) or
+  LLaMA-7B (7B) will show larger speedups from the same techniques,
+  but the bottlenecks and measurement approach are identical.
+
+  PHASES:
+    Prefill : forward pass over the full prompt (input tokens)
+    Decode  : autoregressive generation, one token per step
+
+  Both phases are measured separately because they have different
+  bottlenecks: prefill is compute-bound, decode is memory-BW-bound.
+
+  Model: 45.6M parameters  183 MB (FP32)
+  ✓ Section 1 passed — mini GPT built and on device
+
+── Section 2: TTFT — Time To First Token ──
+
+  TTFT is the latency from receiving the user's request to producing
+  the first output token. It is dominated by the PREFILL phase:
+  a single forward pass over all prompt tokens.
+
+  For a prompt of length L: TTFT ≈ forward_pass_latency(batch=1, seq=L)
+
+  TTFT scales with prompt length because:
+    - The attention matrix is L × L → O(L²) compute
+    - The FFN processes L tokens in parallel → O(L) compute
+  The dominant term is O(L²) for long prompts.
+
+  TODO 1: Implement measure_ttft(model, prompt_len, iters=20)
+  that generates a random token sequence of length prompt_len and
+  times the forward pass. Return (mean_ms, p99_ms).
+
+    Prompt len   TTFT mean (ms)   TTFT P99 (ms)
+  ────────────  ───────────────  ──────────────
+            64            3.796           6.009
+           128            3.796           5.967
+           256            4.241           8.082
+           512            3.894           4.434
+  ✓ Section 2 passed — TTFT measured across prompt lengths
+
+── Section 3: TPS — Tokens Per Second ──
+
+  TPS measures the decode throughput: how many tokens the model can
+  generate per second in the autoregressive decode loop.
+
+  Each decode step:
+    1. Loads all model weights from HBM (memory-bandwidth-bound)
+    2. Computes attention over all past tokens (grows with length)
+    3. Samples one token from the logit distribution
+
+  We simulate the decode loop by running N_DECODE forward passes
+  with a growing context, then compute TPS = N_DECODE / total_time.
+
+  TODO 2: Implement measure_tps(model, prompt_len, n_decode=50)
+  that simulates N_DECODE autoregressive steps and returns TPS.
+  At each step, append the predicted token to the context.
+
+  Decode TPS (FP32, no KV cache): 400.6 tok/s
+  Peak VRAM (prompt=256): 231 MB
+  ✓ Section 3 passed — decode TPS and VRAM measured
+
+── Section 4: Saving the Baseline Snapshot ──
+
+  The baseline snapshot is the "before" record for this capstone.
+  Every subsequent optimization will be compared against it.
+
+  BASELINE SNAPSHOT SCHEMA:
+    model_config  : architecture hyperparameters
+    hardware      : device, VRAM capacity
+    ttft_by_len   : TTFT mean/P99 at each prompt length
+    tps_fp32      : decode TPS without optimization
+    vram_mb       : peak memory during inference
+    dtype         : "float32" (will become float16 in 16.2)
+
+  TODO 3: Save the baseline dict as /tmp/capstone16_baseline.json
+  and assert the file was created successfully.
+
+  Baseline saved: /tmp/capstone16_baseline.json
+  TPS (FP32):   400.6 tok/s
+  TTFT (256):   4.241 ms
+  VRAM peak:    230.9 MB
+
+  NEXT STEP:
+    Run 16.2_precision_and_compile.py to apply the optimization ladder.
+    The baseline JSON will be loaded for before/after comparison.
+
+  ✓ Section 4 passed — baseline snapshot saved
+
+============================================================
+  ALL SECTIONS PASSED — Capstone 16.1 complete!
+  Baseline established: TTFT, TPS (FP32), VRAM footprint.
+  Next: VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py
+============================================================

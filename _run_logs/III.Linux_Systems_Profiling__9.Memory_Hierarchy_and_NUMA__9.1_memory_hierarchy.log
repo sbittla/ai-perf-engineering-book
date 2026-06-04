@@ -1,0 +1,181 @@
+# III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.1_memory_hierarchy.py
+# status=PASS rc=0 duration=10.7s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 9.1 — The Memory Hierarchy
+============================================================
+  Device: cpu
+
+── Section 1: Cache Line Size and Sequential Access ──
+
+  The fundamental unit of CPU memory access is the cache line.
+  On x86 and ARM, a cache line is exactly 64 bytes.
+
+  When the CPU needs a value at address A, it does not fetch just
+  that 4-byte float.  It fetches the entire 64-byte cache line
+  containing A — all 16 consecutive float32 values in that line.
+
+  WHAT THIS MEANS FOR ACCESS PATTERNS:
+
+  Stride-1 (sequential):
+    arr[0], arr[1], …, arr[15] → 1 cache line loaded, 16 values used
+    100% cache line utilization.  The hardware prefetcher detects the
+    sequential pattern and pre-fetches the next line before you ask.
+
+  Stride-16 (one float per cache line):
+    arr[0], arr[16], arr[32], … → 1 cache line per float
+    Only 1 of 16 values per cache line is used. 6.25% utilization.
+    No spatial locality — prefetcher cannot help.
+    Effective bandwidth is 16× lower than stride-1.
+
+  THIS IS WHY PyTorch's .contiguous() EXISTS:
+    A transposed tensor has stride (1, rows) instead of stride (cols, 1).
+    Reading across a transposed tensor's rows accesses memory in stride-N
+    order — each element is N floats apart in memory.  For a 1024×1024
+    matrix, that is stride-1024 = 4096 bytes per element = 64 cache lines
+    wasted per element accessed.  Calling .contiguous() copies the data
+    into row-major order, restoring stride-1 access.
+
+  MEASUREMENT:
+    We measure bandwidth (GB/s = bytes_read / time_seconds / 1e9)
+    for arr[::stride].sum() at strides 1, 4, 8, 16, 32.
+    The bandwidth drop as stride increases directly shows the
+    cache line waste.
+
+  Array size: 268 MB
+    Stride    Bandwidth (GB/s)    Cache efficiency
+  ────────  ──────────────────  ──────────────────
+         1                11.6                 84%
+         4                 4.4                 32%
+         8                 2.1                 16%
+        16                 1.4                 10%
+        32                 0.7                  5%
+  ✓ Section 1 passed — stride-1 bandwidth > stride-16 bandwidth
+
+── Section 2: Working Set Size and Cache Tiers ──
+
+  Access time jumps dramatically when the working set (all the data
+  touched in a computation) exceeds each cache level.
+
+  LATENCY NUMBERS FOR MODERN x86 (approximate, CPU-dependent):
+    L1 cache  (~48 KB):  4 cycles   = ~1.5 ns at 3 GHz
+    L2 cache  (~512 KB): 12 cycles  = ~4 ns
+    L3 cache  (~8–32 MB): 40 cycles = ~13 ns
+    DRAM:                200 cycles = ~67 ns at 3 GHz
+
+  BANDWIDTH NUMBERS (sequential read, modern workstation):
+    L1/L2: 200–500 GB/s  (served from on-chip SRAM)
+    L3:    100–200 GB/s  (last-level cache, shared across all cores)
+    DRAM:  30–100 GB/s   (DDR4/DDR5, depends on channel count)
+
+  The "bandwidth cliff" is visible when you measure throughput vs
+  working set size: bandwidth is stable while data fits in L3,
+  then drops sharply when the working set exceeds L3 capacity.
+
+  FINDING YOUR L3 SIZE:
+    cat /sys/devices/system/cpu/cpu0/cache/index3/size   # Linux
+    lscpu | grep L3                                       # alternative
+    Run this script with perf: the miss rate spikes at the cliff.
+
+  Measuring bandwidth sweep (sizes 1 KB → 512 MB):
+  L3 reference size: 8 MB
+        Size     BW (GB/s)      Tier
+  ──────────  ────────────  ────────
+     0.001MB           0.8     L1/L2
+     0.010MB           5.0     L1/L2
+     0.100MB          11.5     L1/L2
+     1.000MB          16.2     L1/L2
+     4.000MB          16.8        L3
+     8.000MB          18.5        L3
+    32.000MB          13.5      DRAM
+   128.000MB          11.9      DRAM
+   256.000MB          11.8      DRAM
+  ✓ Section 2 passed — cache tier classification implemented
+
+── Section 3: Matrix Layout and Cache Friendliness ──
+
+  A C-contiguous (row-major) matrix stores rows contiguously:
+    A[0,0], A[0,1], …, A[0,N-1], A[1,0], A[1,1], …
+
+  Reading across a row = stride-1 = sequential = cache friendly.
+  Reading down a column = stride N floats between elements.
+
+  For a 4096×4096 float32 matrix, stride is 4096 * 4 = 16,384 bytes
+  between consecutive elements in the same column.  That is 256 cache
+  lines skipped per element access — every single access is a cache miss.
+
+  A SUBTLETY ABOUT np.sum:  numpy's reduction kernel walks the buffer in
+  cache-friendly blocks and SIMD-vectorizes the accumulator regardless of
+  the axis, so A.sum(axis=0) and A.sum(axis=1) BOTH read memory sequentially
+  and show nearly identical bandwidth.  np.sum is the wrong tool to expose
+  the layout penalty.
+
+  To actually pay the strided-access cost we force a column-major GATHER:
+    row-major (friendly)  : A.copy()                    — sequential read
+    col-major (unfriendly): np.ascontiguousarray(A.T)   — one row-stride hop
+                                                           per element copied
+  This is exactly the access pattern .contiguous() exists to avoid, and it
+  is dramatically slower (often >10×).
+
+  PYTORCH EQUIVALENT:
+    tensor.contiguous()        # cheap when already row-major
+    tensor.T.contiguous()      # pays the strided gather, like A.T above
+
+  4096×4096 float32 matrix (67 MB):
+    Row-major copy A.copy():         5.6 GB/s  (cache friendly)
+    Column gather ascontig(A.T):     0.3 GB/s  (cache unfriendly)
+    Slowdown (row/col):              19.6×
+  ✓ Section 3 passed — sequential bandwidth > strided gather by > 1.1×
+
+── Section 4: Implications for PyTorch ──
+
+  PyTorch tensors use C-contiguous (row-major) layout by default.
+  After operations that change the logical view without copying data,
+  the tensor becomes NON-CONTIGUOUS.
+
+  OPERATIONS THAT CREATE NON-CONTIGUOUS TENSORS:
+    .T          (transpose — swaps strides)
+    .permute()  (arbitrary dimension reordering)
+    .view()     (if called on a non-contiguous tensor, it will raise)
+    t[:, ::2]   (slicing with a step creates a strided view)
+
+  HOW TO CHECK:
+    tensor.is_contiguous()   # True = row-major, safe for all ops
+    tensor.stride()          # e.g., (1024, 1) = contiguous; (1, 1024) = transposed
+
+  HOW TO FIX:
+    tensor.contiguous()      # forces a copy into C-contiguous layout
+
+  WHEN DOES IT MATTER?
+    For small tensors (< L3 cache): rarely — cache miss penalty is small.
+    For large weight matrices (hidden_dim × hidden_dim at FP16):
+      non-contiguous access wastes HBM bandwidth, which is already the
+      bottleneck for memory-bound kernels.
+    For BLAS/cuBLAS matmul: PyTorch may call .contiguous() internally
+      or use a strided BLAS path; profiling will show which.
+
+  PRACTICAL RULE:
+    Before passing a tensor to a performance-critical operation,
+    check is_contiguous().  If False and the operation is hot
+    (appears in the torch.profiler top table), add .contiguous().
+
+  base.shape:                (1024, 1024)
+  base.stride():             (1024, 1)
+  transposed.stride():       (1, 1024)
+  transposed.is_contiguous(): False  (expected False)
+  after .contiguous():        True  (expected True)
+  matmul(transposed, x):    3.20 ms
+  matmul(contiguous, x):    3.57 ms
+  (difference may be small on CPU — effect is larger on GPU HBM)
+  ✓ Section 4 passed — transposed tensor is not contiguous, .contiguous() fixes it
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 9.1 complete!
+
+  You can now measure stride bandwidth, classify working set
+  sizes by cache tier, benchmark row vs column access, and
+  verify PyTorch tensor contiguity.
+
+  Next: III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.2_numa_and_topology.py
+============================================================

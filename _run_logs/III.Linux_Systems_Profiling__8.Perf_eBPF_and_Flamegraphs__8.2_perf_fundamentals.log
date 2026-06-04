@@ -1,0 +1,161 @@
+# III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.2_perf_fundamentals.py
+# status=PASS rc=0 duration=3.4s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 8.1 — perf stat and Hardware Counters
+============================================================
+  Device: cpu
+
+── Section 1: IPC and CPU Efficiency ──
+
+  IPC (Instructions Per Cycle) measures how efficiently the CPU
+  executes your code.  Modern superscalar CPUs can issue 3–5
+  instructions per cycle when their pipelines are full — executing
+  multiple independent instructions in parallel on different
+  execution units.
+
+  Memory-bound code has LOW IPC because the CPU stalls waiting for
+  data to arrive from cache or DRAM.  While waiting for one load
+  to complete, the CPU cannot make progress on instructions that
+  depend on that value.
+
+  The rule:
+    IPC > 2.0 → compute-bound (pipelines are full, CPU is busy)
+    IPC < 1.0 → memory-bound  (CPU stalls waiting for data)
+    IPC 1–2   → balanced      (mixed memory and compute pressure)
+
+  We measure IPC indirectly by timing two access patterns:
+    small_array.sum()  → fits in L1 cache → high IPC (no stalls)
+    large_random.sum() → random DRAM access → low IPC (constant stalls)
+
+  perf stat shows the raw instruction and cycle counts:
+    sudo perf stat -e instructions,cycles python 8.1_perf_fundamentals.py
+
+  Small array (L1 fit, 1024 elements):  0.186 ms
+  Large array (DRAM, 2048 random):       0.415 ms
+  Ratio (large/small per element):       1.1×
+  ✓ Section 1 passed — IPC cost measured via Python loop timing
+
+── Section 2: Cache Miss Rate — Sequential vs Random ──
+
+  Each cache miss stalls the CPU for roughly 200 cycles — the time
+  needed to read a 64-byte cache line from DRAM.
+
+  Sequential access lets the hardware prefetcher predict which cache
+  lines will be needed next.  When it detects a stride-1 access
+  pattern (arr[0], arr[1], arr[2], …) it begins fetching future
+  cache lines before the CPU requests them.  The load arrives before
+  the stall begins — the CPU never waits.
+
+  Random access destroys prefetching.  The prefetcher cannot predict
+  which cache line will be needed next, so the CPU must request it
+  on demand and wait ~200 cycles for the DRAM to respond.
+
+  The miss ratio = random_time / sequential_time measures the
+  empirical penalty of random vs sequential access on your hardware.
+  Values of 3× to 10× are typical for large arrays.
+
+  perf stat can show the hardware cache miss count:
+    sudo perf stat -e cache-misses,cache-references python 8.1_perf_fundamentals.py
+
+  Array size:           268 MB (larger than L3)
+  Sequential sum:       21.4 ms
+  Random gather sum:    45.7 ms
+  Miss ratio:           2.1× (random is 2.1× slower)
+  ✓ Section 2 passed — cache miss ratio > 2× (random much slower than sequential)
+
+── Section 3: Branch Misprediction Cost ──
+
+  Modern CPUs predict branches before knowing which way they go.
+  The branch predictor uses history — if the last 100 iterations
+  of a loop always took the same path, it predicts the same again.
+
+  When the prediction is wrong, the CPU must flush the pipeline and
+  discard all speculatively-executed instructions.  This costs
+  15–20 cycles per misprediction on a modern CPU.
+
+  The classic example: summing elements where value > 0.5.
+  On an unsorted random array, half the elements satisfy the
+  condition, half do not — the branch alternates unpredictably,
+  causing many mispredictions.  After sorting, all elements below
+  0.5 appear first, then all above.  The branch flips exactly once
+  at the threshold — the predictor gets almost everything right.
+
+  In practice: sorting input data before a conditional operation
+  is one of the few pure-software cures for branch misprediction.
+  DataLoader shuffling trades training accuracy benefits against
+  branch predictor efficiency in your preprocessing transforms.
+
+  perf stat measures mispredictions directly:
+    sudo perf stat -e branch-misses,branches python 8.1_perf_fundamentals.py
+
+  Array size:           17 MB
+  Unsorted conditional: 27.57 ms  sum=1572696.5
+  Sorted conditional:   4.16 ms   sum=1572696.5
+  Sums match:           True
+  ✓ Section 3 passed — both arrays produce same sum; timing measured
+
+── Section 4: perf stat Command Reference ──
+
+  perf stat is Linux's performance counter tool.  It wraps a command
+  and reports hardware-level event counts when the command exits.
+  It reads CPU performance monitoring units (PMUs) — actual hardware
+  counters in silicon, not estimates.
+
+  The five most important perf stat events for AI workloads:
+
+  ┌─────────────────────┬──────────────────────────────┬───────────┬────────────────┐
+  │ Event               │ What it measures             │ Good      │ Bad            │
+  ├─────────────────────┼──────────────────────────────┼───────────┼────────────────┤
+  │ cache-misses        │ LLC (L3) cache misses         │ < 0.1%    │ > 5% of refs   │
+  │ cache-references    │ All LLC cache accesses        │ baseline  │ —              │
+  │ branch-misses       │ Branch predictor failures     │ < 1%      │ > 5% of branches│
+  │ instructions        │ Total instructions retired    │ high      │ low for work done│
+  │ cycles              │ Total CPU cycles elapsed      │ baseline  │ —              │
+  └─────────────────────┴──────────────────────────────┴───────────┴────────────────┘
+
+  IPC = instructions / cycles
+
+  Commands to run in a separate terminal while your AI workload runs:
+
+    # Five core counters — IPC, cache, and branch:
+    sudo perf stat -e cache-misses,cache-references,branch-misses,instructions,cycles \
+        python 8.1_perf_fundamentals.py
+
+    # Detailed cache hierarchy — L1, L2, LLC miss rates:
+    sudo perf stat -e L1-dcache-misses,L2-dcache-misses,LLC-misses \
+        python 8.1_perf_fundamentals.py
+
+    # For a running process (attach without restarting):
+    sudo perf stat -p <PID> sleep 5
+
+    # Full system-wide snapshot (all CPUs, 10 seconds):
+    sudo perf stat -a sleep 10
+
+  Reading the output:
+    instructions / cycles → IPC.  A100-class CPU code often sees IPC 1.5–2.5
+    during data preprocessing.  Values below 1.0 indicate severe memory stalls.
+
+    cache-misses / cache-references → miss rate.  Above 5% on a DataLoader
+    workload suggests the dataset does not fit in L3 and every item fetch
+    is a DRAM access.
+
+    branch-misses / branches → misprediction rate.  Above 3% on conditional
+    augmentation code suggests the branches are data-dependent and unpredictable.
+    Consider re-ordering data or vectorising the condition with numpy.
+
+  interpret_ipc(3e9, 1e9)   = 'compute-bound'   (IPC=3.0)
+  interpret_ipc(5e8, 1e9)   = 'memory-bound'  (IPC=0.5)
+  interpret_ipc(1.5e9, 1e9) = 'balanced'      (IPC=1.5)
+  ✓ Section 4 passed — IPC interpretation function correct
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 8.1 complete!
+
+  You can now measure IPC cost with Python timing, explain
+  sequential vs random cache miss rates, understand branch
+  misprediction, and interpret perf stat output.
+
+  Next: III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py
+============================================================

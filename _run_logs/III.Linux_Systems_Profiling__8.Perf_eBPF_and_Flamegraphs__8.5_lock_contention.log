@@ -1,0 +1,168 @@
+# III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.5_lock_contention.py
+# status=PASS rc=0 duration=0.9s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 8.4 — Lock Contention
+============================================================
+  Device: cpu
+
+── Section 1: Python GIL Basics ──
+
+  The Python Global Interpreter Lock (GIL) is a mutex that protects
+  CPython's internal data structures from concurrent modification.
+  Only ONE thread can execute Python bytecode at any moment.
+
+  CONSEQUENCE FOR CPU-BOUND WORK:
+    4 threads doing pure Python computation cannot go 4× faster.
+    Each thread must acquire the GIL before executing any bytecode.
+    The interpreter switches threads every 5ms (by default).
+    The overhead of switching — releasing GIL, OS context switch,
+    acquiring GIL again — is pure waste for CPU-bound work.
+
+  CONSEQUENCE FOR I/O-BOUND WORK:
+    When a thread makes a blocking syscall (read(), write(), sleep()),
+    it releases the GIL explicitly before blocking.  Other threads can
+    run.  This is why threading works for network-heavy code.
+
+  NUMPY AND PYTORCH:
+    numpy.dot(), numpy.sum(), PyTorch matmul — these release the GIL
+    while inside the C/Fortran/CUDA code.  For pure numpy computation
+    on large arrays, multi-threading CAN provide parallel speedup.
+    But Python-level loops (for i in range(n): arr[i] += 1) cannot.
+
+  THE FIX FOR CPU-BOUND PARALLELISM:
+    Use multiprocessing instead of threading.  Each process has its
+    own Python interpreter and its own GIL.  No sharing, no contention.
+    DataLoader uses multiprocessing for exactly this reason.
+
+  HOW TO SEE THE GIL IN ACTION:
+    py-spy top -- python train.py   (look for GIL wait bars)
+    python -X gil=0 train.py        (Python 3.13+ free-threaded mode)
+    strace -c python train.py       (count futex syscalls = lock ops)
+
+  Single-threaded (5,000,000 iterations):      190.0 ms
+  Multi-threaded (4 threads, same total): 174.1 ms
+  Speedup:                               1.09× (expect close to 1.0 or < 1.0)
+  (GIL limits CPU-bound thread speedup — speedup ≈ 1 is expected)
+  ✓ Section 1 passed — GIL timing measured for CPU-bound task
+
+── Section 2: Lock Contention with a Shared Counter ──
+
+  When multiple threads compete for the SAME lock, they queue at the
+  lock boundary.  Only one thread can hold the lock at a time.
+
+  The overhead has three components:
+    1. Lock acquisition: a futex syscall (fast if uncontended,
+       slow if contended — the thread must sleep and be woken up)
+    2. Context switch: OS suspends the waiting thread and schedules
+       another one — costs ~1–10 microseconds per switch
+    3. Cache invalidation: the lock's cache line is bounced between
+       CPU cores as ownership changes — up to ~200 nanoseconds
+
+  VISIBLE IN LINUX TOOLS:
+    vmstat 1 — look at the "cs" (context switches) column.
+    A value of 50,000+ per second with 4 threads indicates high
+    contention.  With low contention, "cs" stays near 1,000/second.
+
+    strace -c python script.py — "futex" in the syscall table.
+    High count + high total time = threads spending time in the kernel
+    waiting for the lock to be released.
+
+  THE KEY INSIGHT:
+    If multiple threads are counting independent things (e.g.,
+    each DataLoader worker tracks its own items loaded), there is
+    no need for a shared counter.  Use threading.local() or separate
+    variables per worker.  Aggregation is done at the end.
+
+  4 threads, lock-per-increment (50,000 total): 12.5 ms
+  Final counter value: 50000 (correct: 50000)
+  ✓ Section 2 passed — lock contention measured, counter is correct
+
+── Section 3: DataLoader Workers — Multiprocessing vs Threading ──
+
+  PyTorch's DataLoader uses MULTIPROCESSING (not threading) for workers.
+  Each worker is a separate OS process with its own Python interpreter
+  and its own GIL.  Processes share NO Python objects (only through
+  the output queue, which crosses the process boundary via shared memory).
+
+  WHY THIS MATTERS:
+    If workers did CPU-heavy augmentation in threads, the GIL would
+    serialise them.  4 threads doing transforms = 1 thread speed.
+    4 processes doing transforms = true 4× parallelism.
+
+  I/O + COMPUTE MIX:
+    DataLoader workers typically do: open file → read bytes → decode
+    → augmentation → push to queue.  The open/read part releases the
+    GIL (I/O syscalls).  The decode and augmentation may hold the GIL.
+    Multiprocessing eliminates the GIL conflict entirely — each process
+    has independent memory and can saturate its own CPU core.
+
+  CONCURRENT.FUTURES COMPARISON:
+    ProcessPoolExecutor → separate processes, no GIL sharing → true parallelism
+    ThreadPoolExecutor  → same process, shared GIL → limited for CPU-bound tasks
+
+  This section demonstrates both executors on a task that mixes I/O
+  (simulated with sleep) and compute (numpy matmul).
+
+  ProcessPoolExecutor (4 workers, 10ms I/O + matmul each):
+    Results: ['64572.9', '64572.9', '64572.9', '64572.9']
+    All non-None: True
+  ✓ Section 3 passed — multiprocessing workers produce correct results
+
+── Section 4: Detecting Contention — Diagnosis Commands ──
+
+  Lock contention leaves measurable signatures in Linux tools.
+  Know these four signals and you can diagnose contention without
+  modifying any code.
+
+  SIGNAL 1: High context switch rate (vmstat)
+    vmstat 1 10   — prints system stats every 1 second for 10 seconds.
+    The "cs" column is context switches per second.
+    Baseline on a lightly loaded system: ~1,000/sec
+    Moderate contention: 10,000–50,000/sec
+    High contention: > 100,000/sec
+    Command: watch vmstat 1
+
+  SIGNAL 2: High futex syscall count (strace)
+    strace -c python train.py
+    Look for "futex" in the syscall table.  futex is the Linux primitive
+    for all locks (mutexes, condition variables, semaphores).
+    A high call count (thousands) with high %time → lock contention.
+    Command: strace -e trace=futex -c python train.py
+
+  SIGNAL 3: Wide "futex" or "pthread_mutex_lock" bars in flamegraph
+    py-spy record -o flame.svg -- python train.py
+    If the flamegraph shows "futex" or "pthread_mutex_lock" as wide
+    frames (> 5% of samples), lock contention is a first-class cost.
+    These frames appear in the system call layer below your Python code.
+
+  SIGNAL 4: CPU %sys much higher than %user (top/htop)
+    top — look at the CPU line: "us" = user-space, "sy" = kernel.
+    Normal training: us=80%, sy=5%.
+    High contention: us=40%, sy=30% (many kernel futex calls).
+    Command: top -d 1  (refresh every 1 second)
+
+  FIXING THE CONTENTION:
+    GIL contention → switch from threading to multiprocessing
+                   → reduce Python-level work in workers (offload to C extensions)
+    Shared counter → use per-thread accumulators, aggregate at the end
+    CUDA allocator → pre-allocate persistent buffers, reduce alloc/free frequency
+    Queue contention → increase queue size, batch items, or use lock-free queues
+
+  detect_contention_indicator(500_000, 4) = 'high-contention'
+  detect_contention_indicator(10_000, 4)  = 'moderate'
+  detect_contention_indicator(100, 4)     = 'low'
+  ✓ Section 4 passed — contention indicator function correct
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 8.4 complete!
+
+  You can now explain the Python GIL, measure threading
+  overhead for CPU-bound tasks, implement locked shared
+  counters, run worker tasks with ProcessPoolExecutor,
+  and interpret context-switch rates as contention signals.
+
+  Chapter 8 complete.  Continue to Chapter 9:
+  Next: III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.1_memory_hierarchy.py
+============================================================

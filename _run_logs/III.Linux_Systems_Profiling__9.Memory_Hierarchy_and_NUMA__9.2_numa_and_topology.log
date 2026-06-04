@@ -1,0 +1,179 @@
+# III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.2_numa_and_topology.py
+# status=PASS rc=0 duration=0.5s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 9.2 — NUMA Architecture and Topology
+============================================================
+  Device: cpu
+
+── Section 1: NUMA Topology Detection ──
+
+  NUMA (Non-Uniform Memory Access) describes a memory architecture
+  where memory is divided into banks, each bank directly attached to
+  one CPU socket.  Accessing local memory (same socket) is fast.
+  Accessing remote memory (different socket) must cross the socket
+  interconnect — Intel calls it UPI (Ultra Path Interconnect),
+  AMD calls it Infinity Fabric.
+
+  REMOTE MEMORY PENALTY:
+    Typical latency increase: 1.5× to 2.5× slower.
+    For sequential streaming bandwidth: 10–30% reduction (bandwidth-
+    limited operations recover some of the latency penalty through
+    pipelining, but not all).
+
+  WHY IT MATTERS FOR AI WORKLOADS:
+    A typical 2-socket server has 2 NUMA nodes.
+    GPU 0 is connected to the PCIe root complex of socket 0.
+    If your DataLoader workers are pinned to socket 1 (the "wrong"
+    socket), the data they load must travel:
+      Socket 1 DRAM → UPI interconnect → Socket 0 DRAM → PCIe → GPU
+    instead of the direct path:
+      Socket 0 DRAM → PCIe → GPU
+
+    This adds 10–20% to H2D transfer time on every batch.
+    In a pipeline running thousands of batches, this compounds.
+
+  DETECTING YOUR NUMA TOPOLOGY:
+    numactl --hardware    (show nodes, CPUs, memory per node, distances)
+    lstopo --of ascii     (full topology: CPU + cache + NUMA + GPU)
+    cat /proc/cpuinfo | grep "physical id" | sort -u | wc -l  (socket count)
+
+  For this exercise, we parse simulated numactl output
+  (the function works on real output too).
+
+  Live numactl output detected 1 NUMA node(s) on this system.
+  parse_numa_nodes(2-node sample) = 2
+  parse_numa_nodes(4-node sample) = 4
+  ✓ Section 1 passed — NUMA node parsing implemented
+
+── Section 2: CPU Affinity ──
+
+  CPU affinity is the set of CPU cores this process is ALLOWED to run on.
+  The OS scheduler only places the process on cores in its affinity set.
+
+  READING AFFINITY:
+    Python:  os.sched_getaffinity(0)   → set of core IDs
+    Shell:   taskset -c -p $$           → comma-separated or range
+
+  SETTING AFFINITY (restricts the process):
+    Python:  os.sched_setaffinity(0, {0, 1, 2, 3})
+    Shell:   taskset -c 0-3 python train.py
+    numactl: numactl --cpunodebind=0 python train.py  (all cores on node 0)
+
+  WHY AFFINITY MATTERS FOR AI TRAINING:
+    On a 2-socket server, socket 0 has cores 0–15 and socket 1 has
+    cores 16–31 (typical example).  GPU 0's PCIe root complex connects
+    to socket 0.  If your training process runs freely on all 32 cores,
+    the OS may schedule it on socket 1 cores — every memory access is
+    then "remote" relative to GPU 0.
+
+    Pinning to socket 0 cores ensures:
+      1. All memory allocated by the training process sits on socket 0
+         DRAM (first-touch allocation policy).
+      2. All PCIe DMA transfers from this process go directly over the
+         socket 0 PCIe lanes — no cross-socket hop.
+
+  NUMACTL STRATEGY FOR MULTI-GPU SERVERS:
+    # Find which NUMA node your GPU is on:
+    cat /sys/bus/pci/devices/*/numa_node
+
+    # Run training bound to that GPU's NUMA node:
+    numactl --cpunodebind=0 --membind=0 python train.py  # GPU on node 0
+
+  Available CPU cores: [0, 1, 2, 3, 4, 5, 6, 7]...
+  Total allowed cores: 24
+  ✓ Section 2 passed — CPU affinity read successfully
+
+── Section 3: NUMA Binding Commands ──
+
+  numactl is the standard tool for binding a process to specific NUMA
+  nodes.  The binding applies to BOTH CPU scheduling (which cores run
+  the process) and memory allocation (which DRAM bank gets .malloc()).
+
+  THE LINUX FIRST-TOUCH ALLOCATION POLICY:
+    When you allocate memory (e.g., torch.rand(n)), Linux does NOT
+    immediately assign physical pages.  Pages are assigned on first
+    WRITE (first touch).  The NUMA node of the page is the node where
+    the writing thread is running at that moment.
+    → If your DataLoader worker allocates a buffer while running on
+      socket 1 but needs to DMA it to socket 0's GPU, the data must
+      travel across the interconnect.
+    → numactl --membind=0 forces ALL allocations to socket 0 DRAM,
+      regardless of which core does the first touch.
+
+  PRACTICAL COMMANDS:
+
+  Finding which NUMA node a GPU is on:
+    for dev in /sys/bus/pci/devices/*/numa_node; do
+        echo "$dev: $(cat $dev)"
+    done
+
+  Binding training to a specific NUMA node:
+    numactl --cpunodebind=0 --membind=0 python train.py
+
+  Multi-GPU, each GPU on a different node:
+    CUDA_VISIBLE_DEVICES=0 numactl --cpunodebind=0 --membind=0 python train.py &
+    CUDA_VISIBLE_DEVICES=1 numactl --cpunodebind=1 --membind=1 python train.py &
+
+  Verify your binding is active (check the process's memory policy):
+    cat /proc/$(pgrep -f train.py)/numa_maps | head -5
+
+  Check NUMA hit/miss stats for a running process:
+    numastat -p $(pgrep -f train.py)
+    (look for numa_miss: high count = remote memory accesses)
+
+  build_numactl_command(0, 'train.py'):
+    numactl --cpunodebind=0 --membind=0 python train.py
+  build_numactl_command(1, 'train.py'):
+    numactl --cpunodebind=1 --membind=1 python train.py
+  ✓ Section 3 passed — numactl command builder correct
+
+── Section 4: Simulating NUMA Bandwidth Difference ──
+
+  On a real multi-socket server you would measure remote memory access
+  by running: numactl --cpunodebind=0 --membind=1 python measure.py
+  and comparing with: numactl --cpunodebind=0 --membind=0 python measure.py
+
+  The difference is the NUMA penalty — typically 10–30% lower bandwidth
+  for the remote case, plus higher latency for small random accesses.
+
+  Since we cannot force NUMA binding in a portable Python script,
+  we SIMULATE the penalty by injecting a small delay per 64 KB chunk
+  of data accessed.  This models the extra latency of crossing the
+  UPI interconnect for each cache line that must be fetched from
+  the remote socket's memory controller.
+
+  ON A REAL SYSTEM, the penalty is continuous and hardware-imposed:
+  every cache line that comes from the remote socket takes 1.5–2.5×
+  longer to arrive than a local cache line.  Our simulation models
+  this as a per-chunk overhead, which is a valid approximation for
+  bandwidth-limited workloads.
+
+  WHAT THE NUMBERS MEAN:
+    local_bw  > 20 GB/s  → data in local DRAM, no interconnect overhead
+    remote_bw = local_bw * (1 / (1 + penalty_fraction))
+    Typical penalty_fraction: 0.20–0.50 (20–50% slower)
+
+  simulate_local_access(10M elements):        13.3 GB/s
+  simulate_remote_access(1M elem, 10μs/64KB): 4.0 GB/s
+
+  Simulated NUMA penalty at different per-chunk latencies:
+     Penalty (μs/64KB)     Simulated BW (GB/s)
+  ────────────────────  ──────────────────────
+                     0                     7.7
+                     5                     5.7
+                    10                     4.1
+                    20                     2.5
+                    50                     1.1
+  ✓ Section 4 passed — local and remote access simulation returns > 0 GB/s
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 9.2 complete!
+
+  You can now parse numactl output, read CPU affinity,
+  build numactl binding commands, and simulate the NUMA
+  remote memory penalty.
+
+  Next: III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.3_memory_bandwidth.py
+============================================================

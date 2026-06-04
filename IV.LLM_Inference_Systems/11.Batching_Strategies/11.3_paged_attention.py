@@ -242,7 +242,7 @@ def simulate_paged(
 ) -> dict:
     """
     Simulate continuous batching with PagedAttention block allocation.
-    Returns throughput and peak block utilisation.
+    Returns throughput and peak block utilization.
     """
     alloc   = PagedAllocator(total_blocks)
     waiting = list(requests)

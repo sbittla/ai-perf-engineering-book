@@ -5,12 +5,12 @@ V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterizati
 Chapter 14: Benchmarking Methodology — Section 3: Workload Characterisation
 =======================================================================
 Covers book section 14.3:
-  • What workload characterisation means: profiling before optimising
+  • What workload characterisation means: profiling before optimizing
   • The full characterisation checklist (8 measurements)
-  • Measuring compute utilisation and memory bandwidth utilisation
+  • Measuring compute utilization and memory bandwidth utilization
   • Roofline position: classifying your workload as compute or memory bound
   • Building and saving a structured JSON characterisation report
-  • Comparing reports to track progress across optimisation rounds
+  • Comparing reports to track progress across optimization rounds
 
 Run:  python V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py
 All sections must print ✓.
@@ -36,20 +36,20 @@ print(f"  Device: {DEVICE}\n")
 # ─────────────────────────────────────────────────────────────
 print("── Section 1: The Workload Characterisation Checklist ──")
 print("""
-  Before optimising, characterise. Every optimisation round should start
+  Before optimizing, characterise. Every optimization round should start
   and end with a characterisation so you can attribute improvements.
 
   THE 8-POINT CHECKLIST:
-    □ 1. Peak memory bandwidth utilisation   (DRAM%)
-    □ 2. Peak compute utilisation            (SM%)
+    □ 1. Peak memory bandwidth utilization   (DRAM%)
+    □ 2. Peak compute utilization            (SM%)
     □ 3. Roofline position                   (memory-bound or compute-bound?)
     □ 4. Throughput at max sustained load    (samples/sec)
     □ 5. Latency P50 / P99 at each config   (ms)
     □ 6. GPU memory footprint                (weights + activations in GB)
-    □ 7. CPU utilisation during GPU work     (should be < 20%)
+    □ 7. CPU utilization during GPU work     (should be < 20%)
     □ 8. Thermal throttling check            (burst vs sustained)
 
-  The most common mistake: jumping to optimisation without characterising.
+  The most common mistake: jumping to optimization without characterising.
   You fix a 2% bottleneck while missing a 50% bottleneck sitting next to it.
 
   TOOLS BY METRIC:
@@ -58,7 +58,7 @@ print("""
     Throughput     : CUDA events + benchmark()
     Latency P50/P99: gather_timings() (Exercise 14.1)
     GPU memory     : torch.cuda.memory_allocated() / max_memory_allocated()
-    CPU utilisation: psutil.cpu_percent() or top
+    CPU utilization: psutil.cpu_percent() or top
     Thermal        : nvidia-smi -q -d TEMPERATURE / burst vs sustained benchmark
 """)
 print("  ✓ Section 1 passed — commit the 8-point checklist to memory")
@@ -290,14 +290,14 @@ print("  ✓ Section 4 passed — full characterisation table built")
 print("\n── Section 5: Structured Characterisation Report ──")
 print("""
   A characterisation report is only valuable if you can compare it
-  across optimisation rounds and hardware configurations.
+  across optimization rounds and hardware configurations.
 
   SAVE FORMAT: JSON with all measurements and metadata.
   COMPARE:     diff two JSON reports to see exactly what changed.
 
   Workflow:
-    1. characterise_before.json  ← run before any optimisation
-    2. Apply one optimisation (e.g. FP16 precision)
+    1. characterise_before.json  ← run before any optimization
+    2. Apply one optimization (e.g. FP16 precision)
     3. characterise_after.json   ← run again
     4. diff or compute speedup: after.throughput / before.throughput
 
@@ -340,7 +340,7 @@ for k, v in characterisation["summary"].items():
 print("""
   USAGE PATTERN:
     python 14.3_workload_characterization.py > before.txt
-    # Apply optimisation
+    # Apply optimization
     python 14.3_workload_characterization.py > after.txt
     diff before.txt after.txt   # see what changed
 

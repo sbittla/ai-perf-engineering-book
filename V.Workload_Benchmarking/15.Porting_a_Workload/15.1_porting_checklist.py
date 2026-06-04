@@ -51,10 +51,10 @@ print("""
     2. Too many H2D copies — one .to("cuda") per iteration kills throughput
     3. Non-contiguous tensors — .T (transpose) is a view, not contiguous
     4. Python scalars → float64 promotion inside operations
-    5. Forgetting model.eval() → different BatchNorm/Dropout behaviour
+    5. Forgetting model.eval() → different BatchNorm/Dropout behavior
 
   RULE: port one op at a time. Validate correctness after each step.
-  Never port and optimise simultaneously — you can't tell which change
+  Never port and optimize simultaneously — you can't tell which change
   caused a correctness regression.
 """)
 print("  ✓ Section 1 passed — commit the 6-step checklist to memory")
@@ -158,7 +158,7 @@ try:
     transposed.view(-1)
     print("  view() succeeded (unexpected)")
 except RuntimeError:
-    print("  view() on .T raised RuntimeError  ← expected behaviour")
+    print("  view() on .T raised RuntimeError  ← expected behavior")
 
 # .contiguous().view() always works
 flat = transposed.contiguous().view(-1)

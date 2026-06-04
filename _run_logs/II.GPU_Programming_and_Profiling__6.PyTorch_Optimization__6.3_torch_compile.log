@@ -1,0 +1,115 @@
+# II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.3_torch_compile.py
+# status=PASS rc=0 duration=8.3s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 6.3 — torch.compile and Batch Size Optimization
+============================================================
+  Device: cuda
+
+── Section 1: torch.compile Basics ──
+
+  torch.compile was introduced in PyTorch 2.0 as the successor to
+  torch.jit.script.  It captures the computation graph by tracing the
+  Python code with TorchDynamo, then passes the graph to TorchInductor,
+  which generates optimized Triton or C++ kernels.
+
+  Key differences from eager mode:
+    - Kernel fusion: multiple PyTorch ops become one Triton kernel
+    - Memory layout optimization: rearranges tensors for cache efficiency
+    - Operator fusion: reduces HBM round-trips for elementwise chains
+
+  Compilation modes:
+    "default"        : balanced fusion and compile time
+    "reduce-overhead": aggressive fusion, accepts longer compile time
+    "max-autotune"   : exhaustive kernel search (very slow to compile,
+                       fastest runtime; use for repeated production inference)
+
+  Important: the first 2-3 calls trigger compilation and are much slower
+  than steady-state.  ALWAYS warm up before timing.
+
+  Running warmup iterations (first 2-3 may be slow due to compilation)...
+  Eager shape  : torch.Size([64, 256])
+  Compiled shape: torch.Size([64, 256])
+  ✓ Section 1 passed — torch.compile produces correct output shape
+
+── Section 2: Compilation Warmup behavior ──
+
+  The first time the compiled model is called, TorchDynamo captures the
+  computation graph and TorchInductor generates the kernel code.
+  This takes 0.5–5 seconds for a typical model.
+
+  You should see the first timing step (step 0) being significantly
+  slower than later steps (steps 5–9).  After compilation finishes,
+  timing stabilises at the steady-state value.
+
+  Rule: always discard at least 3 steps for compiled models.
+  In production: use max-autotune mode once, save the compiled artifact
+  with torch.export(), and load the pre-compiled version at serving time.
+
+   Step     Time (ms)  Note
+      0       357.938 ← compilation overhead
+      1         0.396 ← compilation overhead
+      2         0.406 ← compilation overhead
+      3         0.496
+      4         0.431
+      5         0.397
+      6         0.311
+      7         0.212
+      8         0.219
+      9         0.261
+  ✓ Section 2 passed — compilation overhead visible in step 0
+
+── Section 3: Mode Comparison ──
+
+  torch.compile has three main modes:
+
+  "default"         : good starting point; reasonable compile time and
+                      runtime. Recommended for most cases.
+  "reduce-overhead" : more aggressive loop fusion, graph reuse. Useful
+                      when the same graph is called repeatedly with
+                      different data (batch inference).
+  "max-autotune"    : exhaustive autotuning (tries many kernel variants
+                      and picks the fastest). Compile time: minutes.
+                      Use only for fixed-shape production deployment.
+
+  We benchmark all three on a transformer-like layer.
+
+  Eager              : 0.384 ms
+  default            : 0.357 ms  (1.08x speedup)
+  reduce-overhead    : 0.383 ms  (1.00x speedup)
+  ✓ Section 3 passed — compiled mode not slower than eager after warmup
+
+── Section 4: Batch Size Sweep ──
+
+  Throughput (samples/second) does not scale linearly with batch size.
+  At small batch sizes, GPU utilization is low and the hardware is mostly
+  idle.  As batch size increases, more SMs are active and throughput rises.
+  Eventually the GPU is fully occupied and throughput plateaus.
+
+  Finding the batch size that maximises throughput is important for:
+    - Inference serving: maximise tokens/second for a given SLA
+    - Training: maximise samples/second for a given memory budget
+    - Cost optimization: find the cheapest batch size per sample
+
+  We sweep batch sizes [1, 2, 4, 8, 16, 32, 64] on a 512→512 linear
+  layer and report throughput in samples/second.
+
+   Batch    Throughput (samples/s)
+       1                    20,941
+       2                    54,863
+       4                   104,457
+       8                   217,618
+      16                   439,728
+      32                   722,822
+      64                 1,637,555
+
+  Peak throughput batch size: 64
+  ✓ Section 4 passed — batch size sweep complete, peak batch identified
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 6.3 complete!
+  You now understand torch.compile modes, warmup behavior,
+  mode trade-offs, and batch size throughput sweeps.
+  Next: II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.1_dataloader_pipeline.py
+============================================================

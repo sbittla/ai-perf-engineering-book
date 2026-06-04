@@ -1,0 +1,174 @@
+# V.Workload_Benchmarking/15.Porting_a_Workload/15.1_porting_checklist.py
+# status=PASS rc=0 duration=3.0s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 15.1 — The Porting Checklist
+============================================================
+  Device: cuda
+
+── Section 1: The 6-Step Porting Checklist ──
+
+  Porting a workload from CPU to GPU (or from research to production)
+  is a common source of silent correctness bugs and unexpected slowdowns.
+
+  THE 6-STEP CHECKLIST:
+    □ 1. Profile first  — identify the hotspot (CPU or GPU bottleneck?)
+    □ 2. Validate dtype — NumPy defaults float64; PyTorch GPU prefers float32
+    □ 3. Validate shape — row-major (C contiguous) vs col-major (Fortran)
+    □ 4. Measure H2D    — host-to-device transfer is often the hidden bottleneck
+    □ 5. Port hotspot   — only port the bottleneck; keep bookkeeping on CPU
+    □ 6. Validate output — assert max absolute difference < 1e-4 (dtype dependent)
+
+  COMMON MISTAKES IN ORDER OF FREQUENCY:
+    1. float64 on GPU — 8× slower than float32 on most consumer GPUs
+    2. Too many H2D copies — one .to("cuda") per iteration kills throughput
+    3. Non-contiguous tensors — .T (transpose) is a view, not contiguous
+    4. Python scalars → float64 promotion inside operations
+    5. Forgetting model.eval() → different BatchNorm/Dropout behavior
+
+  RULE: port one op at a time. Validate correctness after each step.
+  Never port and optimize simultaneously — you can't tell which change
+  caused a correctness regression.
+
+  ✓ Section 1 passed — commit the 6-step checklist to memory
+
+── Section 2: NumPy → PyTorch Dtype Traps ──
+
+  NumPy defaults to float64. PyTorch defaults to float32 on GPU.
+  Mixing them causes silent precision changes AND performance cliffs.
+
+  EQUIVALENCES:
+    NumPy                        PyTorch
+    ──────────────────────       ──────────────────────────
+    np.zeros((n,), dtype=float)  torch.zeros(n)               ← float32 on GPU
+    np.array([1.0, 2.0])         torch.tensor([1.0, 2.0])     ← float32 by default
+    a @ b                        a @ b  or  torch.mm(a, b)
+    np.concatenate([a, b], 0)    torch.cat([a, b], dim=0)
+    np.transpose(a)              a.T  (view, not contiguous!)
+    np.sum(a, axis=0)            a.sum(dim=0)
+    np.maximum(a, 0)             torch.relu(a)  or  a.clamp(min=0)
+
+  THE FLOAT64 TRAP:
+    a = np.array([1.0, 2.0])        # float64!
+    t = torch.from_numpy(a)          # inherits float64
+    t = t.to(DEVICE)                 # float64 on GPU → 8× slower
+    t = t.to(torch.float32)          # ← correct fix
+
+  TODO 1: Implement safe_from_numpy() that converts a NumPy array
+  to a float32 CUDA tensor regardless of the input dtype.
+
+  float64 numpy → torch.float32 on cuda:0  ✓
+  float32 numpy → torch.float32 on cuda:0  ✓
+
+  Python scalar (1.0) + float32 tensor → torch.float32  (PyTorch normalises)
+  Python scalar (1.0) + np.zeros → float64  ← NumPy promotes to float64!
+  ✓ Section 2 passed — always call .float() after from_numpy()
+
+── Section 3: Contiguity Traps ──
+
+  PyTorch operations that require contiguous memory (e.g. view(), many
+  CUDA kernels) will raise RuntimeError if given a non-contiguous tensor.
+
+  COMMON NON-CONTIGUOUS TENSORS:
+    t.T                    — transpose: memory layout is unchanged, strides reversed
+    t[::2]                 — strided slice
+    t.permute(2, 0, 1)     — permute: non-contiguous unless explicitly copied
+
+  DIAGNOSIS:
+    t.is_contiguous()      — True if row-major (C order)
+    t.contiguous()         — makes a contiguous copy if needed (no-op if already OK)
+    t.stride()             — shows memory stride for each dimension
+
+  THE SAFE PATTERN (port checklist step 3):
+    t = some_tensor.contiguous()   # always safe before calling CUDA kernel
+    t = t.reshape(...)             # reshape requires contiguous
+
+  original   is_contiguous: True
+  .T         is_contiguous: False
+  .T.contiguous() is_contiguous: True
+  view() on .T raised RuntimeError  ← expected behavior
+  ✓ Section 3 passed — always call .contiguous() before reshape/CUDA kernels
+
+── Section 4: Host-to-Device Transfer Cost ──
+
+  The PCIe bus between CPU (host) and GPU (device) is the slowest link
+  in the GPU memory hierarchy:
+    L1 cache    : ~10,000 GB/s
+    HBM (A100)  :  2,000 GB/s
+    PCIe 4.0 ×16:     32 GB/s   ← 60× slower than HBM!
+    PCIe 3.0 ×16:     16 GB/s
+
+  If your model does input.to("cuda") on every inference call, and
+  your input is 100 MB, that is 100/32 ≈ 3 ms added per call.
+
+  PINNED MEMORY (page-locked):
+    Normally, CPU memory can be paged out to disk. The DMA engine
+    requires the memory to stay in place during transfer.
+    Non-pinned: OS must first copy to a pinned staging buffer → 2× the time
+    Pinned:     DMA reads directly from the original buffer → ~2× faster H2D
+
+  torch.Tensor.pin_memory() pins an existing CPU tensor.
+  DataLoader(pin_memory=True) pins all batch tensors automatically.
+
+  TODO 2: Implement measure_h2d_bandwidth_gbs() that creates a large
+  CPU tensor, times the .to(DEVICE) transfer, and returns GB/s.
+  Test both pinned and non-pinned versions.
+
+  Tensor size: 134 MB
+  H2D bandwidth (normal) : 8.4 GB/s
+  H2D bandwidth (pinned) : 13.2 GB/s
+  Pinned speedup: 1.57×  (expected 1.5–2.5× on real GPU)
+  ✓ Section 4 passed — H2D bandwidth measured; use pin_memory for speed
+
+── Section 5: Validating Porting Correctness ──
+
+  The porting checklist ends with validation: the GPU result must match
+  the CPU reference within numerical tolerance.
+
+  TOLERANCES BY DTYPE:
+    float32   : atol=1e-5,  rtol=1e-4   (PyTorch default)
+    float16   : atol=1e-2,  rtol=1e-3   (reduced precision)
+    bfloat16  : atol=1e-1,  rtol=1e-2   (even lower mantissa bits)
+    int8 quant: up to ±1 LSB            (quantisation error)
+
+  COMMON SOURCES OF MISMATCH:
+    • Floating-point order of operations (matmul reduction order differs)
+    • CUDA fast-math approximations (cos, exp, rsqrt)
+    • float64 CPU reference vs float32 GPU result
+
+  VALIDATION PROTOCOL:
+    1. Run the operation on CPU in float32
+    2. Run the same operation on GPU in float32
+    3. max_abs_diff = (cpu_result - gpu_result.cpu()).abs().max()
+    4. Assert max_abs_diff < tolerance
+
+  TODO 3: Implement validate_port(cpu_fn, gpu_fn, input_cpu, atol=1e-4)
+  that runs both functions, moves the GPU result to CPU, and returns
+  (max_abs_diff, passed) where passed = max_abs_diff <= atol.
+
+  CPU vs GPU max abs diff: 3.91e-04
+  Validation passed      : False  (atol=1e-4)
+  WARNING: diff 3.91e-04 exceeds tolerance — check dtype and op order
+
+  WHEN VALIDATION FAILS:
+    1. Check dtypes: cpu_tensor.dtype == gpu_tensor.dtype?
+    2. Loosen atol for float16/bfloat16 (expected 1e-2)
+    3. Check if fast-math is enabled (CUDA fast-rsqrt can differ by 1e-3)
+    4. Reduce batch/sequence length — numerical error accumulates
+
+  PORTING SIGN-OFF CRITERIA:
+    □ max_abs_diff < 1e-4 for float32 operations
+    □ Throughput on GPU ≥ 2× throughput on CPU (otherwise the port is not worth it)
+    □ No .to("cuda") calls inside the hot loop
+    □ Input tensors loaded with pin_memory=True
+    □ Model in eval() mode (BatchNorm uses running stats, not batch stats)
+
+  ✓ Section 5 passed — porting validated; correctness confirmed before benchmarking
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 15.1 complete!
+  You have the 6-step porting checklist, dtype trap fixes,
+  contiguity rules, H2D bandwidth measurement, and output validation.
+  Next: V.Workload_Benchmarking/15.Porting_a_Workload/15.2_bottleneck_shift.py
+============================================================

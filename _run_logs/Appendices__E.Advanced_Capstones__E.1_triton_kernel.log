@@ -1,0 +1,47 @@
+# Appendices/E.Advanced_Capstones/E.1_triton_kernel.py
+# status=PASS rc=0 duration=0.1s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise E.1 - Triton Kernel Optimization (roofline model)
+======================================================================
+
+-- Section 1: Memory Traffic --
+
+  Unfused, each op reads its input from HBM and writes its output back:
+    softmax : read X, write S          (2 passes)
+    dropout : read S, write Y          (2 passes)
+  A fused kernel reads X once and writes Y once (1 pass each).
+
+  Tensor: 4096x4096 FP16 = 33.6 MB
+  Unfused HBM traffic :   134.2 MB
+  Fused   HBM traffic :    67.1 MB
+  Traffic reduction   : 2.0x
+  [check] fusion cuts HBM traffic by >= 2x
+
+-- Section 2: Roofline Position --
+
+  Arithmetic intensity (AI) = FLOPs / bytes moved. Softmax does a handful of
+  FLOPs per element (max, sub, exp, sum, div ~ 5) against a 2-byte read+write.
+  If AI << ridge point, the kernel is memory-bound and fusion is the lever.
+
+  Kernel AI       :   1.25 FLOPs/byte
+  GPU ridge point : 185.19 FLOPs/byte
+  Verdict         : memory-bound
+  [check] softmax is memory-bound -> minimize bytes, i.e. fuse
+
+-- Section 3: Predicted Speedup --
+
+  For a memory-bound kernel, runtime ~ bytes / bandwidth. So the fusion speedup
+  is approximately the traffic reduction - the number to validate with ncu.
+
+  Unfused (HBM-bound) :  0.497 ms
+  Fused   (HBM-bound) :  0.249 ms
+  Predicted speedup   : 2.0x  (validate with ncu)
+  [check] predicted speedup == traffic reduction (memory-bound regime)
+
+======================================================================
+  ALL SECTIONS PASSED - Exercise E.1 complete
+  You modeled the traffic, confirmed the kernel is memory-bound, and
+  predicted the fusion speedup. Now write it in Triton and verify with ncu.
+======================================================================

@@ -1,0 +1,178 @@
+# VI.Capstone_Projects/16.LLM_Inference_Optimization/16.1_production_readiness.py
+# status=PASS rc=0 duration=0.3s
+======================================================================
+--- STDOUT ---
+============================================================
+SECTION 1: The Research-to-Production Gap
+============================================================
+
+Research code and production code solve different problems:
+
+  Research:                          Production:
+  ─────────────────────────────────────────────────────────
+  Single GPU, often                  Multi-GPU, multi-node
+  FP32 by default                    FP16 / BF16 / INT8 / FP8
+  Fixed batch size                   Dynamic batching + request queuing
+  DataLoader with shuffle            Preprocessed, cached, streaming
+  Minimise loss                      Minimise cost under latency SLA
+  Correctness only                   Correctness + performance + reliability
+  Run once                           Run 24/7 with zero-downtime deploys
+  Fail is OK (exception → fix)       Fail is money lost + user impact
+  Metrics: accuracy                  Metrics: TTFT, TPS, P99, cost/$M tokens
+
+The skills to bridge this gap are what this book teaches.
+
+============================================================
+SECTION 2: The Three Production Constraints
+============================================================
+
+Every production AI system is simultaneously constrained by three forces:
+
+CONSTRAINT 1 — Latency SLA
+  Users tolerate specific wait times. Violating them triggers escalations,
+  SLA penalties, and churn. Common targets:
+    Chatbot first-token latency  (TTFT) : P99 < 2 seconds
+    Autocomplete response time          : P99 < 100 milliseconds
+    Batch job turnaround                : P99 < 4 hours
+
+CONSTRAINT 2 — Throughput Target
+  The system must sustain a peak request rate without degradation.
+  tokens_per_second = total_tokens_generated / wall_clock_seconds
+  Capacity planning: peak_rps × avg_tokens_per_request = min tokens/s needed
+
+CONSTRAINT 3 — Cost Budget
+  GPU time is expensive. Common unit: cost per million output tokens.
+  cost_per_M_tokens = (hourly_GPU_cost × 3600) / (tokens_per_second × 1e6)
+
+Example: H100 at $3.00/hr, 150 tokens/sec
+  cost per 1M tokens = $72.00
+
+  How throughput affects cost (same GPU, same hourly rate):
+    Tokens/sec    Cost / 1M tokens  vs baseline
+  ------------  ------------------  ---------------
+            50  $           216.00      1.00× cost
+           100  $           108.00      0.50× cost
+           150  $            72.00      0.33× cost
+           300  $            36.00      0.17× cost
+           600  $            18.00      0.08× cost
+
+2× throughput = 2× cost reduction on the same hardware.
+
+============================================================
+SECTION 3: The Five Most Common Production Failures
+============================================================
+  Symptom                          Root Cause
+  -------------------------------- ---------------------------------------------
+  OOM on first large batch         FP32 residuals, no gradient checkpointing, KV cache unbounded
+                                   Fix: Switch to BF16, enable KV eviction, reduce max_batch_tokens
+                                   See: Chapter 16, 18
+
+  DataLoader starves GPU           Num_workers=0, data on slow NFS, PIL decode on single thread
+                                   Fix: Set num_workers = 4-8, prefetch_factor = 2, use webdataset
+                                   See: Chapter 17
+
+  P99 >> P50 latency               GC pauses, Python GIL contention, cuDNN first-call auto-tune
+                                   Fix: Pre-warm model, disable GC during serving, use torch.compile
+                                   See: Chapter 16
+
+  GPU 100%, low TPS                Tiny batch size, memory-bound decode, suboptimal attention
+                                   Fix: Increase batch size, use FlashAttention, quantise weights
+                                   See: Chapter 16, 18
+
+  Memory leak over time            Unreleased activations, growing KV cache, Python ref cycles
+                                   Fix: Profile with torch.cuda.memory_stats(), set cache eviction
+                                   See: Chapter 18
+
+============================================================
+SECTION 4: Production Readiness Self-Assessment Checklist
+============================================================
+
+Before deploying an AI system, run this checklist. A 'NO' is not a blocker
+by itself — it is a tracked risk that must be documented and mitigated.
+
+  [Latency]
+    [ ] TTFT measured under peak concurrency (not synthetic single-request)
+    [ ] P99 latency < SLA target with at least 50 samples
+    [ ] Model pre-warmed before traffic hits (cuDNN auto-tune complete)
+    [ ] Latency budget allocated across tokenise/prefill/decode/network
+
+  [Throughput]
+    [ ] Sustained tokens/sec measured, not burst peak
+    [ ] Batching strategy validated (static vs continuous vs dynamic)
+    [ ] DataLoader not the bottleneck (GPU util > 80% during training)
+    [ ] Load test run at 110% of expected peak
+
+  [Memory]
+    [ ] Max batch size determined by OOM test, not guessed
+    [ ] KV cache size computed: 2 × layers × heads × d_head × seq × precision
+    [ ] Memory growth monitored over 10,000+ requests (no leak)
+    [ ] Gradient checkpointing enabled if training memory is tight
+
+  [Precision]
+    [ ] Using BF16 or FP16 (not FP32) for inference weights
+    [ ] Autocast enabled for inference if using PyTorch
+    [ ] Accuracy regression tested after any precision change
+    [ ] INT8 / FP8 quantisation impact on accuracy is documented
+
+  [Observability]
+    [ ] TTFT, TPS, P50/P99 latency exported to metrics system
+    [ ] GPU utilization and memory tracked per-request
+    [ ] Alerting configured for P99 > 2× P50 (tail anomaly)
+    [ ] Flamegraph capture path tested (py-spy or Nsight available)
+
+  [Reliability]
+    [ ] OOM handled gracefully (returns error, does not crash process)
+    [ ] Timeout enforced on decode (unbounded token generation capped)
+    [ ] Health check endpoint verified under load
+    [ ] Rollback procedure documented and tested
+
+Total: 24 checks across 6 dimensions.
+Target: all checks GREEN before production launch.
+
+============================================================
+SECTION 5: How the Four Capstones Map to Production Skills
+============================================================
+  Chapter 16: LLM Inference optimization
+    Failure reproduced : OOM on large sequences
+    Skill developed    : FlashAttention, KV cache tuning, quantisation
+    Checklist dims     : Latency, Memory, Precision
+
+  Chapter 17: DataLoader Bottleneck Hunt
+    Failure reproduced : Training throughput < 40% of GPU peak
+    Skill developed    : Worker tuning, prefetch, format conversion
+    Checklist dims     : Throughput, Observability
+
+  Chapter 18: KV Cache Memory Pressure
+    Failure reproduced : Memory grows unboundedly with request volume
+    Skill developed    : Eviction policies, paged attention, measurement
+    Checklist dims     : Memory, Reliability
+
+  Chapter 19: Flamegraph Challenge
+    Failure reproduced : P99 latency 5× worse than P50
+    Skill developed    : py-spy, perf, eBPF, identify root cause
+    Checklist dims     : Observability, Reliability
+
+============================================================
+SECTION 6: KV Cache Size Calculator
+============================================================
+
+The KV cache stores past key and value projections for each request.
+Its size determines how many concurrent requests can be in flight.
+
+  kv_bytes = 2 × num_layers × num_heads × head_dim × max_seq_len × bytes_per_element
+
+  Model            Layers   KV Heads   Max Seq    KV Cache / req       Batch 32
+  ---------------- -------- ---------- ---------- -------------------- ---------------
+  LLaMA-7B         32       32         4096             2048.0 MB      64.00 GB
+  LLaMA-13B        40       40         4096             3200.0 MB     100.00 GB
+  LLaMA-70B        80       64         4096            10240.0 MB     320.00 GB
+  Mistral-7B       32       8          32768            4096.0 MB     128.00 GB
+
+For LLaMA-70B at batch=32: KV cache alone needs ~32+ GB.
+On an 80 GB H100, that leaves ~48 GB for the 140 GB model weights —
+meaning LLaMA-70B requires tensor parallelism across 2+ GPUs in production.
+
+Explore next: VI.Capstone_Projects/16.LLM_Inference_Optimization/
+              VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/
+              VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/
+              VI.Capstone_Projects/19.Flamegraph_Challenge/

@@ -1,0 +1,151 @@
+# V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py
+# status=PASS rc=0 duration=2.3s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 14.3 — Workload Characterisation
+============================================================
+  Device: cuda
+
+── Section 1: The Workload Characterisation Checklist ──
+
+  Before optimizing, characterise. Every optimization round should start
+  and end with a characterisation so you can attribute improvements.
+
+  THE 8-POINT CHECKLIST:
+    □ 1. Peak memory bandwidth utilization   (DRAM%)
+    □ 2. Peak compute utilization            (SM%)
+    □ 3. Roofline position                   (memory-bound or compute-bound?)
+    □ 4. Throughput at max sustained load    (samples/sec)
+    □ 5. Latency P50 / P99 at each config   (ms)
+    □ 6. GPU memory footprint                (weights + activations in GB)
+    □ 7. CPU utilization during GPU work     (should be < 20%)
+    □ 8. Thermal throttling check            (burst vs sustained)
+
+  The most common mistake: jumping to optimization without characterising.
+  You fix a 2% bottleneck while missing a 50% bottleneck sitting next to it.
+
+  TOOLS BY METRIC:
+    DRAM% and SM%  : ncu --metrics dram__throughput.avg.pct_of_peak, sm__throughput
+    Roofline       : ncu --set roofline
+    Throughput     : CUDA events + benchmark()
+    Latency P50/P99: gather_timings() (Exercise 14.1)
+    GPU memory     : torch.cuda.memory_allocated() / max_memory_allocated()
+    CPU utilization: psutil.cpu_percent() or top
+    Thermal        : nvidia-smi -q -d TEMPERATURE / burst vs sustained benchmark
+
+  ✓ Section 1 passed — commit the 8-point checklist to memory
+
+── Section 2: Roofline Position — Memory or Compute Bound? ──
+
+  The roofline model classifies any workload as either:
+    MEMORY-BANDWIDTH BOUND: arithmetic intensity < ridge_point
+    COMPUTE BOUND:          arithmetic intensity > ridge_point
+
+  ARITHMETIC INTENSITY of a linear layer:
+    FLOPs = 2 × batch × seq_len × d_out × d_in       (matmul FLOPs)
+    Bytes = (d_out × d_in + batch × seq_len × d_in) × dtype_bytes
+    AI    = FLOPs / Bytes
+
+  For large batches: AI ≈ batch × seq_len (grows with batch).
+  For batch=1:       AI ≈ 1 (always memory-bound on GPU).
+
+  TODO 1: Implement arithmetic_intensity() for a Linear(d_in, d_out) layer.
+
+  Linear(512, 512) arithmetic intensity (FP32):
+   Batch × Seq     AI (FLOPs/byte)            Bound
+  ────────────  ──────────────────  ───────────────
+     1×64                     28.4        memory-BW
+     8×64                    128.0        memory-BW
+    32×64                    204.8          compute
+   128×64                    240.9          compute
+     1×512                   128.0        memory-BW
+     8×512                   227.6          compute
+
+  A100 ridge point (FP32): 156.0 FLOPs/byte
+  → batch=1 is always memory-bandwidth-bound on current GPUs
+  ✓ Section 2 passed — arithmetic intensity formula implemented
+
+── Section 3: Measuring Peak Memory Bandwidth ──
+
+  To know whether your workload is near the memory bandwidth ceiling,
+  you must measure the ACTUAL peak bandwidth on your hardware.
+
+  METHOD: copy a large tensor — this is purely memory-bandwidth-bound.
+    Bytes transferred = 2 × tensor_size  (read + write)
+    Bandwidth = 2 × tensor_size / time_s  (GB/s)
+
+  This gives you the empirical ridge point for your specific GPU.
+  Published specs (A100: 2 TB/s) are theoretical; real-world
+  efficiency is typically 80–90% of peak.
+
+  TODO 2: Implement measure_peak_bandwidth_gbs() below.
+
+  Measured peak memory bandwidth: 226.7 GB/s
+  GPU: NVIDIA GeForce RTX 4060 Laptop GPU  (theoretical: see GPU spec sheet)
+  Efficiency: this measurement / theoretical peak
+  ✓ Section 3 passed — peak memory bandwidth measured
+
+── Section 4: Full Characterisation Sweep ──
+
+  We now run the complete characterisation for a multi-layer MLP:
+  throughput, latency distribution, and memory footprint.
+
+  Model: 3-layer MLP, d_model=256, 6.3 MB parameters
+
+       B×S   Mean (ms)    P99 (ms)    Tput (sps)        AI         Bound
+  ────────  ──────────  ──────────  ────────────  ────────  ────────────
+   1×64          0.221       0.364          4524      30.1     memory-BW
+   8×64          0.251       0.337         31921     170.7       compute
+  32×64          0.632       0.672         50596     341.3       compute
+  128×64          2.707       2.865         47280     455.1       compute
+   8×256         0.631       0.668         12675     341.3       compute
+  ✓ Section 4 passed — full characterisation table built
+
+── Section 5: Structured Characterisation Report ──
+
+  A characterisation report is only valuable if you can compare it
+  across optimization rounds and hardware configurations.
+
+  SAVE FORMAT: JSON with all measurements and metadata.
+  COMPARE:     diff two JSON reports to see exactly what changed.
+
+  Workflow:
+    1. characterise_before.json  ← run before any optimization
+    2. Apply one optimization (e.g. FP16 precision)
+    3. characterise_after.json   ← run again
+    4. diff or compute speedup: after.throughput / before.throughput
+
+  TODO 3: Add a "summary" key to the characterisation dict with:
+    - max_throughput_sps: highest throughput across all configs
+    - min_p99_ms: lowest P99 latency across all configs
+    - roofline_limited: True if any config's AI < peak_bw estimate
+
+  Report saved: /tmp/characterisation_report.json
+  Summary:
+    max_throughput_sps: 50595.5
+    min_p99_ms: 0.337
+    roofline_limited: True
+
+  USAGE PATTERN:
+    python 14.3_workload_characterization.py > before.txt
+    # Apply optimization
+    python 14.3_workload_characterization.py > after.txt
+    diff before.txt after.txt   # see what changed
+
+  COMPARE JSON REPORTS:
+    import json
+    before = json.load(open("before.json"))
+    after  = json.load(open("after.json"))
+    for c_b, c_a in zip(before["configs"], after["configs"]):
+        speedup = c_a['throughput_sps'] / c_b['throughput_sps']
+        print(f"  B={c_b['batch']}: speedup = {speedup:.2f}x")
+
+  ✓ Section 5 passed — characterisation report saved and summarised
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 14.3 complete!
+  You can now run a complete 8-point characterisation, classify
+  workloads on the roofline, and save/compare JSON reports.
+  Next: V.Workload_Benchmarking/15.Porting_a_Workload/15.1_porting_checklist.py
+============================================================

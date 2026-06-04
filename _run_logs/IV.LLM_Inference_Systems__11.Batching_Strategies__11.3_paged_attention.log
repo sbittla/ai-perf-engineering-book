@@ -1,0 +1,129 @@
+# IV.LLM_Inference_Systems/11.Batching_Strategies/11.3_paged_attention.py
+# status=PASS rc=0 duration=0.2s
+======================================================================
+--- STDOUT ---
+============================================================
+  Exercise 11.3 — PagedAttention and Block Allocation
+============================================================
+
+── Section 1: Static KV Allocation and Fragmentation ──
+
+  NAIVE APPROACH (HuggingFace generate):
+    When a request arrives, pre-allocate a contiguous block of KV memory
+    sized for max_seq_len tokens, regardless of how many tokens will
+    actually be generated.
+
+  PROBLEM — INTERNAL FRAGMENTATION:
+    If max_seq_len = 2048 and the request generates only 100 tokens:
+      Reserved  : 2048 × kv_bytes_per_token
+      Used      : 100  × kv_bytes_per_token
+      Wasted    : 1948 × kv_bytes_per_token = 95.1% waste!
+
+    In a fleet with varied output lengths, static allocation means
+    most of the KV pool is reserved but unused — fewer concurrent
+    requests fit in VRAM.
+
+  PROBLEM — EXTERNAL FRAGMENTATION:
+    When requests complete, their blocks are freed. New requests need
+    contiguous blocks of max_seq_len. The free space may be scattered
+    across many small gaps — unusable for new large requests.
+
+  ✓ Section 1 passed — static allocation causes severe fragmentation
+
+── Section 2: PagedAttention Block Allocator ──
+
+  PagedAttention (vLLM) treats KV memory like virtual memory pages.
+  The entire KV pool is divided into fixed-size blocks.
+  Each block holds BLOCK_SIZE tokens worth of K and V per layer.
+
+  On each decode step, if a sequence needs more KV space:
+    → Allocate one more block from the free pool
+    → Map it into the sequence's "page table"
+
+  When a sequence finishes:
+    → All its blocks are returned to the free pool immediately
+    → No compaction needed (non-contiguous access is fine for GPU)
+
+  BLOCK_SIZE trade-off:
+    Small blocks (e.g. 4):  low waste, many bookkeeping entries
+    Large blocks (e.g. 64): fewer entries, up to 63 tokens wasted per request
+
+  vLLM default: --block-size 16 (16 tokens per block)
+
+  TODO 1: Implement PagedAllocator class below.
+
+  PagedAllocator: allocate/free/OOM all working
+  ✓ Section 2 passed — block allocator implemented
+
+── Section 3: How Many Requests Fit? ──
+
+  We compare how many concurrent requests fit in the KV pool
+  under static (max_seq_len) vs paged (actual tokens used) allocation.
+
+  Model: Llama-7B FP16
+  KV pool: 8 GB
+  Block size: 16 tokens
+  KV per block: 8.4 MB
+  Total blocks: 953
+
+  Average actual output length: 194 tokens
+
+  Method                       Blocks/req   Max concurrent
+  ─────────────────────────  ────────────  ───────────────
+  Static (max_seq_len)                128                7
+  PagedAttention (actual)              13               73
+  PagedAttention serves 10.4× more requests
+  ✓ Section 3 passed — PagedAttention dramatically increases concurrency
+
+── Section 4: Block Allocator Under Continuous Load ──
+
+  We simulate a serving loop where requests arrive, consume blocks
+  one per decode step, then release blocks on completion.
+
+  This mirrors vLLM's internal block manager — requests get blocks
+  as they decode and return them immediately when done.
+
+   Concurrency    Throughput   Peak blocks    Peak util%
+  ────────────  ────────────  ────────────  ────────────
+             4        7417/s           103        10.8%
+             8       13692/s           171        17.9%
+            16       23733/s           317        33.3%
+            32       39556/s           550        57.7%
+
+  Concurrency 4 vs 32: 7417 vs 39556 tok/s
+  ✓ Section 4 passed — PagedAttention block allocation simulation working
+
+── Section 5: Prefix Caching ──
+
+  Many requests share a common prefix (system prompt, few-shot examples).
+  In standard PagedAttention, each request computes and stores its own
+  copy of the prefix KV blocks — redundant work and memory.
+
+  PREFIX CACHING (--enable-prefix-caching in vLLM):
+    Blocks for an identical prefix are computed ONCE and shared across
+    all requests that start with that prefix.
+
+  Memory savings:
+    N requests × L_prefix_tokens × KV_per_token
+    → 1 copy shared = (N-1) × L_prefix_tokens × KV_per_token saved
+
+  For a 512-token system prompt with Llama-7B FP16:
+    Per request: 512 × 524,288 bytes = 256 MB
+    10 concurrent requests: 10 × 256 MB = 2.56 GB
+    With prefix caching: 1 × 256 MB = 2.3 GB saved
+
+  Compute savings:
+    Prefill for the shared prefix is skipped → lower TTFT for repeated prefixes.
+
+  Prefix: 512 tokens, 10 concurrent requests (Llama-7B FP16)
+  Without prefix caching: 2.68 GB
+  With prefix caching   : 0.27 GB
+  Savings               : 2.42 GB  (0%)
+  ✓ Section 5 passed — prefix caching shares KV blocks across requests
+
+============================================================
+  ALL SECTIONS PASSED — Exercise 11.3 complete!
+  You implemented a block allocator, compared static vs paged
+  allocation, and measured the concurrency improvement.
+  Next: IV.LLM_Inference_Systems/12.Speculative_Decoding/12.1_draft_target_model.py
+============================================================

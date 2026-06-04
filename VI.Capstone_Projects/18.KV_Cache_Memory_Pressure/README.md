@@ -1,6 +1,6 @@
 # Chapter 18 — Capstone 3: KV Cache Memory Pressure Experiment
 
-A quantitative analysis of LLM KV cache memory behaviour: from the fundamental formula to production deployment planning.
+A quantitative analysis of LLM KV cache memory behavior: from the fundamental formula to production deployment planning.
 
 ## Exercises
 

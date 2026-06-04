@@ -1,0 +1,119 @@
+# VII.Hardware_Landscape/21.AMD_MI300X_ROCm/21.1_roofline_multi_gpu.py
+# status=PASS rc=0 duration=2.4s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 21.1 — Roofline Analysis Across GPU Vendors
+======================================================================
+
+── Section 1: Detect Active GPU Vendor ──
+
+  PyTorch maps ROCm/HIP to the same 'cuda' device string.
+  torch.version.hip is set on ROCm builds; None on CUDA builds.
+  torch.version.cuda is set on CUDA builds; None on ROCm builds.
+
+  Active device : NVIDIA GeForce RTX 4060 Laptop GPU
+  Vendor        : NVIDIA CUDA  (CUDA 13.0)
+  CUDA available: True
+  Compute cap.  : 8.9
+  VRAM          : 8.6 GB
+  ✓ Section 1 passed — vendor detection understood
+
+── Section 2: MI300X vs H100 vs B200 Key Specifications ──
+
+  MI300X: chiplet design — 8 CDNA3 GPU dies + 4 memory controllers
+          stacked on an interposer with 8 HBM3 stacks.
+  H100:   monolithic Hopper die, 132 SMs, HBM3.
+  B200:   monolithic Blackwell die, 192 SMs, HBM3e.
+
+  Spec                        AMD MI300X     NVIDIA H100     NVIDIA B200
+  ──────────────────────  ──────────────  ──────────────  ──────────────
+  Architecture             CDNA3 chiplet  Hopper monolithic  Blackwell monolithic
+  CUs / SMs                          304             132             192
+  VRAM (GB)                          192              80             192
+  HBM BW (TB/s)                      5.3            3.35             8.0
+  BF16 TFLOP/s                     1,307           1,979           5,000
+  FP8 TOPS                         2,614           3,958          10,000
+  TDP (W)                            750             700            1000
+  Interconnect            Infinity Fabric        NVLink 4        NVLink 5
+  Multi-GPU BW GB/s                  448             900            1800
+
+  MI300X's decisive advantage: 5.3 TB/s HBM3 bandwidth — 58% more than H100.
+  MI300X fits 70B FP16 on one GPU (192 GB); H100 needs 2×.
+  ✓ Section 2 passed
+
+── Section 3: Compute Ridge Points ──
+
+  Ridge point = peak BF16 FLOP/s / memory bandwidth
+              = BF16 TFLOP/s × 1000 / BW_GBs   (gives FLOP/byte)
+
+  Below the ridge point → memory-bound (bandwidth is the bottleneck).
+  Above the ridge point → compute-bound (FLOP/s is the bottleneck).
+
+  GPU                 BF16 TFLOP/s     BW (GB/s)   Ridge (FLOP/byte)
+  ────────────────  ──────────────  ────────────  ──────────────────
+  AMD MI300X                 1,307         5,300               246.6
+  NVIDIA H100                1,979         3,350               590.7
+  NVIDIA B200                5,000         8,000               625.0
+
+  MI300X ridge: 247  H100 ridge: 591
+  MI300X is more bandwidth-rich → memory-bound workloads benefit more.
+  ✓ Section 3 passed
+
+── Section 4: Classify LLM Inference Operations ──
+
+  LLM decode (batch=1): AI ≈ 1 FLOPs/byte — almost always memory-bound.
+  LLM prefill (batch=32): AI ≈ 100+ FLOPs/byte — may be compute-bound.
+  Large GEMM (batch=1024): AI > 400 FLOPs/byte — likely compute-bound.
+
+
+  Operation                                     AI      MI300X        H100        B200
+  ──────────────────────────────────────  ────────  ──────────  ──────────  ──────────
+  LLM decode (bs=1, FP16)                      1.0      memory      memory      memory
+  LLM decode (bs=8, FP16)                      8.0      memory      memory      memory
+  LLM prefill (bs=32, FP16)                  128.0      memory      memory      memory
+  GEMM 4096×4096 (bs=64, FP16)               320.0     compute      memory      memory
+  GEMM 4096×4096 (bs=1024,FP16)              512.0     compute      memory      memory
+
+  Key insight: LLM decode at bs=1 is memory-bound on ALL vendors.
+  The winning hardware for decode is the one with most HBM bandwidth:
+    MI300X (5.3 TB/s) > B200 (8.0 TB/s) > H100 (3.35 TB/s) for capacity
+    B200 wins on bandwidth; MI300X wins on cost-per-GB.
+
+  ✓ Section 4 passed
+
+── Section 5: Hardware Selection Decision Tree ──
+
+  Choosing between MI300X, H100, and B200 depends on the dominant
+  bottleneck in your specific workload.
+
+  Workload                                Best GPU          Reason
+  ──────────────────────────────────────  ────────────────  ────────────────────────────────────────
+  70B FP16 inference (decode)             MI300X            Fits in 192 GB; 5.3 TB/s; no TP needed
+  70B FP8 inference (high QPS)            H100 / B200       Higher FLOP/s for prefill at scale
+  405B FP8 inference                      2× B200           192 GB + 8 TB/s each; minimal TP overhead
+  LLM training (dense)                    B200              Highest FP8 FLOP/s; fastest AllReduce
+  LLM training (MoE)                      H100 or B200      Expert parallel requires fast NVLink
+  Research (cost-sensitive)               MI300X            Competitive price/performance vs H100
+  Apple Silicon (laptop/edge)             Mac / MLX         Unified memory; see Chapter 22
+
+  Summary rule: MI300X for memory-capacity-limited decode;
+                B200 for throughput-limited training & prefill;
+                H100 for current mainstream production deployments.
+
+  ✓ Section 5 passed
+
+======================================================================
+  ALL SECTIONS COMPLETE — Exercise 21.1 done!
+
+  Key takeaways:
+    AMD MI300X      : ridge = 247 FLOP/byte
+    NVIDIA H100     : ridge = 591 FLOP/byte
+    NVIDIA B200     : ridge = 625 FLOP/byte
+
+  LLM decode is ALWAYS memory-bound (AI ≈ 1 FLOPs/byte).
+  Pick hardware based on bandwidth and capacity, not FLOP/s,
+  for decode-dominated inference workloads.
+
+  Next: VII.Hardware_Landscape/21.AMD_MI300X_ROCm/21.2_rocm_profiling.py
+======================================================================

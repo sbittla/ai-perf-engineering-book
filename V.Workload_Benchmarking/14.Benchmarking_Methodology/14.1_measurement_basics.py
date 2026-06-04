@@ -212,7 +212,7 @@ the overall end-to-end speedup is:
   Speedup = 1 / ((1 - P) + P/S)
 
 Where:
-  P = fraction of time spent on the part you are optimising
+  P = fraction of time spent on the part you are optimizing
   S = speedup of that specific part
   (1 - P) = the part you are NOT changing (serial fraction)
 
@@ -232,7 +232,7 @@ for p in [0.20, 0.50, 0.80, 0.90, 0.95, 0.99, 1.00]:
     print(f"  {p*100:>6.0f}%{'':<15} {serial*100:>6.0f}%{'':<17} {speedup:>8.2f}×")
 
 print()
-print("Key lesson: optimising the GPU kernel matters only if the GPU is the")
+print("Key lesson: optimizing the GPU kernel matters only if the GPU is the")
 print("bottleneck. If DataLoader occupies 50% of wall time, a 10× GPU speedup")
 print("delivers only 1.67× end-to-end improvement.")
 print()

@@ -1,0 +1,128 @@
+# VII.Hardware_Landscape/20.NVIDIA_Blackwell/20.1_blackwell_architecture.py
+# status=PASS rc=0 duration=0.3s
+======================================================================
+--- STDOUT ---
+======================================================================
+  Exercise 20.1 — NVIDIA Blackwell Architecture
+======================================================================
+
+── Section 1: Tensor Core Throughput — B200 vs H100 ──
+
+  Blackwell's 5th-generation Tensor Cores add FP4 and approximately
+  double throughput at every precision level relative to Hopper (H100).
+
+  FP4 format: 3-bit mantissa, 0-bit exponent, per-block scale factor.
+  Weights stored in FP4, dequantized on-chip before accumulation.
+  Accuracy: < 1% perplexity degradation vs FP16 for most LLMs.
+
+  Precision        B200 Peak     H100 Peak   Ratio  Use Case
+  ────────────  ────────────  ────────────  ──────  ────────────────────────────────
+  FP4            ~20 PFLOP/s           N/A     NEW  Weight-only LLM inference
+  FP8            ~10 PFLOP/s  ~3.9 PFLOP/s    2.6×  LLM training & inference
+  FP16/BF16       ~5 PFLOP/s  ~1.98 PFLOP/s    2.5×  Mixed-precision training
+  TF32          ~2.5 PFLOP/s  ~989 TFLOP/s    2.5×  Default FP32 matmul
+  INT8              ~20 TOPS     ~7.9 TOPS    2.5×  Post-training quantization
+
+  B200 FP16/BF16 Tensor Core speedup over H100: 2.53×
+  ✓ Section 1 passed
+
+── Section 2: Roofline Ridge Points Across Generations ──
+
+  The ridge point = peak FLOP/s / memory bandwidth.
+  It is the arithmetic intensity (FLOPs/byte) above which a kernel is
+  compute-bound; below which it is memory-bandwidth-bound.
+
+  Blackwell's proportional improvement in both FLOP/s and bandwidth
+  keeps the ridge point nearly constant vs Hopper — the SAME kernels
+  that are memory-bound on H100 remain memory-bound on B200.
+  The benefit for memory-bound workloads is raw bandwidth (8 vs 3.35 TB/s).
+
+  GPU                 FP16 TFLOP/s   HBM BW GB/s   Ridge (FLOP/byte)
+  ────────────────  ──────────────  ────────────  ──────────────────
+  A100 SXM4                    312         2,000               156.0
+  H100 SXM5                  1,979         3,350               590.7
+  B200 SXM                   5,000         8,000               625.0
+  RTX 5090                     838         1,792               467.6
+  RTX 4060                     136           272               500.0
+  MI300X                     1,307         5,300               246.6
+
+  H100 ridge: 590.7  B200 ridge: 625.0  Difference: 5.8%
+  → Same workloads remain memory-bound on B200 as on H100.
+  ✓ Section 2 passed
+
+── Section 3: Model Fit on B200 (192 GB HBM3e) ──
+
+  Memory required for LLM inference ≈ params × bytes_per_param.
+  B200 has 192 GB HBM3e; H100 has 80 GB HBM3.
+
+  FP16: 2 bytes/param   FP8: 1 byte/param   FP4: 0.5 bytes/param
+
+  Model             Precision   GB Required    Fits B200?    H100s needed
+  ────────────────  ────────  ────────────  ────────────  ──────────────
+  Llama 3  8B       FP16                16         Yes ✓               1
+  Llama 3  8B       FP8                  8         Yes ✓               1
+  Llama 3  8B       FP4                  4         Yes ✓               1
+  Llama 3 70B       FP16               140         Yes ✓               2
+  Llama 3 70B       FP8                 70         Yes ✓               1
+  Llama 3 70B       FP4                 35         Yes ✓               1
+  Llama 3 405B      FP16               810         No  ✗              11
+  Llama 3 405B      FP8                405         No  ✗               6
+  Llama 3 405B      FP4                202         No  ✗               3
+
+  Llama 3 70B FP16: 140 GB — fits B200 ✓, needs 2× H100 ✓
+  ✓ Section 3 passed
+
+── Section 4: AllReduce Timing — A100 vs H100 vs B200 Cluster ──
+
+  Ring AllReduce formula (Chapter 13):
+    t = 2 × (N-1)/N × tensor_bytes / link_bw_bytes_per_sec
+
+  NVLink generations:
+    NVLink 3 (A100): 600 GB/s per GPU pair
+    NVLink 4 (H100): 900 GB/s per GPU pair
+    NVLink 5 (B200): 1,800 GB/s per GPU pair
+
+  AllReduce of 1 GB tensor, 8 GPUs:
+
+  Cluster                    NVLink BW    AllReduce (ms)
+  ──────────────────────  ────────────  ────────────────
+  A100 (NVLink 3)                600 GB/s            2.92 ms
+  H100 (NVLink 4)                900 GB/s            1.94 ms
+  B200 (NVLink 5)               1800 GB/s            0.97 ms
+
+  B200 AllReduce is 2.0× faster than H100 for 8-GPU ring.
+  ✓ Section 4 passed
+
+── Section 5: GB200 Grace Blackwell — Eliminating the PCIe Bottleneck ──
+
+  The GB200 Superchip connects a Grace CPU to a Blackwell GPU via
+  NVLink-C2C at 900 GB/s — 28× faster than PCIe 4.0 x16 (~32 GB/s).
+
+  DataLoader implications (Chapter 7 revisited):
+    PCIe systems  → pin_memory + non_blocking are CRITICAL.
+    GB200 systems → H2D is no longer the bottleneck; profiling target
+                    shifts to CPU preprocessing (py-spy, not idle_pct).
+
+  Transfer Type                     PCIe 4.0    NVLink-C2C   Speedup
+  ────────────────────────────  ────────────  ────────────  ────────
+  CPU DRAM → GPU VRAM                   32 GB/s         900 GB/s      28×
+  GPU VRAM → CPU DRAM                   32 GB/s         900 GB/s      28×
+  Effective DataLoader BW               12 GB/s         400 GB/s      33×
+
+  Key architectural shift:
+    PCIe (most GPUs): DataLoader bottleneck → pin_memory, prefetch
+    NVLink-C2C (GB200): CPU preprocessing bottleneck → py-spy, codec
+
+  ✓ Section 5 passed — Grace Blackwell eliminates PCIe H2D bottleneck
+
+======================================================================
+  ALL SECTIONS COMPLETE — Exercise 20.1 done!
+
+  Key takeaways:
+    B200 FP16 Tensor Core: 5,000 TFLOP/s  (2.5× over H100)
+    B200 ridge point: 625 FLOP/byte  (≈ same as H100: 591)
+    Llama 70B FP16: 140 GB — single B200 ✓, needs 2× H100
+    B200 AllReduce (1 GB, 8 GPUs): 0.97 ms via NVLink 5
+
+  Next: VII.Hardware_Landscape/20.NVIDIA_Blackwell/20.2_blackwell_profiling.py
+======================================================================

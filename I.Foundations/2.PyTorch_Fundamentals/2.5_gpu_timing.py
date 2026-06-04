@@ -61,14 +61,17 @@ if DEVICE == "cuda":
 
     # CORRECT: CUDA events record timestamps on the GPU timeline
     # TODO 1: Create start and end CUDA events with enable_timing=True
-    start_evt = None  # YOUR CODE HERE  → torch.cuda.Event(enable_timing=True)
-    end_evt   = None  # YOUR CODE HERE  → torch.cuda.Event(enable_timing=True)
+    start_evt = torch.cuda.Event(enable_timing=True)
+    end_evt   = torch.cuda.Event(enable_timing=True)
 
     # TODO 2: Record start_evt, run torch.mm(A, B), record end_evt
-    pass  # YOUR CODE HERE  → start_evt.record()  → torch.mm  → end_evt.record()
+    start_evt.record()
+    C = torch.mm(A, B)
+    end_evt.record()
 
     # TODO 3: Synchronize then measure elapsed time in ms
-    elapsed_correct = None  # YOUR CODE HERE  → torch.cuda.synchronize(), start_evt.elapsed_time(end_evt)
+    torch.cuda.synchronize()
+    elapsed_correct = start_evt.elapsed_time(end_evt)
 
     assert start_evt is not None,       "create start event"
     assert end_evt   is not None,       "create end event"
@@ -190,7 +193,7 @@ print("""
   Output: a table sorted by the metric you choose.
 
   Use sort_by='cuda_time_total' on GPU, 'cpu_time_total' on CPU.
-  The operator at the top of the table is your first optimisation target.
+  The operator at the top of the table is your first optimization target.
 """)
 
 model2 = nn.Sequential(
@@ -204,7 +207,9 @@ ids = torch.randint(0, 1000, (8, 16), device=DEVICE)
 # TODO 5: Build the activities list
 #   Always include ProfilerActivity.CPU
 #   If DEVICE == "cuda", also include ProfilerActivity.CUDA
-activities = None  # YOUR CODE HERE
+activities = [ProfilerActivity.CPU]
+if DEVICE == "cuda":
+    activities.append(ProfilerActivity.CUDA)
 
 with profile(activities=activities, record_shapes=True) as prof:
     with torch.no_grad():
@@ -213,7 +218,7 @@ with profile(activities=activities, record_shapes=True) as prof:
 sort_by = "cuda_time_total" if DEVICE == "cuda" else "cpu_time_total"
 print(prof.key_averages().table(sort_by=sort_by, row_limit=8))
 assert activities is not None, "set the activities list"
-print("  ✓ Section 4 passed — identify slow ops before optimising")
+print("  ✓ Section 4 passed — identify slow ops before optimizing")
 
 # ─────────────────────────────────────────────────────────────
 # SECTION 5: GPU Memory tracking
@@ -236,12 +241,12 @@ if DEVICE == "cuda":
 
     # TODO 6: Allocate a 100 MB float32 tensor on DEVICE
     #   100 MB = 100*1e6 bytes / 4 bytes/float32 = 25,000,000 elements
-    big_tensor = None  # YOUR CODE HERE  → torch.randn(25_000_000, device=DEVICE)
+    big_tensor = torch.randn(25_000_000, device=DEVICE)
 
     mem_after = torch.cuda.memory_allocated() / 1e6
 
     # TODO 7: Delete big_tensor to free the memory
-    pass  # YOUR CODE HERE  → del big_tensor
+    del big_tensor
 
     torch.cuda.empty_cache()   # return reserved memory to OS
     mem_freed = torch.cuda.memory_allocated() / 1e6
@@ -265,7 +270,7 @@ print("\n── Section 6: NVTX Markers ──")
 print("""
   NVTX (NVIDIA Tools Extension) adds named annotations to the Nsight
   Systems timeline.  Each range_push/range_pop pair appears as a
-  coloured band labelled with your string.
+  colored band labelled with your string.
 
   To see the markers in Nsight Systems:
     nsys profile --trace=cuda,nvtx python I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py
@@ -281,15 +286,15 @@ if DEVICE == "cuda":
     # Replace each `pass` with the correct range_push / range_pop calls.
 
     # Phase: tokenise
-    pass  # YOUR CODE HERE  → torch.cuda.nvtx.range_push("tokenise")
+    torch.cuda.nvtx.range_push("tokenise")
     ids2 = torch.randint(0, 1000, (4, 32), device=DEVICE)
-    pass  # YOUR CODE HERE  → torch.cuda.nvtx.range_pop()
+    torch.cuda.nvtx.range_pop()
 
     # Phase: forward
-    pass  # YOUR CODE HERE  → torch.cuda.nvtx.range_push("forward")
+    torch.cuda.nvtx.range_push("forward")
     with torch.no_grad():
         out = model2(ids2)
-    pass  # YOUR CODE HERE  → torch.cuda.nvtx.range_pop()
+    torch.cuda.nvtx.range_pop()
 
     # Phase: loss  (already filled in — study the pattern)
     torch.cuda.nvtx.range_push("loss")
