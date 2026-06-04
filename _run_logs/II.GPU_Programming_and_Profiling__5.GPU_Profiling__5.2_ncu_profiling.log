@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.2_ncu_profiling.py
-# status=PASS rc=0 duration=2.6s
+# status=PASS rc=0 duration=2.2s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -109,7 +109,7 @@
      Fix: restructure data to avoid per-thread branches.
 
   Measuring DRAM bandwidth proxy via large tensor copy...
-  Achieved DRAM bandwidth: 227.2 GB/s
+  Achieved DRAM bandwidth: 225.8 GB/s
   (GPU: NVIDIA GeForce RTX 4060 Laptop GPU)
   ✓ Section 3 passed — ncu metrics explained and bandwidth measured
 

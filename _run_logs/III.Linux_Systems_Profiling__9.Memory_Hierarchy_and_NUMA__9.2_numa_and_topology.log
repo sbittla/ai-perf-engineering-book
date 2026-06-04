@@ -1,5 +1,5 @@
 # III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.2_numa_and_topology.py
-# status=PASS rc=0 duration=0.4s
+# status=PASS rc=0 duration=0.5s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -155,17 +155,17 @@
     remote_bw = local_bw * (1 / (1 + penalty_fraction))
     Typical penalty_fraction: 0.20–0.50 (20–50% slower)
 
-  simulate_local_access(10M elements):        16.9 GB/s
-  simulate_remote_access(1M elem, 10μs/64KB): 4.5 GB/s
+  simulate_local_access(10M elements):        13.3 GB/s
+  simulate_remote_access(1M elem, 10μs/64KB): 4.0 GB/s
 
   Simulated NUMA penalty at different per-chunk latencies:
      Penalty (μs/64KB)     Simulated BW (GB/s)
   ────────────────────  ──────────────────────
-                     0                     8.1
-                     5                     7.0
-                    10                     4.3
-                    20                     2.7
-                    50                     1.2
+                     0                     7.7
+                     5                     5.7
+                    10                     4.1
+                    20                     2.5
+                    50                     1.1
   ✓ Section 4 passed — local and remote access simulation returns > 0 GB/s
 
 ============================================================

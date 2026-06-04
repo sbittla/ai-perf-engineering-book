@@ -1,5 +1,5 @@
 # I.Foundations/1.What_Is_AI_Performance_Engineering/1.1_roofline_model.py
-# status=PASS rc=0 duration=2.7s
+# status=PASS rc=0 duration=2.1s
 ======================================================================
 --- STDOUT ---
 =================================================================
@@ -66,11 +66,11 @@
     MFU > 60%  → excellent (hard to achieve for full training loops)
 
   2048×2048 matmul (FP16)
-  Average time          : 0.653 ms
+  Average time          : 0.652 ms
   FLOPs per call        : 17.18 GFLOP
-  Observed throughput   : 26.32 TFLOP/s
+  Observed throughput   : 26.35 TFLOP/s
   Peak throughput       : 51.5 TFLOP/s
-  MFU                   : 51.1%
+  MFU                   : 51.2%
   Interpretation: Good utilization
   ✓ Section 4 passed
 
@@ -87,8 +87,8 @@
   Ridge point           : 189.3 FLOPs/byte
   Bound                 : compute-bound
   Roofline prediction   : 51.50 TFLOP/s
-  Actual performance    : 26.32 TFLOP/s
-  Efficiency vs ceiling : 51.1%
+  Actual performance    : 26.35 TFLOP/s
+  Efficiency vs ceiling : 51.2%
   ✓ Section 5 passed
 
 =================================================================
@@ -96,7 +96,7 @@
 
   Key takeaways:
     Ridge point on your hardware : 189.3 FLOPs/byte
-    Your 2048×2048 matmul MFU      : 51.1%
+    Your 2048×2048 matmul MFU      : 51.2%
 
   LLM inference at bs=1 is ALWAYS memory-bound (AI ≈ 1 FLOPs/byte).
   The fix: continuous batching, quantisation, speculative decoding.

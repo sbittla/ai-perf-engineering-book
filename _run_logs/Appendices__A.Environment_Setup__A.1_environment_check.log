@@ -1,5 +1,5 @@
 # Appendices/A.Environment_Setup/A.1_environment_check.py
-# status=PASS rc=0 duration=5.0s
+# status=PASS rc=0 duration=11.1s
 ======================================================================
 --- STDOUT ---
 ====================================================================
@@ -18,7 +18,7 @@ CONCEPT: Version requirements for this book
   • PyTorch 2.0+  — torch.compile requires 2.x
   • CUDA 12.x     — needed for Tensor Core features used in Part II
 
-  Python    : 3.12 (/usr/bin/python)
+  Python    : 3.12 (/usr/bin/python3)
   PyTorch   : 2.11.0+cu130
   CUDA      : 13.0
   GPU count : 1
@@ -106,7 +106,7 @@ CONCEPT: Establishing a timing reference
   We verify that CUDA events work correctly (or fall back to wall-clock time).
   All exercise files use this pattern for GPU timing.
 
-  1024×1024 matmul : 2.92 ms  (735 GFLOPS on cuda)
+  1024×1024 matmul : 5.73 ms  (375 GFLOPS on cuda)
   VRAM used   : 16.9 MB
 
 ✓ Section 5 passed

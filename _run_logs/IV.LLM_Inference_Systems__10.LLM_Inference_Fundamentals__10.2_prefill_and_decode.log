@@ -1,5 +1,5 @@
 # IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_prefill_and_decode.py
-# status=PASS rc=0 duration=2.8s
+# status=PASS rc=0 duration=3.1s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -43,7 +43,7 @@
   In real LLMs the KV cache makes decode cheap (no recompute).
   Here we simulate: prefill populates a KV buffer; decode reads it.
 
-  Model: 6.3M params
+  Model: 6.4M params
   d_model=256  n_layers=4  n_heads=4
   ✓ Section 2 passed — mini-transformer ready
 
@@ -58,16 +58,16 @@
   sluggish; a 50ms TTFT feels instant. APIs that stream tokens show the
   first token as soon as prefill completes.
 
-  TODO 1: Measure TTFT for prompt_len ∈ [64, 128, 256, 512].
+  TODO 1: Measure TTFT for prompt_len ∈ [128, 256, 512, 1024].
   Use CUDA events on GPU, time.perf_counter on CPU.
   Record how TTFT scales with prompt length.
 
-  Prompt   64 tokens → TTFT = 1.01 ms
-  Prompt  128 tokens → TTFT = 1.07 ms
-  Prompt  256 tokens → TTFT = 1.07 ms
-  Prompt  512 tokens → TTFT = 1.18 ms
+  Prompt  128 tokens → TTFT = 1.33 ms
+  Prompt  256 tokens → TTFT = 1.52 ms
+  Prompt  512 tokens → TTFT = 1.67 ms
+  Prompt 1024 tokens → TTFT = 1.83 ms
 
-  TTFT[512] / TTFT[64] = 1.2× (longer prompt = more compute)
+  TTFT[1024] / TTFT[128] = 1.4× (longer prompt = more compute)
   ✓ Section 3 passed — TTFT grows with prompt length
 
 ── Section 4: TPS — Tokens Per Second During Decode ──
@@ -86,12 +86,12 @@
 
   Prompt length : 128 tokens
   New tokens    : 50
-  Decode time   : 53.3 ms
-  Per-token     : 1.07 ms/token
-  TPS           : 937.4 tokens/sec
+  Decode time   : 64.8 ms
+  Per-token     : 1.30 ms/token
+  TPS           : 771.4 tokens/sec
 
-  TTFT (prefill 128 tok) : 1.07 ms
-  Decode TPS                   : 937.4 tok/s
+  TTFT (prefill 128 tok) : 1.33 ms
+  Decode TPS                   : 771.4 tok/s
   ✓ Section 4 passed — TPS is the decode throughput metric
 
 ── Section 5: Decode Bottleneck Analysis ──

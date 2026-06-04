@@ -1,5 +1,5 @@
 # IV.LLM_Inference_Systems/13.Distributed_Inference/13.4_distributed_simulation.py
-# status=PASS rc=0 duration=2.4s
+# status=PASS rc=0 duration=5.0s
 ======================================================================
 --- STDOUT ---
 [Standalone mode] Running single-process simulation (world_size=1)

@@ -1,5 +1,5 @@
 # I.Foundations/2.PyTorch_Fundamentals/2.6_common_mistakes.py
-# status=PASS rc=0 duration=3.1s
+# status=PASS rc=0 duration=2.5s
 ======================================================================
 --- STDOUT ---
 =================================================================
@@ -12,8 +12,8 @@
   WRONG: time.time() returns before the GPU finishes (async).
   RIGHT: CUDA events record timestamps on the GPU timeline.
 
-  time.time() result : 60.216 ms  ← CPU submission, not GPU time
-  CUDA events result : 0.309 ms  ← true GPU execution time
+  time.time() result : 42.099 ms  ← CPU submission, not GPU time
+  CUDA events result : 0.222 ms  ← true GPU execution time
   ✓ Mistake 1 fixed
 
 ── Mistake 2: Forgetting model.eval() ──
@@ -43,10 +43,18 @@
   — the CPU blocks until all pending GPU work finishes.  In a tight
   inner loop this serialises the pipeline and can cut throughput by 50%+.
 
-  Fix: accumulate the raw tensor, call .item() every N steps.
+  Why it stalls: CUDA kernels are enqueued asynchronously, so the host
+  normally keeps launching work while the GPU executes earlier kernels —
+  overlapping data prep with compute.  A synchronous .item()/.cpu() forces
+  the host thread to wait until the GPU drains its entire stream queue and
+  surfaces the scalar back across the PCIe bus, collapsing that overlap into
+  a sequential, single-threaded bottleneck.
 
-  .item() every step  : 66.7 ms  ← GPU sync 100× 
-  .item() every 50    : 32.5 ms  ← GPU sync 2×
+  Fix: accumulate the raw tensor (total += loss.detach()), then call .item()
+  once every N steps (or at epoch end).
+
+  .item() every step  : 47.3 ms  ← GPU sync 100× 
+  .item() every 50    : 19.2 ms  ← GPU sync 2×
   ✓ Mistake 4 demonstrated — on real GPU workloads the gap is 2–5×
 
 ── Mistake 5: Tensors Created on CPU Inside the Loop ──
@@ -65,8 +73,8 @@
   Many engineers leave performance on the table by defaulting to FP32.
   With AMP, this is free — just wrap forward() in torch.autocast().
     
-  FP32 2048×2048 matmul : 1.354 ms
-  FP16 2048×2048 matmul : 0.651 ms  (2.1× faster)
+  FP32 2048×2048 matmul : 1.349 ms
+  FP16 2048×2048 matmul : 0.652 ms  (2.1× faster)
   ✓ Mistake 6 demonstrated — use FP16/BF16 on Tensor Core hardware
 
 ── Mistake 7: No Warmup Before Benchmarking ──
@@ -75,9 +83,9 @@
   Can inflate the first measurement by 10–1000×.
   Always run at least 5 warmup iterations before timing.
 
-  Run 0 (cold)   : 23.264 ms
-  Runs 4-7 avg   : 0.257 ms  ← steady state
-  First/steady   : 90.6×  ← warmup inflation
+  Run 0 (cold)   : 24.321 ms
+  Runs 4-7 avg   : 0.108 ms  ← steady state
+  First/steady   : 224.2×  ← warmup inflation
   ✓ Mistake 7 demonstrated — discard warmup runs
 
 ── Mistake 8: Comparing Latency Without Normalising ──
@@ -86,9 +94,9 @@
   4 ms at batch 32 = 8× higher throughput per unit time.
   Always normalise to per-sample or per-token throughput when comparing.
 
-  bs= 1  latency=0.072 ms  throughput=13879 samples/s
-  bs= 8  latency=0.062 ms  throughput=129252 samples/s
-  bs=32  latency=0.042 ms  throughput=766869 samples/s
+  bs= 1  latency=0.040 ms  throughput=24930 samples/s
+  bs= 8  latency=0.043 ms  throughput=186847 samples/s
+  bs=32  latency=0.037 ms  throughput=862764 samples/s
   ✓ Mistake 8 demonstrated — always normalise to throughput
 
 ── Mistake 9: num_workers=0 in DataLoader ──
@@ -103,8 +111,8 @@
   Ideal settings depend on your CPU core count and disk speed.
   Start with num_workers=4, pin_memory=True and tune from there.
 
-  num_workers=0: 4.1 ms  (TensorDataset is RAM-only — difference minimal here)
-  num_workers=2: 85.6 ms  (real gain on disk I/O workloads: 3–10×)
+  num_workers=0: 4.2 ms  (TensorDataset is RAM-only — difference minimal here)
+  num_workers=2: 91.1 ms  (real gain on disk I/O workloads: 3–10×)
   ✓ Mistake 9 — set num_workers and pin_memory in every DataLoader
 
 ── Mistake 10: GPU Memory Fragmentation / OOM Debugging ──

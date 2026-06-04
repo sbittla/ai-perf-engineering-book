@@ -1,5 +1,5 @@
 # V.Workload_Benchmarking/15.Porting_a_Workload/15.2_bottleneck_shift.py
-# status=PASS rc=0 duration=9.4s
+# status=PASS rc=0 duration=9.1s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -50,7 +50,7 @@
   that returns (mean_ms, p99_ms, throughput_sps).
   Use CUDA events on GPU, perf_counter on CPU.
 
-  Baseline (CPU FP32): 1.793 ms  P99=2.425 ms  17845 sps
+  Baseline (CPU FP32): 2.315 ms  P99=2.942 ms  13820 sps
   ✓ Section 2 passed — benchmark_config() works correctly
 
 ── Section 3: The Full optimization Ladder ──
@@ -62,10 +62,10 @@
 
   Config                   Mean (ms)    P99 (ms)    Tput (sps)    Speedup
   ──────────────────────  ──────────  ──────────  ────────────  ─────────
-  CPU FP32                     2.202       2.651         14533      1.00×
-  GPU FP32                     0.167       0.358        191970     13.21×
-  GPU FP16                     0.176       0.648        182027     12.52×
-  GPU FP16 + compile           0.159       0.358        200721     13.81×
+  CPU FP32                     2.412       3.063         13269      1.00×
+  GPU FP32                     0.198       0.274        161931     12.20×
+  GPU FP16                     0.207       0.696        154770     11.66×
+  GPU FP16 + compile           0.179       0.274        179253     13.51×
   ✓ Section 3 passed — optimization ladder measured
 
 ── Section 4: Diagnosing the Bottleneck at Each Rung ──
@@ -93,12 +93,12 @@
 
   Throughput scaling (CPU FP32, d_model=512):
    Batch    Tput (sps)
-       1          3720
-       4         18002
-      16         68716
-      64        325895
+       1          4076
+       4         16575
+      16         67538
+      64        226101
 
-  Scaling ratio (batch=64 / batch=1): 87.6×
+  Scaling ratio (batch=64 / batch=1): 55.5×
   Diagnosis: strong compute scaling — good GPU utilization
   ✓ Section 4 passed — throughput scaling ratio measured
 
@@ -129,9 +129,9 @@
     overhead_ms = wall_clock_ms - gpu_kernel_ms
 
   Batch=1, d_model=512:
-    Wall-clock (CPU dispatch + GPU): 0.191 ms
-    GPU kernel only (CUDA events)  : 0.165 ms
-    Python overhead floor          : 0.026 ms  (13.4% of wall)
+    Wall-clock (CPU dispatch + GPU): 0.173 ms
+    GPU kernel only (CUDA events)  : 0.179 ms
+    Python overhead floor          : -0.006 ms  (-3.5% of wall)
   OK: overhead < 30% — GPU is the primary bottleneck (as expected)
   ✓ Section 5 passed — Python overhead floor measured
 

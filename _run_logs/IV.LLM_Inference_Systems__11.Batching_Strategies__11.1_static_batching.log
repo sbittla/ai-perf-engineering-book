@@ -1,5 +1,5 @@
 # IV.LLM_Inference_Systems/11.Batching_Strategies/11.1_static_batching.py
-# status=PASS rc=0 duration=0.1s
+# status=PASS rc=0 duration=0.2s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -42,9 +42,9 @@
   Distribution                     Avg len   Max len     Padding
   ──────────────────────────────  ────────  ────────  ──────────
   All equal (no variance)              100       100        0.0%
-  Low variance  (95–105)               101       104        3.1%
-  Medium variance (50–150)             114       148       23.1%
-  High variance  (10–500)              213       457       53.4%
+  Low variance  (95–105)               100       104        4.0%
+  Medium variance (50–150)             102       150       31.9%
+  High variance  (10–500)              239       489       51.1%
   Worst case: 1 long + 15 short         41       500       91.9%
   ✓ Section 2 passed — padding fraction grows with output length variance
 

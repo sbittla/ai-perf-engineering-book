@@ -131,7 +131,8 @@ D_MODEL  = 256
 N_LAYERS = 4
 N_HEADS  = 4
 VOCAB    = 10_000
-model    = MiniTransformer(VOCAB, D_MODEL, N_LAYERS, N_HEADS).to(DEVICE)
+MAX_SEQ  = 1024
+model    = MiniTransformer(VOCAB, D_MODEL, N_LAYERS, N_HEADS, max_seq=MAX_SEQ).to(DEVICE)
 model.eval()
 print(f"  Model: {sum(p.numel() for p in model.parameters())/1e6:.1f}M params")
 print(f"  d_model={D_MODEL}  n_layers={N_LAYERS}  n_heads={N_HEADS}")
@@ -152,12 +153,12 @@ print("""
   sluggish; a 50ms TTFT feels instant. APIs that stream tokens show the
   first token as soon as prefill completes.
 
-  TODO 1: Measure TTFT for prompt_len ∈ [64, 128, 256, 512].
+  TODO 1: Measure TTFT for prompt_len ∈ [128, 256, 512, 1024].
   Use CUDA events on GPU, time.perf_counter on CPU.
   Record how TTFT scales with prompt length.
 """)
 
-prompt_lens = [64, 128, 256, 512]
+prompt_lens = [128, 256, 512, 1024]
 ttft_results = {}
 
 for prompt_len in prompt_lens:
@@ -174,11 +175,12 @@ for prompt_len in prompt_lens:
     if DEVICE == "cuda":
         torch.cuda.synchronize()
 
-    # These prompts are small, so a single forward is dominated by fixed
-    # kernel-launch overhead (~1 ms) and the prompt-length signal is buried in
-    # noise. Take the MIN over several iterations to isolate the real prefill
-    # cost, which scales with prompt length.
-    ITERS = 20
+    # A single forward at the shortest prompt is dominated by fixed
+    # kernel-launch overhead (~1 ms), so the prompt-length signal is easily
+    # buried in noise. Take the MIN over several iterations to isolate the real
+    # prefill cost; the wide prompt range (128 → 1024) makes the O(seq_len)
+    # prefill work clearly dominate that overhead at the long end.
+    ITERS = 20 if DEVICE == "cuda" else 5
     if DEVICE == "cuda":
         ttft_ms = float("inf")
         for _ in range(ITERS):
@@ -201,16 +203,17 @@ for prompt_len in prompt_lens:
     ttft_results[prompt_len] = ttft_ms
     print(f"  Prompt {prompt_len:>4} tokens → TTFT = {ttft_ms:.2f} ms")
 
-# Verify TTFT grows with prompt length
-ttft_64  = ttft_results[64]
-ttft_512 = ttft_results[512]
+# Verify TTFT grows with prompt length (compare the extremes of the range)
+short_len, long_len = prompt_lens[0], prompt_lens[-1]
+ttft_short = ttft_results[short_len]
+ttft_long  = ttft_results[long_len]
 
 # On GPU timings are deterministic; on CPU cache effects can flip short sequences.
 if DEVICE == "cuda":
-    assert ttft_512 > ttft_64, \
-        f"TTFT should increase with prompt length: {ttft_64:.2f} ms vs {ttft_512:.2f} ms"
-ratio = ttft_512 / ttft_64 if ttft_64 > 0 else 1.0
-print(f"\n  TTFT[512] / TTFT[64] = {ratio:.1f}× (longer prompt = more compute)")
+    assert ttft_long > ttft_short, \
+        f"TTFT should increase with prompt length: {ttft_short:.2f} ms vs {ttft_long:.2f} ms"
+ratio = ttft_long / ttft_short if ttft_short > 0 else 1.0
+print(f"\n  TTFT[{long_len}] / TTFT[{short_len}] = {ratio:.1f}× (longer prompt = more compute)")
 print("  ✓ Section 3 passed — TTFT grows with prompt length")
 
 

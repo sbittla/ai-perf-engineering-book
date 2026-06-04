@@ -1,5 +1,5 @@
 # VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py
-# status=PASS rc=0 duration=6.4s
+# status=PASS rc=0 duration=5.6s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -33,18 +33,18 @@
   -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
                                                      Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
   -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-                                                attention         0.00%       0.000us         0.00%       0.000us       0.000us      17.338ms       218.12%      17.338ms     866.900us            20  
-                                             aten::linear         1.63%     573.679us        18.86%       6.649ms      78.229us       0.000us         0.00%       6.606ms      77.719us            85  
-                                                      ffn         0.00%       0.000us         0.00%       0.000us       0.000us       6.456ms        81.23%       6.456ms     322.823us            20  
-                                              attn_scores         0.00%       0.000us         0.00%       0.000us       0.000us       5.179ms        65.15%       5.179ms     258.935us            20  
-                                             aten::matmul         2.27%     801.762us        16.31%       5.750ms      67.646us       0.000us         0.00%       4.949ms      58.220us            85  
-  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       4.876ms        61.35%       4.876ms     108.362us            45  
-                                                 aten::mm         4.02%       1.416ms         6.43%       2.266ms      50.352us       4.523ms        56.91%       4.523ms     100.517us            45  
-                                                  lm_head         0.00%       0.000us         0.00%       0.000us       0.000us       3.943ms        49.60%       3.943ms     788.581us             5  
-                                                attn_proj         0.00%       0.000us         0.00%       0.000us       0.000us       3.836ms        48.26%       3.836ms     191.820us            20  
-                                                  lm_head         0.74%     261.923us         2.67%     941.854us     188.371us       0.000us         0.00%       3.481ms     696.271us             5  
+                                                attention         0.00%       0.000us         0.00%       0.000us       0.000us      18.727ms       246.77%      18.727ms     936.358us            20  
+                                             aten::linear         1.17%     382.032us        18.13%       5.932ms      69.790us       0.000us         0.00%       6.310ms      74.241us            85  
+                                              attn_scores         0.00%       0.000us         0.00%       0.000us       0.000us       5.722ms        75.40%       5.722ms     286.101us            20  
+                                                      ffn         0.00%       0.000us         0.00%       0.000us       0.000us       4.788ms        63.09%       4.788ms     239.379us            20  
+                                             aten::matmul         2.26%     739.894us        22.99%       7.523ms      88.504us       0.000us         0.00%       4.730ms      55.651us            85  
+  void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       4.661ms        61.42%       4.661ms     103.581us            45  
+                                                 aten::mm         4.84%       1.582ms         7.59%       2.483ms      55.179us       4.323ms        56.96%       4.323ms      96.062us            45  
+                                                  lm_head         0.00%       0.000us         0.00%       0.000us       0.000us       3.666ms        48.30%       3.666ms     733.151us             5  
+                                                attn_proj         0.00%       0.000us         0.00%       0.000us       0.000us       3.513ms        46.29%       3.513ms     175.656us            20  
+                                                  lm_head         0.80%     262.625us         2.41%     789.182us     157.836us       0.000us         0.00%       3.329ms     665.709us             5  
   -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-  Self CPU time total: 35.249ms
+  Self CPU time total: 32.722ms
   ...
   ✓ Section 1 passed — torch.profiler recording works
 
@@ -69,16 +69,16 @@
   Region breakdown (FP32, prompt=256):
   Region                   Time (µs)     Share
   ────────────────────  ────────────  ────────
-  attention                   3886.7     42.5%
-  ffn                         1255.9     13.7%
-  attn_scores                 1221.8     13.3%
-  attn_proj                    795.2      8.7%
-  lm_head                      780.9      8.5%
-  layer_0                      221.4      2.4%
-  layer_3                      220.8      2.4%
-  layer_2                      220.7      2.4%
-  layer_1                      220.3      2.4%
-  attn_qkv                     137.1      1.5%
+  attention                   2520.2     38.1%
+  ffn                          984.9     14.9%
+  lm_head                      711.5     10.7%
+  attn_scores                  695.1     10.5%
+  attn_proj                    567.9      8.6%
+  layer_0                      211.1      3.2%
+  layer_2                      210.6      3.2%
+  layer_1                      210.4      3.2%
+  layer_3                      209.9      3.2%
+  attn_qkv                     131.8      2.0%
   ✓ Section 2 passed — op-level attribution extracted
 
 ── Section 3: FP16 vs FP32 — Where Does the Speedup Come From? ──
@@ -97,14 +97,14 @@
   FP32 vs FP16 breakdown comparison (top regions):
   Region                   FP32 (µs)     FP16 (µs)    Speedup
   ────────────────────  ────────────  ────────────  ─────────
-  attention                   3886.7       28335.3      0.14×
-  ffn                         1255.9        1293.7      0.97×
-  attn_scores                 1221.8        1769.3      0.69×
-  attn_proj                    795.2         875.4      0.91×
-  lm_head                      780.9         659.0      1.18×
-  layer_0                      221.4        1499.7      0.15×
-  layer_3                      220.8         138.4      1.60×
-  layer_2                      220.7         138.6      1.59×
+  attention                   2520.2       31544.2      0.08×
+  ffn                          984.9         994.2      0.99×
+  lm_head                      711.5         549.7      1.29×
+  attn_scores                  695.1        1468.4      0.47×
+  attn_proj                    567.9         707.3      0.80×
+  layer_0                      211.1        1444.7      0.15×
+  layer_2                      210.6         135.0      1.56×
+  layer_1                      210.4         135.1      1.56×
   ✓ Section 3 passed — FP16 vs FP32 breakdown compared
 
 ── Section 4: Diagnosis → Fix Attribution ──
@@ -126,11 +126,11 @@
   This is the final output of the capstone: a structured audit report
   linking observations to actions to measured outcomes.
 
-  Bottleneck #1: attention             3887 µs  (42.5%)  → Apply FP16 + optional Flash Attention (O(L) memory)
-  Bottleneck #2: ffn                   1256 µs  (13.7%)  → Apply FP16 (2× Tensor Core speedup on large tiles)
-  Bottleneck #3: attn_scores           1222 µs  (13.3%)  → Profile further with ncu
+  Bottleneck #1: attention             2520 µs  (38.1%)  → Apply FP16 + optional Flash Attention (O(L) memory)
+  Bottleneck #2: ffn                   985 µs  (14.9%)  → Apply FP16 (2× Tensor Core speedup on large tiles)
+  Bottleneck #3: lm_head               712 µs  (10.7%)  → Profile further with ncu
 
-  Overall best config: FP32 + compile  (2.13×)
+  Overall best config: FP16 + compile  (1.61×)
 
   AUDIT SAVED: /tmp/capstone16_audit.json
 

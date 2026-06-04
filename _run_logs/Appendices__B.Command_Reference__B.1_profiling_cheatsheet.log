@@ -1,5 +1,5 @@
 # Appendices/B.Command_Reference/B.1_profiling_cheatsheet.py
-# status=PASS rc=0 duration=3.6s
+# status=PASS rc=0 duration=4.0s
 ======================================================================
 --- STDOUT ---
 ====================================================================
@@ -54,14 +54,14 @@ CONCEPT: torch.profiler records CPU ops AND CUDA kernels together.
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-                                                    ffn         0.00%       0.000us         0.00%       0.000us       0.000us     740.083us       104.93%     740.083us     148.017us             5  
-                                            aten::addmm        10.06%     537.779us        14.01%     748.999us      49.933us     671.185us        95.16%     671.185us      44.746us            15  
-void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     510.707us        72.41%     510.707us     102.141us             5  
-                                                lm_head         0.00%       0.000us         0.00%       0.000us       0.000us     510.707us        72.41%     510.707us     102.141us             5  
-void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      86.167us        12.22%      86.167us      17.233us             5  
+                                                    ffn         0.00%       0.000us         0.00%       0.000us       0.000us     902.416us       129.69%     902.416us     180.483us             5  
+                                            aten::addmm         6.30%     619.053us         8.81%     865.996us      57.733us     662.225us        95.17%     662.225us      44.148us            15  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     503.737us        72.39%     503.737us     100.747us             5  
+                                                lm_head         0.00%       0.000us         0.00%       0.000us       0.000us     503.737us        72.39%     503.737us     100.747us             5  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      85.082us        12.23%      85.082us      17.016us             5  
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-Self CPU time total: 5.345ms
-Self CUDA time total: 705.331us
+Self CPU time total: 9.830ms
+Self CUDA time total: 695.827us
 
   Named regions captured: ['embedding', 'ffn', 'lm_head']
 
@@ -85,9 +85,9 @@ CONCEPT: time.perf_counter() on GPU code measures CPU submission time, not
     elapsed_ms = start_evt.elapsed_time(end_evt)
 
   2048×2048 matmul on cuda:
-    wall-clock time   : 1.331 ms
-    CUDA event time   : 1.349 ms
-    ratio             : 0.99x  (close (overhead amortised))
+    wall-clock time   : 1.324 ms
+    CUDA event time   : 1.360 ms
+    ratio             : 0.97x  (close (overhead amortised))
 
 ✓ Section 3 passed
 

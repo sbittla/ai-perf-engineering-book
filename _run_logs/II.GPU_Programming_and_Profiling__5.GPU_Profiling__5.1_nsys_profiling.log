@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.1_nsys_profiling.py
-# status=PASS rc=0 duration=4.0s
+# status=PASS rc=0 duration=3.8s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -58,8 +58,8 @@
 
   idle_fraction = (wall_ms - gpu_ms_total) / wall_ms
 
-  Wall time total  : 43.8 ms
-  GPU compute total: 1.8 ms
+  Wall time total  : 28.0 ms
+  GPU compute total: 4.5 ms
   ✓ Section 2 passed — CPU-GPU timeline measurements collected
 
 ── Section 3: Detecting GPU Idle Time ──
@@ -74,7 +74,7 @@
   A low idle fraction (<10%) means the GPU is the bottleneck —
   time to profile kernels with ncu (Exercise 5.2).
 
-  Idle fraction: 95.80%
+  Idle fraction: 83.75%
   GPU is idle >20% of the time → likely I/O bound.
   Fix: increase DataLoader num_workers, add pin_memory=True,
        or cache preprocessed data to a fast disk/RAM.
@@ -96,7 +96,7 @@
   is slow, whether the GPU is idle between phases, and whether the
   PCIe transfer overlaps with compute.
 
-  Training step completed.  loss = 2.3619
+  Training step completed.  loss = 2.3721
   NVTX annotations added — run under nsys to see the six phases.
   ✓ Section 4 passed — full training step annotated with NVTX
 

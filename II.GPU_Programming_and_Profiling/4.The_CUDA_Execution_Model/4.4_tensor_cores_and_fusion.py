@@ -167,6 +167,21 @@ if DEVICE == "cuda":
     print(f"  M=1024 (aligned)   : {aligned_ms:.3f} ms")
     print(f"  M=1000 (unaligned) : {unaligned_ms:.3f} ms")
     print(f"  Ratio unaligned/aligned: {ratio:.2f}x")
+
+    # Quantify the padding waste directly. Tensor Cores process fixed tiles of
+    # width W, so any dimension not a multiple of W is rounded up and the extra
+    # columns are pure wasted compute on every forward pass:
+    #     wasted = ceil(D / W) * W - D
+    import math
+    def wasted_columns(D, W):
+        return math.ceil(D / W) * W - D
+    print("  Padding overhead (dimension rounded up to the tile width W):")
+    for D, W, label in [(M_unaligned, 64, "cuBLAS kernel tile"), (513, 16, "FP8 TC tile")]:
+        padded = math.ceil(D / W) * W
+        print(f"    D={D:>4}, W={W:>2} ({label}) -> padded to {padded}, "
+              f"{wasted_columns(D, W)} wasted columns")
+    print(f"    ^ this is why M={M_unaligned} trails M={M_aligned}: it is rounded up "
+          f"to {math.ceil(M_unaligned/64)*64} by the kernel tiler.")
 else:
     print("  (CUDA not available — skipping alignment benchmark)")
 

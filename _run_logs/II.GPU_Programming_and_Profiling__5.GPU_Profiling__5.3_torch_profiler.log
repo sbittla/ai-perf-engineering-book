@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.3_torch_profiler.py
-# status=PASS rc=0 duration=5.2s
+# status=PASS rc=0 duration=3.5s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -27,19 +27,19 @@
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-                                           aten::linear         0.08%      89.975us        74.82%      85.515ms      21.379ms       0.000us         0.00%     109.300us      27.325us             4  
-                                            aten::addmm        67.97%      77.692ms        74.61%      85.278ms      21.319ms      52.580us        92.91%     109.300us      27.325us             4  
-void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      44.137us        77.99%      44.137us      14.712us             3  
-                                  Lazy Function Loading         0.21%     242.845us         0.21%     242.845us      60.711us      33.544us        59.27%      33.544us       8.386us             4  
-                                    cudaLaunchKernelExC         2.76%       3.160ms         2.80%       3.203ms       1.602ms       0.000us         0.00%      13.995us       6.997us             2  
-                                Activity Buffer Request         2.55%       2.919ms         2.55%       2.919ms       2.919ms      12.294us        21.72%      12.294us      12.294us             1  
-                                   cudaGetSymbolAddress         0.18%     204.379us         0.27%     309.628us     309.628us       0.000us         0.00%      12.294us      12.294us             1  
-                       Runtime Triggered Module Loading         0.09%     105.249us         0.09%     105.249us     105.249us      12.294us        21.72%      12.294us      12.294us             1  
-                                             aten::relu         0.06%      63.566us        25.17%      28.765ms       9.588ms       0.000us         0.00%       5.425us       1.808us             3  
-                                        aten::clamp_min        17.25%      19.719ms        25.11%      28.701ms       9.567ms       4.013us         7.09%       5.425us       1.808us             3  
+                                           aten::linear         0.12%      89.643us        67.26%      52.420ms      13.105ms       0.000us         0.00%     102.069us      25.517us             4  
+                                            aten::addmm        61.54%      47.962ms        66.98%      52.200ms      13.050ms      49.257us        93.01%     102.069us      25.517us             4  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      41.460us        78.29%      41.460us      13.820us             3  
+                                  Lazy Function Loading         0.40%     308.431us         0.40%     308.431us      77.108us      31.222us        58.95%      31.222us       7.806us             4  
+                                    cudaLaunchKernelExC         2.05%       1.601ms         2.10%       1.634ms     816.856us       0.000us         0.00%      13.097us       6.548us             2  
+                                Activity Buffer Request         1.74%       1.356ms         1.74%       1.356ms       1.356ms      11.442us        21.60%      11.442us      11.442us             1  
+                                   cudaGetSymbolAddress         0.19%     146.177us         0.33%     254.813us     254.813us       0.000us         0.00%      11.442us      11.442us             1  
+                       Runtime Triggered Module Loading         0.14%     108.636us         0.14%     108.636us     108.636us      11.442us        21.60%      11.442us      11.442us             1  
+                                             aten::relu         0.07%      56.550us        32.72%      25.501ms       8.500ms       0.000us         0.00%       4.997us       1.666us             3  
+                                        aten::clamp_min        21.56%      16.803ms        32.65%      25.445ms       8.482ms       3.703us         6.99%       4.997us       1.666us             3  
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-Self CPU time total: 114.297ms
-Self CUDA time total: 56.593us
+Self CPU time total: 77.931ms
+Self CUDA time total: 52.960us
 
   ✓ Section 1 passed — profiler ran and printed operator table
 
@@ -79,7 +79,7 @@ Self CUDA time total: 56.593us
   To open in TensorBoard: use prof.export_chrome_trace() then:
     tensorboard --logdir /tmp/tb_logs
 
-  Chrome trace exported: /tmp/pt2_chrome_trace.json (78.5 KB)
+  Chrome trace exported: /tmp/pt2_chrome_trace.json (78.8 KB)
   Open with: chrome://tracing → Load → select /tmp/pt2_chrome_trace.json
   ✓ Section 3 passed — Chrome trace exported
 
@@ -101,25 +101,25 @@ Self CUDA time total: 56.593us
   Always sort by self_cuda_time_total to find the true bottleneck kernel.
 
   Top op by self CUDA time: aten::addmm
-    Self CUDA time  : 0.437 ms
-    Total CUDA time : 0.447 ms
+    Self CUDA time  : 0.409 ms
+    Total CUDA time : 0.418 ms
     Self %          : 97.7%
 
   Full table sorted by self_cuda_time_total:
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-                                            aten::addmm        16.96%       1.169ms        76.61%       5.283ms     132.067us     437.029us        91.74%     447.239us      11.181us            40  
-void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     361.131us        75.81%     361.131us      12.038us            30  
-void cublasLt::splitKreduce_kernel<32, 16, int, floa...         0.00%       0.000us         0.00%       0.000us       0.000us      41.415us         8.69%      41.415us       2.071us            20  
-                                        aten::clamp_min         6.04%     416.262us        12.30%     847.911us      28.264us      39.361us         8.26%      39.361us       1.312us            30  
-void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us      39.361us         8.26%      39.361us       1.312us            30  
-void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      34.483us         7.24%      34.483us       3.448us            10  
-                                Activity Buffer Request        43.62%       3.008ms        43.62%       3.008ms       3.008ms      10.210us         2.14%      10.210us      10.210us             1  
-                                           aten::linear         3.10%     213.743us        85.12%       5.869ms     146.733us       0.000us         0.00%     447.239us      11.181us            40  
+                                            aten::addmm        22.69%       1.131ms        75.94%       3.787ms      94.680us     408.811us        91.83%     418.327us      10.458us            40  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     338.311us        75.99%     338.311us      11.277us            30  
+void cublasLt::splitKreduce_kernel<32, 16, int, floa...         0.00%       0.000us         0.00%       0.000us       0.000us      38.398us         8.63%      38.398us       1.920us            20  
+                                        aten::clamp_min         6.84%     341.034us        13.29%     662.814us      22.094us      36.377us         8.17%      36.377us       1.213us            30  
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us      36.377us         8.17%      36.377us       1.213us            30  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      32.102us         7.21%      32.102us       3.210us            10  
+                                Activity Buffer Request        31.20%       1.556ms        31.20%       1.556ms       1.556ms       9.516us         2.14%       9.516us       9.516us             1  
+                                           aten::linear         2.95%     147.137us        84.30%       4.204ms     105.101us       0.000us         0.00%     418.327us      10.458us            40  
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-Self CPU time total: 6.896ms
-Self CUDA time total: 476.390us
+Self CPU time total: 4.987ms
+Self CUDA time total: 445.188us
 
   ✓ Section 4 passed — Self CUDA time analysis complete
 

@@ -1,5 +1,5 @@
 # V.Workload_Benchmarking/14.Benchmarking_Methodology/14.2_benchmark_mistakes.py
-# status=PASS rc=0 duration=6.2s
+# status=PASS rc=0 duration=5.6s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -22,24 +22,24 @@
   discard at least 3 full forward passes to allow compilation to complete.
 
    Run        ms
-     0    92.590 ← cold (DISCARD)
-     1     0.308 ← cold (DISCARD)
-     2     0.158 ← cold (DISCARD)
-     3     0.125 ← cold (DISCARD)
-     4     0.118 ← cold (DISCARD)
-     5     0.115
-     6     0.132
-     7     0.116
-     8     0.220
-     9     0.181
-    10     0.240
-    11     0.158
-    12     0.163
-    13     0.170
-    14     0.141
+     0   117.515 ← cold (DISCARD)
+     1     0.653 ← cold (DISCARD)
+     2     0.292 ← cold (DISCARD)
+     3     0.384 ← cold (DISCARD)
+     4     0.215 ← cold (DISCARD)
+     5     0.293
+     6     0.217
+     7     0.169
+     8     0.129
+     9     0.183
+    10     0.225
+    11     0.128
+    12     0.127
+    13     0.210
+    14     0.191
 
-  First run  : 92.590 ms  ← inflated by init
-  Steady mean: 0.164 ms  ← what users see
+  First run  : 117.515 ms  ← inflated by init
+  Steady mean: 0.187 ms  ← what users see
   ✓ Section 1 passed — always warm up; discard first N runs
 
 ── Section 2: Mistake 2 — Using time.time() for GPU Code ──
@@ -60,9 +60,9 @@
     torch.cuda.synchronize()
     ms = s.elapsed_time(e)
 
-  WRONG (no sync)    : 0.1240 ms  ← GPU still running!
-  BETTER (w/sync)    : 0.1357 ms  ← includes Python overhead
-  CORRECT (events)   : 0.1590 ms  ← true GPU kernel time
+  WRONG (no sync)    : 0.1884 ms  ← GPU still running!
+  BETTER (w/sync)    : 0.1929 ms  ← includes Python overhead
+  CORRECT (events)   : 0.1886 ms  ← true GPU kernel time
   ✓ Section 2 passed — use CUDA events on GPU; perf_counter on CPU
 
 ── Section 3: Mistake 3 — Single Sample, No Variance ──
@@ -83,11 +83,11 @@
   (using CUDA events on GPU, perf_counter on CPU) after a warmup phase.
 
   50 iterations collected:
-    Mean  : 0.161 ms
-    Std   : 0.031 ms  (19.6% of mean)
-    P50   : 0.155 ms
-    P99   : 0.325 ms
-    P99/mean ratio: 2.03×
+    Mean  : 0.209 ms
+    Std   : 0.047 ms  (22.7% of mean)
+    P50   : 0.197 ms
+    P99   : 0.451 ms
+    P99/mean ratio: 2.15×
   ✓ Section 3 passed — always collect 20+ samples and report P99
 
 ── Section 4: Mistake 4 — Changing Multiple Variables ──
@@ -111,9 +111,9 @@
 
   Config                   Mean (ms)     Speedup
   ──────────────────────  ──────────  ──────────
-  Baseline FP32 b=8            0.189       1.00×
-  FP16 only   b=8              0.149       1.27×
-  Batch=32 FP32                0.163       1.16×
+  Baseline FP32 b=8            0.212       1.00×
+  FP16 only   b=8              0.219       0.97×
+  Batch=32 FP32                0.208       1.02×
   ✓ Section 4 passed — isolate one variable at a time
 
 ── Section 5: Mistake 5 — Reporting Peak, Not Steady State ──
@@ -134,9 +134,9 @@
   Run fn() for duration_burst_s seconds, then duration_steady_s more seconds.
   Return mean latency (ms) from each phase separately.
 
-  Burst mean   : 0.157 ms
-  Steady mean  : 0.159 ms
-  Difference   : 1.2%  ← OK (< 10%)
+  Burst mean   : 0.215 ms
+  Steady mean  : 0.221 ms
+  Difference   : 2.7%  ← OK (< 10%)
   Note: significant throttling only appears after 10–30s on a loaded GPU
   ✓ Section 5 passed — always report sustained, not peak burst performance
 

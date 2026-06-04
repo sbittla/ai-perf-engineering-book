@@ -1,5 +1,5 @@
 # VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimized_training.py
-# status=PASS rc=0 duration=3.8s
+# status=PASS rc=0 duration=4.0s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -8,7 +8,7 @@
   Device: cuda
 
 ── Section 1: Re-establish the Buggy Baseline ──
-  Buggy baseline:  mean=1.360 ms  P99=1.868 ms
+  Buggy baseline:  mean=2.378 ms  P99=3.197 ms
   ✓ Section 1 passed — baseline re-established
 
 ── Section 2: Fix 1 — Remove .item() from the hot path ──
@@ -29,8 +29,8 @@
   TODO 1: Implement fast_step_no_item(model, optimizer, x_cpu, y_cpu)
   that replaces loss.item() with loss.detach().float().  Return step_time_ms.
 
-  Fix 1 (no .item()):  mean=1.265 ms  speedup=1.08×  saved=0.095 ms/step
-  ✓ Section 2 passed — Fix 1 applied (1.08×)
+  Fix 1 (no .item()):  mean=2.424 ms  speedup=0.98×  saved=-0.047 ms/step
+  ✓ Section 2 passed — Fix 1 applied (0.98×)
 
 ── Section 3: Fix 2 — non_blocking=True H2D Transfer ──
 
@@ -52,9 +52,9 @@
   TODO 2: Implement fast_step_nonblocking(model, optimizer, x_cpu, y_cpu)
   that applies Fix 1 + Fix 2. Return step_time_ms.
 
-  Fix 1+2 (no .item + nonblocking):  mean=1.224 ms  speedup=1.11×
-  Isolated Fix 2 gain: 0.041 ms/step
-  ✓ Section 3 passed — Fix 2 applied (cumulative 1.11×)
+  Fix 1+2 (no .item + nonblocking):  mean=2.247 ms  speedup=1.06×
+  Isolated Fix 2 gain: 0.177 ms/step
+  ✓ Section 3 passed — Fix 2 applied (cumulative 1.06×)
 
 ── Section 4: Fix 3 — torch.no_grad() in Evaluation ──
 
@@ -77,22 +77,22 @@
   TODO 3: Implement evaluate_fast(model, x_cpu) with torch.no_grad().
   Measure speedup vs evaluate_slow (no no_grad).
 
-  evaluate_slow (no no_grad): 0.376 ms
-  evaluate_fast (no_grad)   : 0.357 ms
-  Speedup: 1.05×  saved 0.019 ms/eval call
-  ✓ Section 4 passed — Fix 3 applied (1.05× eval speedup)
+  evaluate_slow (no no_grad): 0.520 ms
+  evaluate_fast (no_grad)   : 0.436 ms
+  Speedup: 1.19×  saved 0.084 ms/eval call
+  ✓ Section 4 passed — Fix 3 applied (1.19× eval speedup)
 
 ── Section 5: All Fixes — Final Comparison ──
 
   Config                           Mean (ms)    P99 (ms)    Speedup
   ──────────────────────────────  ──────────  ──────────  ─────────
-  Buggy baseline (all 3 bugs)          1.360       1.868      1.00×
-  Fix 1 (no .item())                   1.265           —      1.08×
-  Fix 1+2 (+non_blocking)              1.224           —      1.11×
-  All fixes (1+2+3)                    1.172       1.428      1.16×
+  Buggy baseline (all 3 bugs)          2.378       3.197      1.00×
+  Fix 1 (no .item())                   2.424           —      0.98×
+  Fix 1+2 (+non_blocking)              2.247           —      1.06×
+  All fixes (1+2+3)                    2.190       3.546      1.09×
 
-  TOTAL TRAINING STEP SPEEDUP: 1.16×
-  Eval speedup from no_grad:   1.05×
+  TOTAL TRAINING STEP SPEEDUP: 1.09×
+  Eval speedup from no_grad:   1.19×
   Report saved: /tmp/capstone19_report.json
 
   LESSON SUMMARY:
@@ -115,7 +115,7 @@
 
 ============================================================
   ALL SECTIONS PASSED — Capstone 19.2 complete!
-  Total speedup: 1.16× from three targeted fixes.
+  Total speedup: 1.09× from three targeted fixes.
   Capstone 19 (Flamegraph Challenge) complete.
   Part VI — Capstone Projects complete!
 ============================================================

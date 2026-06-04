@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.3_torch_compile.py
-# status=PASS rc=0 duration=8.1s
+# status=PASS rc=0 duration=8.3s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -48,16 +48,16 @@
   with torch.export(), and load the pre-compiled version at serving time.
 
    Step     Time (ms)  Note
-      0       411.668 ← compilation overhead
+      0       357.938 ← compilation overhead
       1         0.396 ← compilation overhead
-      2         0.260 ← compilation overhead
-      3         0.345
-      4         0.422
-      5         0.310
-      6         0.268
-      7         0.173
-      8         0.234
-      9         0.197
+      2         0.406 ← compilation overhead
+      3         0.496
+      4         0.431
+      5         0.397
+      6         0.311
+      7         0.212
+      8         0.219
+      9         0.261
   ✓ Section 2 passed — compilation overhead visible in step 0
 
 ── Section 3: Mode Comparison ──
@@ -75,9 +75,9 @@
 
   We benchmark all three on a transformer-like layer.
 
-  Eager              : 0.251 ms
-  default            : 0.364 ms  (0.69x speedup)
-  reduce-overhead    : 0.354 ms  (0.71x speedup)
+  Eager              : 0.384 ms
+  default            : 0.357 ms  (1.08x speedup)
+  reduce-overhead    : 0.383 ms  (1.00x speedup)
   ✓ Section 3 passed — compiled mode not slower than eager after warmup
 
 ── Section 4: Batch Size Sweep ──
@@ -96,13 +96,13 @@
   layer and report throughput in samples/second.
 
    Batch    Throughput (samples/s)
-       1                    20,190
-       2                    45,600
-       4                    85,714
-       8                   190,447
-      16                   368,035
-      32                   779,140
-      64                 1,436,816
+       1                    20,941
+       2                    54,863
+       4                   104,457
+       8                   217,618
+      16                   439,728
+      32                   722,822
+      64                 1,637,555
 
   Peak throughput batch size: 64
   ✓ Section 4 passed — batch size sweep complete, peak batch identified
@@ -113,6 +113,3 @@
   mode trade-offs, and batch size throughput sweeps.
   Next: II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.1_dataloader_pipeline.py
 ============================================================
-
---- STDERR ---
-W0602 22:26:55.121000 85782 torch/_inductor/utils.py:1731] [0/0] Not enough SMs to use max_autotune_gemm mode

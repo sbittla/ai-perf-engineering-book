@@ -1,5 +1,5 @@
 # I.Foundations/2.PyTorch_Fundamentals/2.5_gpu_timing.py
-# status=PASS rc=0 duration=3.7s
+# status=PASS rc=0 duration=3.6s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -16,9 +16,9 @@
   GPU execution time.  Use CUDA Events: they record timestamps
   directly on the GPU timeline, bypassing CPU overhead entirely.
 
-  WRONG (no sync)  : 129.081 ms  ← GPU not done yet
-  Better (w/ sync) : 0.288 ms  ← includes Python overhead
-  CORRECT (events) : 0.119 ms  ← true GPU execution time
+  WRONG (no sync)  : 186.844 ms  ← GPU not done yet
+  Better (w/ sync) : 0.339 ms  ← includes Python overhead
+  CORRECT (events) : 0.105 ms  ← true GPU execution time
   ✓ Section 1 passed — always use CUDA events for GPU timing
 
 ── Section 2: Warmup Runs ──
@@ -29,18 +29,18 @@
   With torch.compile, discard at least 3 runs for compilation to complete.
 
    Run   Time (ms)
-     0      90.465 ← WARMUP (discard)
-     1       0.175 ← WARMUP (discard)
-     2       0.089 ← WARMUP (discard)
-     3       0.065
-     4       0.098
-     5       0.096
-     6       0.130
-     7       0.134
-     8       0.123
-     9       0.106
+     0     105.736 ← WARMUP (discard)
+     1       0.405 ← WARMUP (discard)
+     2       0.360 ← WARMUP (discard)
+     3       0.343
+     4       0.346
+     5       0.240
+     6       0.137
+     7       0.120
+     8       0.133
+     9       0.130
 
-  First run : 90.465 ms   Steady state: 0.118 ms
+  First run : 105.736 ms   Steady state: 0.152 ms
   ✓ Section 2 passed — always warm up before benchmarking
 
 ── Section 3: Reusable benchmark() Helper ──
@@ -51,8 +51,8 @@
     3. Times `iters` runs with CUDA events (GPU) or perf_counter (CPU)
     4. Returns average time in milliseconds
 
-  [256×256 matmul] 0.053 ms / iter
-  Verified: benchmark() returned 0.053 ms
+  [256×256 matmul] 0.071 ms / iter
+  Verified: benchmark() returned 0.071 ms
   ✓ Section 3 passed
 
 ── Section 4: torch.profiler ──
@@ -66,17 +66,17 @@
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
                                                    Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-                                           aten::linear         0.72%      31.237us         8.23%     356.618us     178.309us       0.000us         0.00%      15.175us       7.587us             2  
-                                            aten::addmm         4.28%     185.654us         6.50%     281.768us     140.884us       9.712us        77.30%      15.175us       7.587us             2  
-                                  Lazy Function Loading         1.63%      70.719us         1.63%      70.719us      35.360us       6.980us        55.56%       6.980us       3.490us             2  
-                                        aten::embedding         1.78%      77.083us        82.71%       3.584ms       3.584ms       0.000us         0.00%       4.551us       4.551us             1  
-                                     aten::index_select         1.81%      78.296us        80.33%       3.481ms       3.481ms       0.000us         0.00%       4.551us       4.551us             1  
-                                           aten::gather         4.10%     177.552us        77.65%       3.365ms       3.365ms       1.517us        12.07%       4.551us       4.551us             1  
-void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       4.249us        33.82%       4.249us       4.249us             1  
-void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       3.824us        30.44%       3.824us       3.824us             1  
+                                           aten::linear         0.68%      41.236us        31.26%       1.893ms     946.551us       0.000us         0.00%      14.635us       7.318us             2  
+                                            aten::addmm        27.22%       1.648ms        29.66%       1.796ms     898.113us       9.305us        77.44%      14.635us       7.318us             2  
+                                  Lazy Function Loading         1.37%      83.203us         1.37%      83.203us      41.602us       6.715us        55.89%       6.715us       3.358us             2  
+                                        aten::embedding         1.83%     111.084us        58.64%       3.551ms       3.551ms       0.000us         0.00%       4.155us       4.155us             1  
+                                     aten::index_select         1.52%      92.005us        56.54%       3.424ms       3.424ms       0.000us         0.00%       4.155us       4.155us             1  
+                                           aten::gather         3.20%     194.068us        53.88%       3.263ms       3.263ms       1.385us        11.53%       4.155us       4.155us             1  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       3.975us        33.08%       3.975us       3.975us             1  
+void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us       3.733us        31.07%       3.733us       3.733us             1  
 -------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
-Self CPU time total: 4.333ms
-Self CUDA time total: 12.564us
+Self CPU time total: 6.056ms
+Self CUDA time total: 12.015us
 
   ✓ Section 4 passed — identify slow ops before optimizing
 
@@ -111,7 +111,7 @@ Self CUDA time total: 12.564us
     ... do work ...
     torch.cuda.nvtx.range_pop()
 
-  loss = 2.3211
+  loss = 2.3121
   ✓ Section 6 passed — run under nsys to see NVTX ranges in timeline
 
 ============================================================

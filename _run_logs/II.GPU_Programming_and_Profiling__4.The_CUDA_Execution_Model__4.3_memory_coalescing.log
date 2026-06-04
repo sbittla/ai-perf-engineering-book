@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_memory_coalescing.py
-# status=PASS rc=0 duration=3.2s
+# status=PASS rc=0 duration=2.4s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -23,11 +23,11 @@
   Bandwidth (GB/s) = bytes_read / (time_s)
                    = (n_elements * 4 bytes) / (time_ms / 1000) / 1e9
 
-  stride= 1      55.6 GB/s   (4.832 ms)
-  stride= 2      49.2 GB/s   (2.726 ms)
-  stride= 4      35.1 GB/s   (1.913 ms)
-  stride= 8      22.3 GB/s   (1.505 ms)
-  stride=16      22.2 GB/s   (0.755 ms)
+  stride= 1      56.5 GB/s   (4.751 ms)
+  stride= 2      49.2 GB/s   (2.730 ms)
+  stride= 4      35.0 GB/s   (1.915 ms)
+  stride= 8      22.2 GB/s   (1.512 ms)
+  stride=16      22.1 GB/s   (0.760 ms)
   stride=32      22.1 GB/s   (0.380 ms)
   ✓ Section 1 passed — stride-1 access has highest bandwidth
 
@@ -48,12 +48,12 @@
 
   L2 cache size: 34 MB (from device properties)
 
-     0.01 MB       1.2 GB/s  [L1/L2 hit]
-     0.10 MB      11.0 GB/s  [L1/L2 hit]
-     1.00 MB       4.1 GB/s  [L2 hit]
-    10.00 MB     488.3 GB/s  [L2 hit]
-    64.00 MB     243.1 GB/s  [DRAM]
-   256.00 MB     249.1 GB/s  [DRAM]
+     0.01 MB       0.3 GB/s  [L1/L2 hit]
+     0.10 MB       2.2 GB/s  [L1/L2 hit]
+     1.00 MB      14.6 GB/s  [L2 hit]
+    10.00 MB     481.1 GB/s  [L2 hit]
+    64.00 MB     244.3 GB/s  [DRAM]
+   256.00 MB     248.7 GB/s  [DRAM]
   ✓ Section 2 passed — memory tier classification complete
 
 ── Section 3: Row-major vs Column-major Access ──
@@ -70,9 +70,9 @@
 
   We time 128 repeated slices of rows vs columns on a (1024, 1024) FP16 matrix.
 
-  Row-major slice (M[i, :]) : 2.758 ms total (128 iters)
-  Col-major slice (M[:, i]) : 2.864 ms total (128 iters)
-  Ratio col/row             : 1.04x slower
+  Row-major slice (M[i, :]) : 2.659 ms total (128 iters)
+  Col-major slice (M[:, i]) : 2.927 ms total (128 iters)
+  Ratio col/row             : 1.10x slower
   ✓ Section 3 passed — row-major access is faster due to coalescing
 
 ── Section 4: Layout Implication — contiguous() for matmul ──
@@ -90,7 +90,7 @@
   B_transposed.is_contiguous(): False
   B_cont.is_contiguous(): True
   matmul non-contiguous : 0.086 ms
-  matmul contiguous     : 0.086 ms
+  matmul contiguous     : 0.087 ms
   (results may be similar — modern cuBLAS handles both paths)
   ✓ Section 4 passed — .contiguous() produces a contiguous tensor
 

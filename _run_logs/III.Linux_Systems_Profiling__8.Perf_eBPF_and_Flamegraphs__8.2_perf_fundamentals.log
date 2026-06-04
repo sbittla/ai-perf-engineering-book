@@ -1,5 +1,5 @@
 # III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.2_perf_fundamentals.py
-# status=PASS rc=0 duration=2.9s
+# status=PASS rc=0 duration=3.4s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -32,8 +32,8 @@
   perf stat shows the raw instruction and cycle counts:
     sudo perf stat -e instructions,cycles python 8.1_perf_fundamentals.py
 
-  Small array (L1 fit, 1024 elements):  0.133 ms
-  Large array (DRAM, 2048 random):       0.302 ms
+  Small array (L1 fit, 1024 elements):  0.186 ms
+  Large array (DRAM, 2048 random):       0.415 ms
   Ratio (large/small per element):       1.1×
   ✓ Section 1 passed — IPC cost measured via Python loop timing
 
@@ -60,9 +60,9 @@
     sudo perf stat -e cache-misses,cache-references python 8.1_perf_fundamentals.py
 
   Array size:           268 MB (larger than L3)
-  Sequential sum:       18.2 ms
-  Random gather sum:    42.7 ms
-  Miss ratio:           2.3× (random is 2.3× slower)
+  Sequential sum:       21.4 ms
+  Random gather sum:    45.7 ms
+  Miss ratio:           2.1× (random is 2.1× slower)
   ✓ Section 2 passed — cache miss ratio > 2× (random much slower than sequential)
 
 ── Section 3: Branch Misprediction Cost ──
@@ -91,8 +91,8 @@
     sudo perf stat -e branch-misses,branches python 8.1_perf_fundamentals.py
 
   Array size:           17 MB
-  Unsorted conditional: 27.09 ms  sum=1572696.5
-  Sorted conditional:   3.03 ms   sum=1572696.5
+  Unsorted conditional: 27.57 ms  sum=1572696.5
+  Sorted conditional:   4.16 ms   sum=1572696.5
   Sums match:           True
   ✓ Section 3 passed — both arrays produce same sum; timing measured
 

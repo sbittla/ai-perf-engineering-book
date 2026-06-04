@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.1_dataloader_pipeline.py
-# status=PASS rc=0 duration=3.9s
+# status=PASS rc=0 duration=3.2s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -25,9 +25,9 @@
   With batch_size=8 and single worker: 4ms loading per batch.
   With 4 workers:    <1ms loading per batch (parallel).
 
-  Single worker (num_workers=0): 209.5 ms for 40 batches
-  Multi  worker (num_workers=4): 131.1 ms for 40 batches
-  Speedup: 1.60x
+  Single worker (num_workers=0): 227.9 ms for 40 batches
+  Multi  worker (num_workers=4): 140.0 ms for 40 batches
+  Speedup: 1.63x
   ✓ Section 1 passed — multi-worker DataLoader is faster
 
 ── Section 2: pin_memory and non_blocking ──
@@ -47,8 +47,8 @@
   Combined: pin_memory=True + non_blocking=True is the fastest CPU→GPU
   path for DataLoader output.  Always use both together.
 
-  Regular (pageable) .to(device): 1.029 ms
-  Pinned  (non_blocking=True)   : 0.146 ms
+  Regular (pageable) .to(device): 1.188 ms
+  Pinned  (non_blocking=True)   : 0.183 ms
   ✓ Section 2 passed — pin_memory transfer verified
 
 ── Section 3: prefetch_factor ──
@@ -66,8 +66,8 @@
 
   We simulate 5ms I/O per item to make prefetching visibly beneficial.
 
-  prefetch_factor=1: 273 ms for 20 batches
-  prefetch_factor=4: 270 ms for 20 batches
+  prefetch_factor=1: 283 ms for 20 batches
+  prefetch_factor=4: 257 ms for 20 batches
   (Higher prefetch buffers more batches ahead, hiding I/O latency)
   ✓ Section 3 passed — prefetch_factor comparison complete
 
@@ -90,9 +90,9 @@
   On CPU, the difference is smaller (no GPU sync) but still measurable
   due to Python function call overhead.
 
-  .item() in loop (BAD)          : 108.0 ms for 100 steps
-  .detach() + single .item() (GOOD): 27.3 ms for 100 steps
-  Speedup from removing .item()   : 3.96x
+  .item() in loop (BAD)          : 95.0 ms for 100 steps
+  .detach() + single .item() (GOOD): 26.1 ms for 100 steps
+  Speedup from removing .item()   : 3.64x
   ✓ Section 4 passed — .item() anti-pattern demonstrated
 
 ============================================================

@@ -1,5 +1,5 @@
 # V.Workload_Benchmarking/15.Porting_a_Workload/15.1_porting_checklist.py
-# status=PASS rc=0 duration=4.3s
+# status=PASS rc=0 duration=3.0s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -116,9 +116,9 @@
   Test both pinned and non-pinned versions.
 
   Tensor size: 134 MB
-  H2D bandwidth (normal) : 10.8 GB/s
-  H2D bandwidth (pinned) : 13.5 GB/s
-  Pinned speedup: 1.24×  (expected 1.5–2.5× on real GPU)
+  H2D bandwidth (normal) : 8.4 GB/s
+  H2D bandwidth (pinned) : 13.2 GB/s
+  Pinned speedup: 1.57×  (expected 1.5–2.5× on real GPU)
   ✓ Section 4 passed — H2D bandwidth measured; use pin_memory for speed
 
 ── Section 5: Validating Porting Correctness ──

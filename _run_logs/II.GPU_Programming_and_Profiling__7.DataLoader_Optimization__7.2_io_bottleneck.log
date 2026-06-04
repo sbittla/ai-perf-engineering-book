@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/7.DataLoader_Optimization/7.2_io_bottleneck.py
-# status=PASS rc=0 duration=6.7s
+# status=PASS rc=0 duration=6.6s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -23,9 +23,9 @@
   A DataLoader-bottlenecked pipeline has idle_pct > 50%.
 
   SlowDataset (10 batches):
-    Total wall time  : 4046 ms
-    GPU compute time : 372.9 ms
-    Idle %           : 90.8%
+    Total wall time  : 4071 ms
+    GPU compute time : 492.1 ms
+    Idle %           : 87.9%
   ✓ Section 1 passed — GPU starvation detected (idle_pct > 50%)
 
 ── Section 2: Measuring GPU utilization ──
@@ -38,9 +38,9 @@
   healthy baseline.
 
   FastDataset (10 batches):
-    Total wall time  : 149 ms
-    GPU compute time : 126.8 ms
-    Idle %           : 14.8%
+    Total wall time  : 151 ms
+    GPU compute time : 129.8 ms
+    Idle %           : 13.9%
   ✓ Section 2 passed — FastDataset keeps GPU busy (idle_pct < 30%)
 
 ── Section 3: Diagnosing with nvidia-smi ──

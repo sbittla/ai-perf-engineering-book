@@ -1,5 +1,5 @@
 # I.Foundations/2.PyTorch_Fundamentals/2.4_training_loop.py
-# status=PASS rc=0 duration=4.4s
+# status=PASS rc=0 duration=4.9s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -29,8 +29,8 @@
   Batches in val_loader  : 4
 
   DataLoader num_workers timing (SineDataset is tiny — difference is minimal here):
-    num_workers=0: 2.6 ms  (real datasets: 0 → GPU idle, 4 → overlap)
-    num_workers=2: 75.3 ms  (real datasets: 0 → GPU idle, 4 → overlap)
+    num_workers=0: 2.8 ms  (real datasets: 0 → GPU idle, 4 → overlap)
+    num_workers=2: 103.4 ms  (real datasets: 0 → GPU idle, 4 → overlap)
   ✓ Section 2 passed
 
 ── Section 3: Model ──
@@ -51,11 +51,11 @@
     5. loss.backward()                          ← backpropagate
     6. optimizer.step()                         ← update weights
 
-  Epoch 1/5  train=0.3014  val=0.2994
-  Epoch 2/5  train=0.1476  val=0.2384
-  Epoch 3/5  train=0.1101  val=0.1559
-  Epoch 4/5  train=0.0770  val=0.1046
-  Epoch 5/5  train=0.0507  val=0.0686
+  Epoch 1/5  train=0.2437  val=0.2550
+  Epoch 2/5  train=0.1250  val=0.1637
+  Epoch 3/5  train=0.0796  val=0.0960
+  Epoch 4/5  train=0.0495  val=0.0749
+  Epoch 5/5  train=0.0318  val=0.0617
   ✓ Section 4 passed — loss decreased
 
 ── Section 5: Gradient Clipping ──
@@ -66,7 +66,7 @@
 
   Order: backward() → clip_grad_norm_() → optimizer.step()
 
-  Gradient norm before clipping: 3.5828
+  Gradient norm before clipping: 2.3955
   Gradient norm after  clipping: 1.0000  (capped at 1.0)
   ✓ Section 5 passed
 
@@ -82,8 +82,8 @@
     clip_grad_norm_()              → on unscaled gradients
     scaler.step() + scaler.update() → instead of optimizer.step()
 
-  AMP 1-epoch training: 268.5 ms
-  Final AMP loss: 0.1827
+  AMP 1-epoch training: 404.1 ms
+  Final AMP loss: 0.1329
   ✓ Section 6 passed
 
 ── Section 7: Inference ──
@@ -93,9 +93,9 @@
     torch.no_grad()       — suppress computation graph (faster, less memory)
   Both are required. Forgetting either causes bugs or wasted compute.
 
-  sin(0)   pred: -0.004  (true:  0.000)
-  sin(π/2) pred: 0.823  (true:  1.000)
-  sin(π)   pred: 0.458  (true:  0.000)
+  sin(0)   pred: 0.007  (true:  0.000)
+  sin(π/2) pred: 0.901  (true:  1.000)
+  sin(π)   pred: 0.479  (true:  0.000)
   ✓ Section 7 passed
 
 ============================================================

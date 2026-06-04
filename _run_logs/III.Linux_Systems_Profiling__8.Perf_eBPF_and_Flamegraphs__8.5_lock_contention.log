@@ -1,5 +1,5 @@
 # III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.5_lock_contention.py
-# status=PASS rc=0 duration=0.7s
+# status=PASS rc=0 duration=0.9s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -41,9 +41,9 @@
     python -X gil=0 train.py        (Python 3.13+ free-threaded mode)
     strace -c python train.py       (count futex syscalls = lock ops)
 
-  Single-threaded (5,000,000 iterations):      160.2 ms
-  Multi-threaded (4 threads, same total): 144.9 ms
-  Speedup:                               1.11× (expect close to 1.0 or < 1.0)
+  Single-threaded (5,000,000 iterations):      190.0 ms
+  Multi-threaded (4 threads, same total): 174.1 ms
+  Speedup:                               1.09× (expect close to 1.0 or < 1.0)
   (GIL limits CPU-bound thread speedup — speedup ≈ 1 is expected)
   ✓ Section 1 passed — GIL timing measured for CPU-bound task
 
@@ -75,7 +75,7 @@
     no need for a shared counter.  Use threading.local() or separate
     variables per worker.  Aggregation is done at the end.
 
-  4 threads, lock-per-increment (50,000 total): 9.5 ms
+  4 threads, lock-per-increment (50,000 total): 12.5 ms
   Final counter value: 50000 (correct: 50000)
   ✓ Section 2 passed — lock contention measured, counter is correct
 
@@ -106,7 +106,7 @@
   (simulated with sleep) and compute (numpy matmul).
 
   ProcessPoolExecutor (4 workers, 10ms I/O + matmul each):
-    Results: ['66479.2', '66479.2', '66479.2', '66479.2']
+    Results: ['64572.9', '64572.9', '64572.9', '64572.9']
     All non-None: True
   ✓ Section 3 passed — multiprocessing workers produce correct results
 

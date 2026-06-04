@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_execution_model.py
-# status=PASS rc=0 duration=3.2s
+# status=PASS rc=0 duration=2.4s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -42,15 +42,15 @@
   We measure FP16 matmul TFLOP/s = 2 * M * K * N / (time_s * 1e12)
   using M=K=N=512.  A 512×512 FP16 matmul needs 2*512^3 ≈ 268M FLOPs.
 
-  batch=   1  13.420 TFLOP/s
-  batch=   2  17.218 TFLOP/s
-  batch=   4  21.380 TFLOP/s
-  batch=   8  22.087 TFLOP/s
-  batch=  16  24.701 TFLOP/s
-  batch=  32  25.108 TFLOP/s
-  batch=  64  25.965 TFLOP/s
-  batch= 128  25.996 TFLOP/s
-  batch= 256  25.294 TFLOP/s
+  batch=   1  13.443 TFLOP/s
+  batch=   2  17.050 TFLOP/s
+  batch=   4  21.162 TFLOP/s
+  batch=   8  22.407 TFLOP/s
+  batch=  16  25.093 TFLOP/s
+  batch=  32  25.033 TFLOP/s
+  batch=  64  25.992 TFLOP/s
+  batch= 128  25.895 TFLOP/s
+  batch= 256  25.455 TFLOP/s
   ✓ Section 2 passed — SIMT throughput scales with batch size
 
 ── Section 3: SM Occupancy Effect ──
@@ -63,7 +63,7 @@
   occupancy-limited (not enough warps to keep the GPU busy).
   For production inference, target a batch size at or beyond the knee.
 
-  Peak TFLOP/s: 25.996
+  Peak TFLOP/s: 25.992
   Knee (80% of peak) at batch size: 4
   Below this batch size, you are occupancy-limited.
   ✓ Section 3 passed — occupancy knee identified
@@ -81,9 +81,9 @@
   In practice, modern GPUs handle simple cases well, so the difference
   may be small for this microbenchmark.  We verify both complete > 0 ms.
 
-  relu (no divergence)   : 0.039 ms / iter
-  where (two-path)       : 0.547 ms / iter
-  Ratio where/relu       : 13.98x
+  relu (no divergence)   : 0.042 ms / iter
+  where (two-path)       : 0.555 ms / iter
+  Ratio where/relu       : 13.37x
   ✓ Section 4 passed — warp divergence measured
 
 ============================================================

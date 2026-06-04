@@ -14,7 +14,7 @@ Full machine-readable report: [`../EXERCISE_EXECUTION_REPORT.md`](../EXERCISE_EX
 |---|---|
 | **GPU** | NVIDIA GeForce RTX 4060 Laptop GPU (8.6 GB, 24 SMs, Compute Capability 8.9) |
 | **Driver** | 592.27 |
-| **PyTorch / CUDA** | 2.6.0a0+ecf3bae40a.nv25.01 / 12.8 |
+| **PyTorch / CUDA** | 2.11.0+cu130 / 13.0 |
 | **Python** | 3.12.3 |
 | **Run date** | 2026-06-03 |
 
@@ -22,10 +22,10 @@ Full machine-readable report: [`../EXERCISE_EXECUTION_REPORT.md`](../EXERCISE_EX
 
 | Metric | Value |
 |---|---|
-| **Exercises passing** | **77 / 77** (harness runs 78/78 incl. the `sitecustomize.py` bootstrap) |
+| **Exercises passing** | **89 / 89** (harness runs 90/90 incl. the `sitecustomize.py` bootstrap) |
 | Failures | 0 |
-| Total wall time | ~264 s |
-| Slowest exercises | `16.3_precision_and_compile.py` (16.3 s), `17.1_slow_dataloader.py` (15.7 s), `3.2_gpu_memory_and_compute.py` (12.0 s) |
+| Total wall time | ~278 s |
+| Slowest exercises | `3.2_gpu_memory_and_compute.py` (30.5 s), `17.1_slow_dataloader.py` (16.3 s), `16.3_precision_and_compile.py` (11.6 s) |
 
 ## Headline Results
 
@@ -35,12 +35,12 @@ Auto-extracted from each exercise's output. Illustrative — expect different ab
 |---|---|---|---|
 | I | `3.3_hardware_survey.py` | Roofline from device specs | 51.5 TFLOP/s |
 | II | `4.2_execution_model.py` | Throughput scales with batch (knee) | 4 |
-| II | `4.4_tensor_cores_and_fusion.py` | BF16 Tensor-Core speedup vs FP32 | 2.06x |
-| II | `6.1_precision_and_amp.py` | autocast forward speedup | 1.52x faster |
-| II | `7.1_dataloader_pipeline.py` | removing in-loop .item() | 3.96x |
-| II | `7.2_io_bottleneck.py` | GPU idle: starved → fed | 90.8% → 14.8% |
-| III | `9.1_memory_hierarchy.py` | sequential vs strided memory | 17.2× |
-| IV | `10.2_prefill_and_decode.py` | TTFT grows with prompt length | 1.2× |
+| II | `4.4_tensor_cores_and_fusion.py` | BF16 Tensor-Core speedup vs FP32 | 1.98x |
+| II | `6.1_precision_and_amp.py` | autocast forward speedup | 1.44x faster |
+| II | `7.1_dataloader_pipeline.py` | removing in-loop .item() | 3.64x |
+| II | `7.2_io_bottleneck.py` | GPU idle: starved → fed | 87.9% → 13.9% |
+| III | `9.1_memory_hierarchy.py` | sequential vs strided memory | 19.6× |
+| IV | `10.2_prefill_and_decode.py` | TTFT grows with prompt length | 1.4× |
 
 > Parts V–IX (benchmarking methodology, capstone labs, hardware landscape, advanced topics, production capstones) are methodology / portfolio / read-and-run material; they execute cleanly and emit before/after comparison tables rather than a single headline number.
 
@@ -70,15 +70,15 @@ ridge_point = peak_FP16_FLOP/s  /  HBM_bandwidth_bytes/s
 ### `II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_execution_model.py`
 
 ```
-batch=   1  13.420 TFLOP/s
-batch=   2  17.218 TFLOP/s
-batch=   4  21.380 TFLOP/s
-batch=   8  22.087 TFLOP/s
-batch=  16  24.701 TFLOP/s
-batch=  32  25.108 TFLOP/s
-batch=  64  25.965 TFLOP/s
-batch= 128  25.996 TFLOP/s
-batch= 256  25.294 TFLOP/s
+batch=   1  13.443 TFLOP/s
+batch=   2  17.050 TFLOP/s
+batch=   4  21.162 TFLOP/s
+batch=   8  22.407 TFLOP/s
+batch=  16  25.093 TFLOP/s
+batch=  32  25.033 TFLOP/s
+batch=  64  25.992 TFLOP/s
+batch= 128  25.895 TFLOP/s
+batch= 256  25.455 TFLOP/s
 ✓ Section 2 passed — SIMT throughput scales with batch size
 
 ── Section 3: SM Occupancy Effect ──
@@ -89,9 +89,9 @@ As batch size increases, TFLOP/s rises steeply — each increment fills
 ### `III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.1_memory_hierarchy.py`
 
 ```
-Row-major copy A.copy():         6.1 GB/s  (cache friendly)
-Column gather ascontig(A.T):     0.4 GB/s  (cache unfriendly)
-Slowdown (row/col):              17.2×
+Row-major copy A.copy():         5.6 GB/s  (cache friendly)
+Column gather ascontig(A.T):     0.3 GB/s  (cache unfriendly)
+Slowdown (row/col):              19.6×
 ```
 
 ## Reproducing These Results

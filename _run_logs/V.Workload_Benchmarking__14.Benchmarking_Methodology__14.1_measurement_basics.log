@@ -1,5 +1,5 @@
 # V.Workload_Benchmarking/14.Benchmarking_Methodology/14.1_measurement_basics.py
-# status=PASS rc=0 duration=6.3s
+# status=PASS rc=0 duration=2.5s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -41,30 +41,30 @@ SECTION 2: Warmup Effect Demo (CPU-based)
 ============================================================
    Run     Time (ms)  Note
   ----  ------------  ------------------------------
-     1         4.080  ← first run (cache cold)
-     2         3.813  ← warming up
-     3         3.815  ← warming up
-     4         3.719  
-     5         3.671  
-     6         3.601  
-     7         3.608  
-     8         3.666  
-     9         3.931  
-    10         3.778  
-    11         3.987  
-    12         3.693  
-    13         4.020  
-    14         3.670  
-    15         3.871  
-    16         3.807  
-    17         4.041  
-    18         3.602  
-    19         3.887  
-    20         3.630  ← stable
+     1         4.779  ← first run (cache cold)
+     2         4.275  ← warming up
+     3         4.288  ← warming up
+     4         4.328  
+     5         4.270  
+     6         4.162  
+     7         4.309  
+     8         4.499  
+     9         4.630  
+    10         4.445  
+    11         4.414  
+    12         4.367  
+    13         4.453  
+    14         4.748  
+    15         4.504  
+    16         4.586  
+    17         4.556  
+    18         4.487  
+    19         4.611  
+    20         4.470  ← stable
 
-  First run:   4.080 ms
-  Steady P50:  3.778 ms
-  Difference:  8.0% slower on run 1
+  First run:   4.779 ms
+  Steady P50:  4.487 ms
+  Difference:  6.5% slower on run 1
 
 ============================================================
 SECTION 3: Mean vs Percentiles — Why the Mean Lies
@@ -173,10 +173,10 @@ Running GPU timing harness demo...
   Warmup runs : 10
   Sample runs : 50
   Measurement : CUDA events (device-side, not CPU wall clock)
-  Mean        : 0.242 ms
-  P50         : 0.238 ms
-  P99         : 0.437 ms
-  CV          : 13.37%  ← check variability
+  Mean        : 0.236 ms
+  P50         : 0.237 ms
+  P99         : 0.285 ms
+  CV          : 6.24%  ← check variability
 
 Explore next: V.Workload_Benchmarking/14.Benchmarking_Methodology/
               V.Workload_Benchmarking/15.Porting_a_Workload/

@@ -1,5 +1,5 @@
 # V.Workload_Benchmarking/15.Porting_a_Workload/15.3_dataloader_at_scale.py
-# status=PASS rc=0 duration=4.5s
+# status=PASS rc=0 duration=2.9s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -45,7 +45,7 @@
   that iterates the loader for n_batches, times each iteration,
   and returns (mean_iter_ms, batches_per_sec).
 
-  num_workers=0  : 4.153 ms/batch  241 batches/s
+  num_workers=0  : 5.404 ms/batch  185 batches/s
   ✓ Section 2 passed — DataLoader throughput measurement works
 
 ── Section 3: num_workers Sweep ──
@@ -64,12 +64,12 @@
 
    workers    ms/batch     batches/s     speedup
   ────────  ──────────  ────────────  ──────────
-         0       0.345          2900       1.00×
-         1       3.298           303       0.10×
-         2       2.292           436       0.15×
-         4       2.270           441       0.15×
+         0       0.351          2848       1.00×
+         1       4.574           219       0.08×
+         2       3.510           285       0.10×
+         4       3.239           309       0.11×
 
-  Best: num_workers=0 → 2900 batches/s
+  Best: num_workers=0 → 2848 batches/s
   ✓ Section 3 passed — num_workers sweep complete
 
 ── Section 4: Measuring GPU Idle Time (Starvation) ──
@@ -94,10 +94,10 @@
   that runs a model over n_batches from the loader and returns idle_pct.
 
 
-  num_workers=0        idle_pct: 74.6%
-  num_workers=0 (best)  idle_pct: 73.5%
-  More workers reduced GPU starvation by 1.0pp
-  WARNING: 73.5% idle — DataLoader is still the bottleneck
+  num_workers=0        idle_pct: 70.8%
+  num_workers=0 (best)  idle_pct: 70.2%
+  More workers reduced GPU starvation by 0.6pp
+  WARNING: 70.2% idle — DataLoader is still the bottleneck
   → Try: more workers, pin_memory=True, prefetch_factor=4
   ✓ Section 4 passed — GPU idle pct measured
 

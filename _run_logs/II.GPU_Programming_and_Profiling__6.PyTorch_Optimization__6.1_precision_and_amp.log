@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.1_precision_and_amp.py
-# status=PASS rc=0 duration=4.4s
+# status=PASS rc=0 duration=6.6s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -44,9 +44,9 @@
 
   We benchmark a (2048, 2048) matmul for all three dtypes.
 
-  FP32 matmul (2048x2048): 1.353 ms  (12.70 TFLOP/s)
-  FP16 matmul (2048x2048): 0.653 ms  (26.32 TFLOP/s)  2.1x speedup
-  BF16 matmul (2048x2048): 0.653 ms  (26.33 TFLOP/s)  2.1x speedup
+  FP32 matmul (2048x2048): 1.352 ms  (12.70 TFLOP/s)
+  FP16 matmul (2048x2048): 0.652 ms  (26.33 TFLOP/s)  2.1x speedup
+  BF16 matmul (2048x2048): 0.657 ms  (26.16 TFLOP/s)  2.1x speedup
   ✓ Section 2 passed — FP16/BF16 are faster than FP32
 
 ── Section 3: torch.autocast ──
@@ -68,8 +68,8 @@
   memory savings come from storing the model itself in half precision
   (model.half()) or from FP16 activations during *training* with checkpointing.
 
-  FP32 forward          : 2.650 ms
-  Autocast forward      : 1.745 ms  (1.52x faster)
+  FP32 forward          : 2.539 ms
+  Autocast forward      : 1.758 ms  (1.44x faster)
   FP32 peak memory      : 149.1 MB
   Autocast peak memory  : 153.8 MB  (~equal — autocast trades memory for Tensor-Core speed)
   ✓ Section 3 passed — autocast speeds up the forward pass via Tensor Cores
@@ -95,7 +95,7 @@
     4. scaler.update()                 at the end of each step
 
   GradScaler initial scale : 65536.0
-  Loss value               : 2.3726
+  Loss value               : 2.3366
   ✓ Section 4 passed — GradScaler AMP training step implemented
 
 ============================================================

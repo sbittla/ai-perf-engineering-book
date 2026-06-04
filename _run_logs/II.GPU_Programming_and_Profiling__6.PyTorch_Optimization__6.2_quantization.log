@@ -1,5 +1,5 @@
 # II.GPU_Programming_and_Profiling/6.PyTorch_Optimization/6.2_quantization.py
-# status=PASS rc=0 duration=1.8s
+# status=PASS rc=0 duration=2.1s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -24,9 +24,9 @@
     layer_types : a set of layer classes to quantise, e.g. {nn.Linear}
     dtype       : quantisation dtype, torch.qint8 for INT8
 
-  FP32 inference  : 0.69 ms
-  INT8 inference  : 0.79 ms
-  CPU speedup     : 0.87x (may vary by CPU; ~1.5–2x expected)
+  FP32 inference  : 0.89 ms
+  INT8 inference  : 1.16 ms
+  CPU speedup     : 0.77x (may vary by CPU; ~1.5–2x expected)
   ✓ Section 1 passed — INT8 dynamic quantization applied
 
 ── Section 2: Memory Footprint ──
@@ -61,9 +61,9 @@
   A well-quantized model has diff < 1.0 for typical inputs.
   If diff is large, the model may need calibration (static quantization).
 
-  FP32 output sample (first 5): [ 0.00756107 -0.01957574 -0.02959217  0.04254182 -0.02285579]
-  INT8 output sample (first 5): [ 0.00712191 -0.02338592 -0.02848146  0.04365969 -0.02099292]
-  Mean absolute difference     : 0.000809
+  FP32 output sample (first 5): [-0.03450387  0.08288677 -0.01655301 -0.028605    0.00697923]
+  INT8 output sample (first 5): [-0.03379418  0.08215154 -0.01616118 -0.02902303  0.00539414]
+  Mean absolute difference     : 0.000790
   (Expected < 1.0 for a well-quantized model)
   ✓ Section 3 passed — accuracy impact measured
 

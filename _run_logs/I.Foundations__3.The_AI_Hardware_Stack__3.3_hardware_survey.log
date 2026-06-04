@@ -1,5 +1,5 @@
 # I.Foundations/3.The_AI_Hardware_Stack/3.3_hardware_survey.py
-# status=PASS rc=0 duration=4.0s
+# status=PASS rc=0 duration=3.5s
 ======================================================================
 --- STDOUT ---
 =================================================================
@@ -57,11 +57,11 @@
     MFU < 30%  → investigate (small batch? FP32? wrong dtype?)
 
   Matrix size     : 4096×4096  FP16
-  Avg time        : 5.013 ms
+  Avg time        : 5.025 ms
   FLOPs/call      : 137.4 GFLOP
   Observed        : 27.4 TFLOP/s
   Peak            : 51.5 TFLOP/s
-  MFU             : 53.2%
+  MFU             : 53.1%
   Result: good — typical for real workloads (not just bare GEMM)
   ✓ Section 3 passed
 
@@ -74,12 +74,12 @@
     nvidia-smi dmon -s pcut -d 1   (poll every 1 second)
     nvidia-smi --query-gpu=temperature.gpu,clocks.sm,power.draw --format=csv
 
-  Temperature      : 81 °C
+  Temperature      : 74 °C
   SM clock         : 2520 MHz  (max: 3105 MHz)
   Clock throttle   : 18.8%  (WARNING: throttling detected)
-  Power draw       : 80.81 W  / [N/A] W
-  GPU utilization  : 100%
-  Memory used      : 227 / 8188 MB
+  Power draw       : 73.29 W  / [N/A] W
+  GPU utilization  : 78%
+  Memory used      : 318 / 8188 MB
   ✓ Section 4 passed
 
 ── Section 5: Multi-GPU Topology ──
@@ -111,7 +111,7 @@
   │  Peak FP16 :   51.5 TFLOP/s                         │
   │  HBM BW    :    272 GB/s                            │
   │  Ridge pt  :  189.3 FLOPs/byte                      │
-  │  Bare GEMM :  53.2% MFU                              │
+  │  Bare GEMM :  53.1% MFU                              │
   └─────────────────────────────────────────────────────┘
 
   Keep these numbers.  Every profiling result in this book

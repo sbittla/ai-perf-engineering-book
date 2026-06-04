@@ -1,5 +1,5 @@
 # III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py
-# status=PASS rc=0 duration=0.5s
+# status=PASS rc=0 duration=0.6s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -90,15 +90,15 @@
     percall — time per call
 
   cProfile output (top 5 functions by cumulative time):
-             4376 function calls (4233 primitive calls) in 0.199 seconds
+             4376 function calls (4233 primitive calls) in 0.250 seconds
        Ordered by: cumulative time
        List reduced from 240 to 5 due to restriction <5>
        ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-            1    0.000    0.000    0.199    0.199 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py:165(mixed_workload)
-            1    0.168    0.168    0.198    0.198 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py:146(slow_matmul)
-            1    0.000    0.000    0.022    0.022 /usr/local/lib/python3.12/dist-packages/numpy/__init__.py:707(__getattr__)
-         18/1    0.000    0.000    0.022    0.022 <frozen importlib._bootstrap>:1349(_find_and_load)
-         18/1    0.000    0.000    0.022    0.022 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+            1    0.001    0.001    0.250    0.250 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py:165(mixed_workload)
+            1    0.208    0.208    0.249    0.249 /workspace/III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.3_cpu_flamegraphs.py:146(slow_matmul)
+            1    0.000    0.000    0.026    0.026 /usr/local/lib/python3.12/dist-packages/numpy/__init__.py:707(__getattr__)
+         18/1    0.000    0.000    0.026    0.026 <frozen importlib._bootstrap>:1349(_find_and_load)
+         18/1    0.000    0.000    0.026    0.026 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
   ✓ Section 2 passed — cProfile ran successfully on mixed workload
 
 ── Section 3: Differential Flamegraph ──
@@ -132,8 +132,8 @@
   For this exercise, we profile a slow version (with sleep) and a fast
   version (no sleep) using cProfile, then compute the improvement.
 
-  slow_fn profile time: 25.4 ms
-  fast_fn profile time: 0.014 ms
+  slow_fn profile time: 20.2 ms
+  fast_fn profile time: 0.015 ms
   Improvement:          100%
   ✓ Section 3 passed — differential profiling implemented
 

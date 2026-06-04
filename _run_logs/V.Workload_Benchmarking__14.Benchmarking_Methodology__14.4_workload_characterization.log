@@ -1,5 +1,5 @@
 # V.Workload_Benchmarking/14.Benchmarking_Methodology/14.4_workload_characterization.py
-# status=PASS rc=0 duration=3.3s
+# status=PASS rc=0 duration=2.3s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -81,7 +81,7 @@
 
   TODO 2: Implement measure_peak_bandwidth_gbs() below.
 
-  Measured peak memory bandwidth: 227.2 GB/s
+  Measured peak memory bandwidth: 226.7 GB/s
   GPU: NVIDIA GeForce RTX 4060 Laptop GPU  (theoretical: see GPU spec sheet)
   Efficiency: this measurement / theoretical peak
   ✓ Section 3 passed — peak memory bandwidth measured
@@ -95,11 +95,11 @@
 
        B×S   Mean (ms)    P99 (ms)    Tput (sps)        AI         Bound
   ────────  ──────────  ──────────  ────────────  ────────  ────────────
-   1×64          0.160       0.193          6248      30.1     memory-BW
-   8×64          0.226       0.307         35400     170.7       compute
-  32×64          0.598       0.627         53556     341.3       compute
-  128×64          2.611       2.626         49028     455.1       compute
-   8×256         0.605       0.649         13231     341.3       compute
+   1×64          0.221       0.364          4524      30.1     memory-BW
+   8×64          0.251       0.337         31921     170.7       compute
+  32×64          0.632       0.672         50596     341.3       compute
+  128×64          2.707       2.865         47280     455.1       compute
+   8×256         0.631       0.668         12675     341.3       compute
   ✓ Section 4 passed — full characterisation table built
 
 ── Section 5: Structured Characterisation Report ──
@@ -123,8 +123,8 @@
 
   Report saved: /tmp/characterisation_report.json
   Summary:
-    max_throughput_sps: 53556.3
-    min_p99_ms: 0.193
+    max_throughput_sps: 50595.5
+    min_p99_ms: 0.337
     roofline_limited: True
 
   USAGE PATTERN:

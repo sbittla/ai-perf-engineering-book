@@ -1,5 +1,5 @@
 # III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.3_memory_bandwidth.py
-# status=PASS rc=0 duration=5.0s
+# status=PASS rc=0 duration=4.8s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -42,7 +42,7 @@
     If you see < 50%, check for NUMA effects (wrong node) or
     that the array is large enough to overflow L3.
 
-  CPU DRAM bandwidth (256 MB clone): 26.6 GB/s
+  CPU DRAM bandwidth (256 MB clone): 29.2 GB/s
   (Typical: 30–100 GB/s depending on DDR generation)
   ✓ Section 1 passed — CPU DRAM bandwidth > 5 GB/s measured
 
@@ -75,9 +75,9 @@
     Fix: pin_memory=True in DataLoader, non_blocking=True in .to(device),
     pre-load batches asynchronously with a background thread.
 
-  Pageable H2D (256 MB): 10.8 GB/s
-  Pinned   H2D (256 MB): 12.9 GB/s
-  Pinned speedup:        1.19×
+  Pageable H2D (256 MB): 10.1 GB/s
+  Pinned   H2D (256 MB): 13.9 GB/s
+  Pinned speedup:        1.37×
   ✓ Section 2 passed — PCIe bandwidth measurement complete
 
 ── Section 3: The Full Bandwidth Hierarchy ──

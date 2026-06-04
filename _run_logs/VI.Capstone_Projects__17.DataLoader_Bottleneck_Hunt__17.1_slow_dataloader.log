@@ -1,5 +1,5 @@
 # VI.Capstone_Projects/17.DataLoader_Bottleneck_Hunt/17.1_slow_dataloader.py
-# status=PASS rc=0 duration=15.7s
+# status=PASS rc=0 duration=16.3s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -68,9 +68,9 @@
   (This will take ~6s — slow by design)
 
   SLOW LOADER DIAGNOSIS:
-    Load + H2D per batch : 138.4 ms
-    GPU forward per batch: 0.389 ms
-    GPU idle percentage  : 99.7%
+    Load + H2D per batch : 142.7 ms
+    GPU forward per batch: 0.750 ms
+    GPU idle percentage  : 99.5%
     Verdict: CRITICAL: GPU is mostly idle — DataLoader is the bottleneck
   ✓ Section 3 passed — slow loader diagnosed
 
@@ -87,16 +87,16 @@
   Bug isolation (fast dataset, no sleep):
   Config                           Loader (ms)    GPU (ms)    Idle %
   ──────────────────────────────  ────────────  ──────────  ────────
-  Baseline (all bugs)                    0.433       0.180     70.6%
-  +workers=2                             1.599       0.207     88.6%
-  +pin_memory                            1.391       0.319     81.3%
+  Baseline (all bugs)                    0.505       0.215     70.1%
+  +workers=2                             2.052       0.333     86.0%
+  +pin_memory                            1.322       0.361     78.6%
 
   DIAGNOSIS SAVED: /tmp/capstone17_diagnosis.json
 
   SUMMARY OF FINDINGS:
-    Bug 1 (num_workers=0)      : GPU idle ~71% with single worker
-    Fix 1 (+2 workers)        : reduces idle to ~89%
-    Fix 2 (+pin_memory)        : reduces idle to ~81%
+    Bug 1 (num_workers=0)      : GPU idle ~70% with single worker
+    Fix 1 (+2 workers)        : reduces idle to ~86%
+    Fix 2 (+pin_memory)        : reduces idle to ~79%
     Fix 3 (remove sleep)       : requires changing __getitem__ augmentation
 
   NEXT STEP: Run 17.2_fast_dataloader.py to apply all fixes

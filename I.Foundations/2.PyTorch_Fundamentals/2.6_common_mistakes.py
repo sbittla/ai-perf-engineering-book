@@ -147,7 +147,15 @@ print("""
   — the CPU blocks until all pending GPU work finishes.  In a tight
   inner loop this serialises the pipeline and can cut throughput by 50%+.
 
-  Fix: accumulate the raw tensor, call .item() every N steps.
+  Why it stalls: CUDA kernels are enqueued asynchronously, so the host
+  normally keeps launching work while the GPU executes earlier kernels —
+  overlapping data prep with compute.  A synchronous .item()/.cpu() forces
+  the host thread to wait until the GPU drains its entire stream queue and
+  surfaces the scalar back across the PCIe bus, collapsing that overlap into
+  a sequential, single-threaded bottleneck.
+
+  Fix: accumulate the raw tensor (total += loss.detach()), then call .item()
+  once every N steps (or at epoch end).
 """)
 
 # Simulate a training loop that logs loss every step (WRONG) vs every 50 (RIGHT)

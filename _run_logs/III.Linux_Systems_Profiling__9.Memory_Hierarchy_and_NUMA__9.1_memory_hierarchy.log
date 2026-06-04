@@ -1,5 +1,5 @@
 # III.Linux_Systems_Profiling/9.Memory_Hierarchy_and_NUMA/9.1_memory_hierarchy.py
-# status=PASS rc=0 duration=8.4s
+# status=PASS rc=0 duration=10.7s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -46,10 +46,10 @@
   Array size: 268 MB
     Stride    Bandwidth (GB/s)    Cache efficiency
   ────────  ──────────────────  ──────────────────
-         1                14.2                106%
-         4                 4.9                 36%
-         8                 2.6                 20%
-        16                 1.2                  9%
+         1                11.6                 84%
+         4                 4.4                 32%
+         8                 2.1                 16%
+        16                 1.4                 10%
         32                 0.7                  5%
   ✓ Section 1 passed — stride-1 bandwidth > stride-16 bandwidth
 
@@ -82,15 +82,15 @@
   L3 reference size: 8 MB
         Size     BW (GB/s)      Tier
   ──────────  ────────────  ────────
-     0.001MB           0.6     L1/L2
-     0.010MB           4.1     L1/L2
-     0.100MB          10.9     L1/L2
-     1.000MB          14.2     L1/L2
-     4.000MB          20.3        L3
-     8.000MB          20.5        L3
-    32.000MB          14.7      DRAM
-   128.000MB          14.7      DRAM
-   256.000MB          15.5      DRAM
+     0.001MB           0.8     L1/L2
+     0.010MB           5.0     L1/L2
+     0.100MB          11.5     L1/L2
+     1.000MB          16.2     L1/L2
+     4.000MB          16.8        L3
+     8.000MB          18.5        L3
+    32.000MB          13.5      DRAM
+   128.000MB          11.9      DRAM
+   256.000MB          11.8      DRAM
   ✓ Section 2 passed — cache tier classification implemented
 
 ── Section 3: Matrix Layout and Cache Friendliness ──
@@ -123,9 +123,9 @@
     tensor.T.contiguous()      # pays the strided gather, like A.T above
 
   4096×4096 float32 matrix (67 MB):
-    Row-major copy A.copy():         6.1 GB/s  (cache friendly)
-    Column gather ascontig(A.T):     0.4 GB/s  (cache unfriendly)
-    Slowdown (row/col):              17.2×
+    Row-major copy A.copy():         5.6 GB/s  (cache friendly)
+    Column gather ascontig(A.T):     0.3 GB/s  (cache unfriendly)
+    Slowdown (row/col):              19.6×
   ✓ Section 3 passed — sequential bandwidth > strided gather by > 1.1×
 
 ── Section 4: Implications for PyTorch ──
@@ -165,8 +165,8 @@
   transposed.stride():       (1, 1024)
   transposed.is_contiguous(): False  (expected False)
   after .contiguous():        True  (expected True)
-  matmul(transposed, x):    3.54 ms
-  matmul(contiguous, x):    3.46 ms
+  matmul(transposed, x):    3.20 ms
+  matmul(contiguous, x):    3.57 ms
   (difference may be small on CPU — effect is larger on GPU HBM)
   ✓ Section 4 passed — transposed tensor is not contiguous, .contiguous() fixes it
 

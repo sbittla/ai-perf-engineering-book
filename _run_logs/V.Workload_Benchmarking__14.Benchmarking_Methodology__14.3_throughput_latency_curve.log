@@ -1,5 +1,5 @@
 # V.Workload_Benchmarking/14.Benchmarking_Methodology/14.3_throughput_latency_curve.py
-# status=PASS rc=0 duration=2.9s
+# status=PASS rc=0 duration=2.2s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -47,14 +47,14 @@
 
    Batch   Latency (ms)    P99 (ms)    Throughput   P99/P50
   ──────  ─────────────  ──────────  ────────────  ────────
-       1           0.20        0.81          5012/s      4.05
-       2           0.16        0.23         12167/s      1.40
-       4           0.15        0.19         26782/s      1.24
-       8           0.17        0.25         47449/s      1.47
-      16           0.15        0.19        104570/s      1.25
-      32           0.18        0.32        182415/s      1.84
-      64           0.16        0.22        408900/s      1.42
-     128           0.16        0.20        824023/s      1.27
+       1           0.20        0.27          5087/s      1.36
+       2           0.21        0.63          9527/s      3.00
+       4           0.17        0.25         23149/s      1.45
+       8           0.19        0.42         41576/s      2.16
+      16           0.21        0.33         74808/s      1.54
+      32           0.21        0.42        152112/s      1.97
+      64           0.22        0.30        292839/s      1.37
+     128           0.26        0.64        485816/s      2.42
   ✓ Section 2 passed — T-L curve collected across batch sizes
 
 ── Section 3: Finding the Knee — Optimal Operating Point ──
@@ -75,19 +75,19 @@
   TODO 2: Implement find_knee() that returns the batch size at the knee,
   defined as the largest batch where p99 / latency_mean < threshold.
 
-  Knee point: batch=128
-    Latency  : 0.16 ms  (P99: 0.20 ms)
-    Throughput: 824023 samples/sec
+  Knee point: batch=64
+    Latency  : 0.22 ms  (P99: 0.30 ms)
+    Throughput: 292839 samples/sec
 
   Pareto frontier (max throughput within latency budget):
    Budget (ms)   Best batch    Throughput
   ────────────  ───────────  ────────────
-             5ms          128      824023/s
-            10ms          128      824023/s
-            20ms          128      824023/s
-            50ms          128      824023/s
-           100ms          128      824023/s
-           200ms          128      824023/s
+             5ms          128      485816/s
+            10ms          128      485816/s
+            20ms          128      485816/s
+            50ms          128      485816/s
+           100ms          128      485816/s
+           200ms          128      485816/s
   ✓ Section 3 passed — knee detected and Pareto frontier computed
 
 ── Section 4: Simulating Request Rate Sweep ──
@@ -106,22 +106,22 @@
   TODO 3: Implement md1_latency_ms() that returns mean latency from the M/D/1 formula.
   Handle ρ >= 1.0 by returning infinity (system overloaded).
 
-  Service time (batch=1): 0.17 ms → capacity = 5845 req/s
+  Service time (batch=1): 0.19 ms → capacity = 5179 req/s
 
     Load (req/s)    ρ (util)    Latency (ms)
   ──────────────  ──────────  ──────────────
-           584.5        0.10            0.18
-          1169.0        0.20            0.19
-          2338.1        0.40            0.23
-          2922.6        0.50            0.26
-          3507.1        0.60            0.30
-          4091.6        0.70            0.37
-          4676.1        0.80            0.51
-          5260.6        0.90            0.94
-          5552.9        0.95            1.80
-          5845.1        1.00  770486234490106.38
+           517.9        0.10            0.20
+          1035.7        0.20            0.22
+          2071.4        0.40            0.26
+          2589.3        0.50            0.29
+          3107.2        0.60            0.34
+          3625.0        0.70            0.42
+          4142.9        0.80            0.58
+          4660.8        0.90            1.06
+          4919.7        0.95            2.03
+          5178.6        1.00  ∞ (overloaded)
 
-  Latency at 50% load: 0.26 ms → at 80% load: 0.51 ms (2.0× worse)
+  Latency at 50% load: 0.29 ms → at 80% load: 0.58 ms (2.0× worse)
   ✓ Section 4 passed — M/D/1 queueing model shows latency explosion near capacity
 
 ── Section 5: Benchmark Report Format ──
@@ -139,16 +139,16 @@
   Benchmark Report — SERVER scenario  (P99 SLO: 50.0 ms)
    Batch    P50 (ms)    P99 (ms)    Tput (sps)    SLO OK
   ──────  ──────────  ──────────  ────────────  ────────
-       1        0.20        0.81          5012         ✓
-       2        0.16        0.23         12167         ✓
-       4        0.15        0.19         26782         ✓
-       8        0.17        0.25         47449         ✓
-      16        0.15        0.19        104570         ✓
-      32        0.18        0.32        182415         ✓
-      64        0.16        0.22        408900         ✓
-     128        0.16        0.20        824023         ✓
+       1        0.20        0.27          5087         ✓
+       2        0.21        0.63          9527         ✓
+       4        0.17        0.25         23149         ✓
+       8        0.19        0.42         41576         ✓
+      16        0.21        0.33         74808         ✓
+      32        0.21        0.42        152112         ✓
+      64        0.22        0.30        292839         ✓
+     128        0.26        0.64        485816         ✓
 
-  Recommended: batch=128  throughput=824023 sps  P99=0.20 ms
+  Recommended: batch=128  throughput=485816 sps  P99=0.64 ms
   ✓ Section 5 passed — benchmark report generated with SLO-aware recommendation
 
 ============================================================

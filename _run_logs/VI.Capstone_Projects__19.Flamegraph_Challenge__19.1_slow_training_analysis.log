@@ -1,5 +1,5 @@
 # VI.Capstone_Projects/19.Flamegraph_Challenge/19.1_slow_training_analysis.py
-# status=PASS rc=0 duration=3.8s
+# status=PASS rc=0 duration=3.7s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -49,7 +49,7 @@
     3. Calls evaluate() which does NOT use torch.no_grad()
   Return (step_time_ms, logged_loss).
 
-  SLOW training step:  mean=1.321 ms  P99=1.560 ms
+  SLOW training step:  mean=2.301 ms  P99=3.215 ms
   ✓ Section 2 passed — slow baseline measured
 
 ── Section 3: Isolating Each Bug's Cost ──
@@ -61,10 +61,10 @@
   (remove the loss.item() call inside the step; accumulate loss as
   a tensor instead). Measure and compare to slow baseline.
 
-  SLOW (all bugs):         1.321 ms
-  Fix 1 (no .item()):      1.258 ms  (saved 0.063 ms, 4.7%)
-  Fix 2 (non_blocking):    1.265 ms  (saved 0.056 ms, 4.3%)
-  Fix 3 (no_grad eval):    slow=1.602ms  fast=0.365ms  (4.39× speedup)
+  SLOW (all bugs):         2.301 ms
+  Fix 1 (no .item()):      2.123 ms  (saved 0.177 ms, 7.7%)
+  Fix 2 (non_blocking):    1.761 ms  (saved 0.539 ms, 23.4%)
+  Fix 3 (no_grad eval):    slow=2.470ms  fast=0.350ms  (7.05× speedup)
   ✓ Section 3 passed — each bug's cost isolated
 
 ── Section 4: Reading the Flamegraph ──
@@ -96,9 +96,9 @@
     Use speedscope or brendangregg/FlameGraph to diff them
 
   Top 5 ops in slow loop (CUDA time):
-    aten::linear                         138 µs/iter
-    aten::addmm                          138 µs/iter
-    void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4::Params)  125 µs/iter
+    aten::linear                         127 µs/iter
+    aten::addmm                          127 µs/iter
+    void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4>(cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align4::Params)  114 µs/iter
     void cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align1>(cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_align1::Params)  6 µs/iter
     Activity Buffer Request              5 µs/iter
 
@@ -108,9 +108,9 @@
 ============================================================
   ALL SECTIONS PASSED — Capstone 19.1 complete!
   Three bottlenecks found:
-    Bug 1 (.item() sync)    : 0.063 ms overhead/step
-    Bug 2 (blocking H2D)    : 0.056 ms overhead/step
-    Bug 3 (grad in eval)    : 1.238 ms overhead/eval call
+    Bug 1 (.item() sync)    : 0.177 ms overhead/step
+    Bug 2 (blocking H2D)    : 0.539 ms overhead/step
+    Bug 3 (grad in eval)    : 2.120 ms overhead/eval call
   Next: VI.Capstone_Projects/19.Flamegraph_Challenge/19.2_optimized_training.py
 ============================================================
 

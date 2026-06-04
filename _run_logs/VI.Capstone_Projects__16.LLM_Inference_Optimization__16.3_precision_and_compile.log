@@ -1,5 +1,5 @@
 # VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py
-# status=PASS rc=0 duration=16.3s
+# status=PASS rc=0 duration=11.6s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -13,8 +13,8 @@
   Every optimization rung will compute its speedup relative to FP32.
   If the baseline file doesn't exist, we establish it here.
 
-  Loaded baseline: TPS(FP32)=232.4 tok/s
-  FP32 reference TTFT (prompt=256): 5.527 ms
+  Loaded baseline: TPS(FP32)=400.6 tok/s
+  FP32 reference TTFT (prompt=256): 3.650 ms
   ✓ Section 1 passed — baseline loaded
 
 ── Section 2: FP16 Precision ──
@@ -33,11 +33,11 @@
 
   Dtype        TTFT mean (ms)    Speedup   VRAM (MB)
   ──────────  ───────────────  ─────────  ──────────
-  float32               5.527       1.00×         N/A
-  float16               3.358       1.65×         309
-  bfloat16              3.800       1.45×         308
+  float32               3.650       1.00×         N/A
+  float16               3.681       0.99×         309
+  bfloat16              3.163       1.15×         308
 
-  FP16 speedup on GPU: 1.65×  (expected 1.5–2.5×)
+  FP16 speedup on GPU: 0.99×  (expected 1.5–2.5×)
   ✓ Section 2 passed — precision speedup measured
 
 ── Section 3: torch.compile ──
@@ -62,12 +62,12 @@
   Measure: (a) time to first result (includes compilation), (b) steady-state TTFT.
   Report compile overhead = first_call_ms - steady_state_ms.
 
-  First call (includes compilation): 4808 ms
-  Steady-state TTFT                : 2.598 ms
-  Compile overhead                 : 4805 ms
-  Speedup vs eager FP32            : 2.13×
+  First call (includes compilation): 1624 ms
+  Steady-state TTFT                : 5.155 ms
+  Compile overhead                 : 1618 ms
+  Speedup vs eager FP32            : 0.71×
 
-  Compile amortised after ~1640 inferences (at 5.5 ms/call saving 2.93 ms)
+  Compile amortised after ~1618500 inferences (at 3.6 ms/call saving 0.00 ms)
   ✓ Section 3 passed — compile overhead and speedup measured
 
 ── Section 4: Full optimization Ladder ──
@@ -84,21 +84,18 @@
 
   Rung    Config                   TTFT (ms)    Speedup
   ──────  ──────────────────────  ──────────  ─────────
-  1       FP32 eager                   5.527      1.00×
-  2       FP16 eager                   3.358      1.65×
-  3       FP32 + compile               2.598      2.13×
-  4       FP16 + compile               4.624      1.20×
+  1       FP32 eager                   3.650      1.00×
+  2       FP16 eager                   3.681      0.99×
+  3       FP32 + compile               5.155      0.71×
+  4       FP16 + compile               2.268      1.61×
 
-  Best configuration: FP32 + compile  (2.13× over FP32 eager)
+  Best configuration: FP16 + compile  (1.61× over FP32 eager)
 
   Snapshot saved to: /tmp/capstone16_optimized.json
   ✓ Section 4 passed — optimization ladder built
 
 ============================================================
   ALL SECTIONS PASSED — Capstone 16.2 complete!
-  Best result: FP32 + compile → 2.13× over FP32 baseline
+  Best result: FP16 + compile → 1.61× over FP32 baseline
   Next: VI.Capstone_Projects/16.LLM_Inference_Optimization/16.4_profiling_audit.py
 ============================================================
-
---- STDERR ---
-W0602 22:28:37.738000 86945 torch/_inductor/utils.py:1731] [0/0] Not enough SMs to use max_autotune_gemm mode

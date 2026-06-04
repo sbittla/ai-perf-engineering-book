@@ -1,5 +1,5 @@
 # III.Linux_Systems_Profiling/8.Perf_eBPF_and_Flamegraphs/8.4_ebpf_and_bpftrace.py
-# status=PASS rc=0 duration=0.1s
+# status=PASS rc=0 duration=0.3s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -148,8 +148,8 @@
   Bucket       Count  Bar
   <1ms            81  ██████████████████████████████
   1-5ms           14  █████
-  5-20ms           3  █
-  >20ms            2  
+  5-20ms           5  █
+  >20ms            0  
   (Total: 100 operations)
   ✓ Section 3 passed — latency histogram built and verified
 

@@ -1,5 +1,5 @@
 # VI.Capstone_Projects/18.KV_Cache_Memory_Pressure/18.1_kv_cache_scaling.py
-# status=PASS rc=0 duration=2.4s
+# status=PASS rc=0 duration=2.2s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -94,16 +94,16 @@
           bandwidth_gb_s, base_ms=0.5, dtype_bytes=2)
   that models the per-step decode latency as memory-bandwidth-bound.
 
-  Measured HBM bandwidth: 148 GB/s
+  Measured HBM bandwidth: 145 GB/s
 
-  Decode latency model (Llama-7B FP16, BW=148 GB/s):
+  Decode latency model (Llama-7B FP16, BW=145 GB/s):
    seq_len   latency (ms)    vs seq=128
   ────────  ─────────────  ────────────
-       128          0.954         1.00×
-       512          2.316         2.43×
-      1024          4.133         4.33×
-      2048          7.766         8.14×
-      4096         15.032        15.75×
+       128          0.963         1.00×
+       512          2.353         2.44×
+      1024          4.207         4.37×
+      2048          7.913         8.21×
+      4096         15.327        15.91×
   ✓ Section 3 passed — decode latency model built
 
 ── Section 4: Comparing KV Cache Strategies ──

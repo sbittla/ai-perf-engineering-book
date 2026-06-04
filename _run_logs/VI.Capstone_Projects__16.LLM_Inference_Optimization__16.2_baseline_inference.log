@@ -1,5 +1,5 @@
 # VI.Capstone_Projects/16.LLM_Inference_Optimization/16.2_baseline_inference.py
-# status=PASS rc=0 duration=4.1s
+# status=PASS rc=0 duration=6.0s
 ======================================================================
 --- STDOUT ---
 ============================================================
@@ -53,10 +53,10 @@
 
     Prompt len   TTFT mean (ms)   TTFT P99 (ms)
   ────────────  ───────────────  ──────────────
-            64            2.910           5.227
-           128            2.681           5.090
-           256            5.673           5.899
-           512            4.879           6.367
+            64            3.796           6.009
+           128            3.796           5.967
+           256            4.241           8.082
+           512            3.894           4.434
   ✓ Section 2 passed — TTFT measured across prompt lengths
 
 ── Section 3: TPS — Tokens Per Second ──
@@ -76,7 +76,7 @@
   that simulates N_DECODE autoregressive steps and returns TPS.
   At each step, append the predicted token to the context.
 
-  Decode TPS (FP32, no KV cache): 232.4 tok/s
+  Decode TPS (FP32, no KV cache): 400.6 tok/s
   Peak VRAM (prompt=256): 231 MB
   ✓ Section 3 passed — decode TPS and VRAM measured
 
@@ -97,8 +97,8 @@
   and assert the file was created successfully.
 
   Baseline saved: /tmp/capstone16_baseline.json
-  TPS (FP32):   232.4 tok/s
-  TTFT (256):   5.673 ms
+  TPS (FP32):   400.6 tok/s
+  TTFT (256):   4.241 ms
   VRAM peak:    230.9 MB
 
   NEXT STEP:
