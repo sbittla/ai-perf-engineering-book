@@ -357,7 +357,7 @@ print(f"  TTFT (256):   {ttft_results.get(256, {}).get('mean_ms', 'N/A')} ms")
 print(f"  VRAM peak:    {baseline['vram_mb']} MB")
 print(f"""
   NEXT STEP:
-    Run 16.2_precision_and_compile.py to apply the optimization ladder.
+    Run 16.3_precision_and_compile.py to apply the optimization ladder.
     The baseline JSON will be loaded for before/after comparison.
 """)
 print("  ✓ Section 4 passed — baseline snapshot saved")

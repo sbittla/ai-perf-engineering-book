@@ -6,7 +6,7 @@ Four self-contained portfolio projects that integrate the tools and techniques f
 
 | Chapter | Project | Theme | Exercises |
 |---------|---------|-------|-----------|
-| 16 — LLM Inference Optimization Lab | Optimize a mini GPT to 2–3× baseline | Precision, torch.compile, profiling | 16.1, 16.2, 16.3 |
+| 16 — LLM Inference Optimization Lab | Optimize a mini GPT to 2–3× baseline | Production readiness, precision, torch.compile, profiling | 16.1, 16.2, 16.3, 16.4 |
 | 17 — DataLoader Bottleneck Hunt | Find and fix 3 DataLoader bugs | CPU-GPU starvation diagnosis | 17.1, 17.2 |
 | 18 — KV Cache Memory Pressure | Plan LLM deployment given VRAM budget | KV cache formula, OOM threshold | 18.1, 18.2 |
 | 19 — Flamegraph Challenge | Find 3 training loop bugs via profiling | .item() sync, H2D, no_grad | 19.1, 19.2 |
@@ -15,9 +15,10 @@ Four self-contained portfolio projects that integrate the tools and techniques f
 
 ```bash
 # Capstone 16: LLM Inference Optimization
-python 16.LLM_Inference_Optimization/16.1_baseline_inference.py
-python 16.LLM_Inference_Optimization/16.2_precision_and_compile.py
-python 16.LLM_Inference_Optimization/16.3_profiling_audit.py
+python 16.LLM_Inference_Optimization/16.1_production_readiness.py
+python 16.LLM_Inference_Optimization/16.2_baseline_inference.py
+python 16.LLM_Inference_Optimization/16.3_precision_and_compile.py
+python 16.LLM_Inference_Optimization/16.4_profiling_audit.py
 
 # Capstone 17: DataLoader Bottleneck Hunt
 python 17.DataLoader_Bottleneck_Hunt/17.1_slow_dataloader.py
@@ -67,9 +68,10 @@ All capstones require Parts I–V. CPU-only fallbacks are included throughout �
 
 | File | What You Build |
 |------|---------------|
-| `16.1_baseline_inference.py` | MiniGPT baseline: TTFT, TPS, VRAM snapshot |
-| `16.2_precision_and_compile.py` | FP16 + compile optimization ladder with speedup table |
-| `16.3_profiling_audit.py` | Per-op time attribution; diagnosis-to-fix report |
+| `16.1_production_readiness.py` | Research-vs-production gap; six-dimension readiness self-assessment (read-and-run background, no GPU) |
+| `16.2_baseline_inference.py` | MiniGPT baseline: TTFT, TPS, VRAM snapshot |
+| `16.3_precision_and_compile.py` | FP16 + compile optimization ladder with speedup table |
+| `16.4_profiling_audit.py` | Per-op time attribution; diagnosis-to-fix report |
 | `17.1_slow_dataloader.py` | Three-bug DataLoader; idle_pct measurement |
 | `17.2_fast_dataloader.py` | Fix all three bugs; 43× improvement on I/O-heavy load |
 | `18.1_kv_cache_scaling.py` | OOM threshold, latency model, strategy comparison |

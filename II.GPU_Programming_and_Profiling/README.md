@@ -1,6 +1,6 @@
 # Part II — GPU Programming & Profiling
 
-Companion exercises for **Part II — GPU Programming & Profiling** of *AI Systems Performance Engineering*.
+Companion exercises for **Part II — GPU Programming & Profiling** of *AI Performance Engineering*.
 
 Each folder name matches a chapter title exactly as it appears in the book.
 
@@ -9,9 +9,10 @@ Each folder name matches a chapter title exactly as it appears in the book.
 ```
 II.GPU_Programming_and_Profiling/
 ├── 4.The_CUDA_Execution_Model/
-│   ├── 4.1_execution_model.py
-│   ├── 4.2_memory_coalescing.py
-│   └── 4.3_tensor_cores_and_fusion.py
+│   ├── 4.1_cuda_foundations.py
+│   ├── 4.2_execution_model.py
+│   ├── 4.3_memory_coalescing.py
+│   └── 4.4_tensor_cores_and_fusion.py
 ├── 5.GPU_Profiling/
 │   ├── 5.1_nsys_profiling.py
 │   ├── 5.2_ncu_profiling.py
@@ -46,9 +47,10 @@ A CUDA-capable GPU is required for Chapters 4–7. Most exercises skip CUDA sect
 
 ```bash
 # Chapter 4 — The CUDA Execution Model
-python "II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.1_execution_model.py"
-python "II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_memory_coalescing.py"
-python "II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_tensor_cores_and_fusion.py"
+python "II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.1_cuda_foundations.py"
+python "II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.2_execution_model.py"
+python "II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.3_memory_coalescing.py"
+python "II.GPU_Programming_and_Profiling/4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py"
 
 # Chapter 5 — GPU Profiling
 python "II.GPU_Programming_and_Profiling/5.GPU_Profiling/5.1_nsys_profiling.py"
@@ -71,9 +73,10 @@ Each file prints `✓` for every passing section and stops with a clear error at
 
 | Chapter | Topic | File |
 |---|---|---|
-| 4.1 | GPU thread hierarchy, SIMT, occupancy, warp divergence | `4.The_CUDA_Execution_Model/4.1_execution_model.py` |
-| 4.2 | Memory coalescing, cache tiers, row/column access | `4.The_CUDA_Execution_Model/4.2_memory_coalescing.py` |
-| 4.3 | Tensor Cores, alignment, BF16, kernel fusion | `4.The_CUDA_Execution_Model/4.3_tensor_cores_and_fusion.py` |
+| II.1 | The CUDA story, GPU/SM/warp/shared-memory detection, CUDA stack overview (Part II background, read-and-run) | `4.The_CUDA_Execution_Model/4.1_cuda_foundations.py` |
+| 4.1 | GPU thread hierarchy, SIMT, occupancy, warp divergence | `4.The_CUDA_Execution_Model/4.2_execution_model.py` |
+| 4.2 | Memory coalescing, cache tiers, row/column access | `4.The_CUDA_Execution_Model/4.3_memory_coalescing.py` |
+| 4.3 | Tensor Cores, alignment, BF16, kernel fusion | `4.The_CUDA_Execution_Model/4.4_tensor_cores_and_fusion.py` |
 | 5.1 | NVTX markers, CPU-GPU overlap, idle_fraction | `5.GPU_Profiling/5.1_nsys_profiling.py` |
 | 5.2 | Arithmetic intensity, roofline, ncu metrics | `5.GPU_Profiling/5.2_ncu_profiling.py` |
 | 5.3 | torch.profiler schedule, Chrome trace, Self CUDA | `5.GPU_Profiling/5.3_torch_profiler.py` |

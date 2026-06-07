@@ -1,21 +1,23 @@
 # Chapter 14 — Benchmarking Methodology
 
-Three exercises covering the full benchmarking toolkit: avoiding common mistakes, plotting throughput-latency curves, and producing structured workload characterization reports.
+Four exercises covering the full benchmarking toolkit: the science of honest measurement, avoiding common mistakes, plotting throughput-latency curves, and producing structured workload characterization reports.
 
 ## Exercises
 
 | File | Topic | Key Functions |
 |------|-------|---------------|
-| `14.1_benchmark_mistakes.py` | The five benchmarking mistakes and their fixes | `gather_timings()`, `burst_vs_sustained()` |
-| `14.2_throughput_latency_curve.py` | Throughput-latency curves, queuing theory, Pareto frontier | `tl_sweep()`, `find_knee()`, `md1_latency_ms()`, `benchmark_report()` |
-| `14.3_workload_characterization.py` | 8-point characterization checklist, roofline position, JSON reports | `arithmetic_intensity()`, `measure_peak_bandwidth_gbs()`, `add_summary()` |
+| `14.1_measurement_basics.py` | Warmup, statistics, and Amdahl's law — the science of honest measurement (read-and-run background) | `summarize()`, `amdahl_speedup()` |
+| `14.2_benchmark_mistakes.py` | The five benchmarking mistakes and their fixes | `gather_timings()`, `burst_vs_sustained()` |
+| `14.3_throughput_latency_curve.py` | Throughput-latency curves, queuing theory, Pareto frontier | `tl_sweep()`, `find_knee()`, `md1_latency_ms()`, `benchmark_report()` |
+| `14.4_workload_characterization.py` | 8-point characterization checklist, roofline position, JSON reports | `arithmetic_intensity()`, `measure_peak_bandwidth_gbs()`, `add_summary()` |
 
 ## Quick Start
 
 ```bash
-python 14.1_benchmark_mistakes.py
-python 14.2_throughput_latency_curve.py
-python 14.3_workload_characterization.py
+python 14.1_measurement_basics.py
+python 14.2_benchmark_mistakes.py
+python 14.3_throughput_latency_curve.py
+python 14.4_workload_characterization.py
 ```
 
 ## Key Concepts

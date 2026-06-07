@@ -1,6 +1,6 @@
 # Chapter 9 — Memory Hierarchy and NUMA
 
-Exercises for Chapter 9 of *AI Systems Performance Engineering*.
+Exercises for Chapter 9 of *AI Performance Engineering*.
 
 ## Exercise map
 

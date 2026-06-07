@@ -1,21 +1,23 @@
 # Chapter 16 — Capstone 1: LLM Inference Optimization Lab
 
-A complete end-to-end optimization workflow: establish a baseline, apply precision and compile optimizations, then audit the result with torch.profiler.
+A complete end-to-end optimization workflow: assess production readiness, establish a baseline, apply precision and compile optimizations, then audit the result with torch.profiler.
 
 ## Exercises
 
 | File | Topic | Key Functions |
 |------|-------|---------------|
-| `16.1_baseline_inference.py` | GPT-2 style transformer; measure TTFT, TPS, VRAM | `measure_ttft()`, `measure_tps()`, `save_baseline()` |
-| `16.2_precision_and_compile.py` | FP16, BF16, torch.compile optimization ladder | `measure_precision_speedup()`, `measure_compile_overhead()` |
-| `16.3_profiling_audit.py` | torch.profiler op-level attribution; diagnosis-to-fix table | `profile_region_breakdown()` |
+| `16.1_production_readiness.py` | Research-vs-production gap; six-dimension readiness self-assessment (read-and-run background, no GPU) | `score_readiness()`, `gap_analysis()` |
+| `16.2_baseline_inference.py` | GPT-2 style transformer; measure TTFT, TPS, VRAM | `measure_ttft()`, `measure_tps()`, `save_baseline()` |
+| `16.3_precision_and_compile.py` | FP16, BF16, torch.compile optimization ladder | `measure_precision_speedup()`, `measure_compile_overhead()` |
+| `16.4_profiling_audit.py` | torch.profiler op-level attribution; diagnosis-to-fix table | `profile_region_breakdown()` |
 
 ## Workflow
 
 ```bash
-python 16.1_baseline_inference.py    # establishes /tmp/capstone16_baseline.json
-python 16.2_precision_and_compile.py  # applies optimizations; saves ladder
-python 16.3_profiling_audit.py        # attributes time to ops; saves audit
+python 16.1_production_readiness.py   # background: research-vs-production readiness
+python 16.2_baseline_inference.py    # establishes /tmp/capstone16_baseline.json
+python 16.3_precision_and_compile.py  # applies optimizations; saves ladder
+python 16.4_profiling_audit.py        # attributes time to ops; saves audit
 ```
 
 ## Key Concepts

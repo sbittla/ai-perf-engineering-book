@@ -1,6 +1,6 @@
 # Part I — Foundations
 
-Companion exercises for **Part I — Foundations** of *AI Systems Performance Engineering*.
+Companion exercises for **Part I — Foundations** of *AI Performance Engineering*.
 
 Each folder name matches a chapter title exactly as it appears in the book.
 

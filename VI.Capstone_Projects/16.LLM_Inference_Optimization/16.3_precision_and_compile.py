@@ -6,14 +6,14 @@ Chapter 16: Capstone 1 — LLM Inference optimization Lab
 Section 2: Precision and torch.compile optimization Ladder
 =======================================================================
 Covers capstone section 16.2:
-  • Load the baseline from 16.1 for before/after comparison
+  • Load the baseline (from 16.2_baseline_inference.py) for before/after comparison
   • Apply FP16 / BF16 and measure the speedup over FP32
   • Apply torch.compile and measure compile overhead vs steady-state gain
   • Build a full optimization ladder table with cumulative speedup
   • Save the optimized snapshot for final comparison
 
 Run:  python VI.Capstone_Projects/16.LLM_Inference_Optimization/16.3_precision_and_compile.py
-All sections must print ✓. Run 16.1 first to generate the baseline.
+All sections must print ✓. Run 16.2_baseline_inference.py first to generate the baseline.
 """
 
 import copy
@@ -130,7 +130,7 @@ def bench_ttft(model, prompt_len=256, warmup=5, iters=30):
 # ─────────────────────────────────────────────────────────────
 print("── Section 1: Load the Baseline Snapshot ──")
 print("""
-  The baseline from 16.1 provides the FP32 reference numbers.
+  The baseline from 16.2_baseline_inference.py provides the FP32 reference numbers.
   Every optimization rung will compute its speedup relative to FP32.
   If the baseline file doesn't exist, we establish it here.
 """)

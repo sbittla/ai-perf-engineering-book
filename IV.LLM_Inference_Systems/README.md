@@ -1,6 +1,6 @@
 # Part IV — LLM Inference Systems
 
-> Chapters 10–13 | 10 exercises
+> Chapters 10–13 | 13 exercises
 
 This part covers the performance engineering of large language model inference systems: from the fundamental prefill/decode asymmetry through batching strategies, speculative decoding, and distributed inference across multiple GPUs.
 
@@ -8,18 +8,19 @@ This part covers the performance engineering of large language model inference s
 
 | Chapter | Topic | Exercises |
 |---------|-------|-----------|
-| 10 | LLM Inference Fundamentals | 10.1 · 10.2 · 10.3 |
+| 10 | LLM Inference Fundamentals | 10.1 · 10.2 · 10.3 · 10.4 |
 | 11 | Batching Strategies | 11.1 · 11.2 · 11.3 |
 | 12 | Speculative Decoding | 12.1 · 12.2 |
-| 13 | Distributed Inference | 13.1 · 13.2 · 13.3 |
+| 13 | Distributed Inference | 13.1 · 13.2 · 13.3 · 13.4 |
 
 ## Quick Start
 
 ```bash
 # Chapter 10 — LLM Inference Fundamentals
-python "IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.1_prefill_and_decode.py"
-python "IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_kv_cache.py"
-python "IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_inference_metrics.py"
+python "IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.1_llm_evolution.py"
+python "IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.2_prefill_and_decode.py"
+python "IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.3_kv_cache.py"
+python "IV.LLM_Inference_Systems/10.LLM_Inference_Fundamentals/10.4_inference_metrics.py"
 
 # Chapter 11 — Batching Strategies
 python "IV.LLM_Inference_Systems/11.Batching_Strategies/11.1_static_batching.py"
@@ -34,6 +35,7 @@ python "IV.LLM_Inference_Systems/12.Speculative_Decoding/12.2_acceptance_rate.py
 python "IV.LLM_Inference_Systems/13.Distributed_Inference/13.1_tensor_parallelism.py"
 python "IV.LLM_Inference_Systems/13.Distributed_Inference/13.2_nccl_collectives.py"
 python "IV.LLM_Inference_Systems/13.Distributed_Inference/13.3_fsdp_and_pipeline.py"
+python "IV.LLM_Inference_Systems/13.Distributed_Inference/13.4_distributed_simulation.py"
 ```
 
 ## Prerequisites

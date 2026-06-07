@@ -6,16 +6,17 @@ This part teaches you to measure before optimizing: how to avoid benchmarking mi
 
 | Chapter | Topic | Exercises |
 |---------|-------|-----------|
-| 14 — Benchmarking Methodology | Five common mistakes, T-L curves, 8-point characterization | 14.1, 14.2, 14.3 |
+| 14 — Benchmarking Methodology | Honest measurement, five common mistakes, T-L curves, 8-point characterization | 14.1, 14.2, 14.3, 14.4 |
 | 15 — Porting a Workload | 6-step porting checklist, bottleneck shift, DataLoader tuning | 15.1, 15.2, 15.3 |
 
 ## Quick Start
 
 ```bash
 # Chapter 14 — Benchmarking Methodology
-python 14.Benchmarking_Methodology/14.1_benchmark_mistakes.py
-python 14.Benchmarking_Methodology/14.2_throughput_latency_curve.py
-python 14.Benchmarking_Methodology/14.3_workload_characterization.py
+python 14.Benchmarking_Methodology/14.1_measurement_basics.py
+python 14.Benchmarking_Methodology/14.2_benchmark_mistakes.py
+python 14.Benchmarking_Methodology/14.3_throughput_latency_curve.py
+python 14.Benchmarking_Methodology/14.4_workload_characterization.py
 
 # Chapter 15 — Porting a Workload
 python 15.Porting_a_Workload/15.1_porting_checklist.py
@@ -69,9 +70,10 @@ Measure `idle_pct`. If > 10%, tune: `num_workers`, `pin_memory=True`, `prefetch_
 
 | File | What You Learn |
 |------|---------------|
-| `14.1_benchmark_mistakes.py` | `gather_timings()`, CUDA events, `burst_vs_sustained()` |
-| `14.2_throughput_latency_curve.py` | `tl_sweep()`, `find_knee()`, M/D/1 queueing, `benchmark_report()` |
-| `14.3_workload_characterization.py` | Arithmetic intensity, roofline position, JSON characterization report |
+| `14.1_measurement_basics.py` | Warmup, statistics, Amdahl's law — the science of honest measurement (read-and-run background) |
+| `14.2_benchmark_mistakes.py` | `gather_timings()`, CUDA events, `burst_vs_sustained()` |
+| `14.3_throughput_latency_curve.py` | `tl_sweep()`, `find_knee()`, M/D/1 queueing, `benchmark_report()` |
+| `14.4_workload_characterization.py` | Arithmetic intensity, roofline position, JSON characterization report |
 | `15.1_porting_checklist.py` | `safe_from_numpy()`, H2D bandwidth, `validate_port()` |
 | `15.2_bottleneck_shift.py` | Optimization ladder, Python overhead floor, scaling ratio |
 | `15.3_dataloader_at_scale.py` | `sweep_num_workers()`, `measure_idle_pct()`, CPU affinity |

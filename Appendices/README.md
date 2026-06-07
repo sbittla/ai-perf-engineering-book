@@ -1,6 +1,6 @@
 # Appendices
 
-Reference appendices for the AI Systems Performance Engineering book. (Appendices D and F
+Reference appendices for the AI Performance Engineering book. (Appendices D and F
 in the print book are narrative — production case studies and a "keeping current" guide —
 so they have no exercises here; their fillable worksheets live in [`../docs/worksheets/`](../docs/worksheets).)
 

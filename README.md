@@ -1,4 +1,4 @@
-# AI Systems Performance Engineering — Companion Repository
+# AI Performance Engineering — Companion Repository
 
 **Hands-on exercises for GPU profiling, LLM inference optimization, and Linux systems performance.**
 
