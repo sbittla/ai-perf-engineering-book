@@ -1,23 +1,53 @@
-# AI Systems Performance Engineering — Companion Repository
+# AI Performance Engineering — Companion Repository
 
-**Hands-on exercises for GPU profiling, LLM inference optimization, and Linux systems performance.**
+> **Hands-on exercises for GPU profiling, LLM inference optimization, and Linux systems performance.**
 
-Companion repository for the book *AI Performance Engineering: From GPU Kernels to LLM Inference* by Srinivasa Rao Bittla.
+Companion repository for the book **[AI Performance Engineering: From GPU Kernels to LLM Inference](https://www.amazon.com/AI-Performance-Engineering-Kernels-Inference/dp/B0H4X6QWR1/)** by [Srinivasa Rao Bittla](https://bittla.me).
 
 ---
 
-## About the Book
+## 📖 About the Book
 
 | | |
 |---|---|
 | **Title** | AI Performance Engineering |
 | **Subtitle** | From GPU Kernels to LLM Inference |
 | **Author** | Srinivasa Rao Bittla |
-| **Editions** | Kindle &amp; Paperback (Amazon KDP) |
-| **ASIN** | B0H2ZC9JGM |
-| **Buy on Amazon** | https://a.co/d/0cxZivYm |
+| **Publisher** | Amazon KDP |
+| **Formats** | Kindle · Paperback · Hardcover |
+| **ISBN — Paperback** | 979-8-1986-9248-0 |
+| **ISBN — Hardcover** | 979-8-1806-1131-4 |
+| **ASIN** | B0H4X6QWR1 |
+| **Amazon** | [Buy on Amazon.com](https://www.amazon.com/AI-Performance-Engineering-Kernels-Inference/dp/B0H4X6QWR1/) |
+| **Interactive Companion** | [Ask the Book — Claude AI](https://claude.ai/artifact/Ub7kUiBpkjfjgAjtRxkyP4) |
+| **Author Website** | [bittla.me/ask-ai-performance-engineering.html](https://bittla.me/ask-ai-performance-engineering.html) |
 
-A practical, hands-on guide for engineers moving into AI systems performance. The book takes you from GPU fundamentals (CUDA execution model, memory hierarchy, Tensor Cores) through profiling tooling (`nsys`, `ncu`, `torch.profiler`, `perf`, eBPF), into LLM inference optimization (KV cache, batching, speculative decoding, distributed inference), and finishes with production capstones on serving, multi-GPU scaling, and cloud cost. This repository contains every runnable exercise referenced in the book.
+A practical, hands-on guide for engineers moving into AI systems performance. The book takes you from GPU fundamentals (CUDA execution model, memory hierarchy, Tensor Cores) through profiling tooling (`nsys`, `ncu`, `torch.profiler`, `perf`, eBPF), into LLM inference optimization (KV cache, continuous batching, speculative decoding, distributed inference), and finishes with production capstones on vLLM serving, multi-GPU scaling, and cloud cost optimization. This repository contains every runnable exercise referenced in the book.
+
+### 💬 Ask the Book — AI Companion
+
+You can ask questions directly from the book's content — about GPU performance, LLM inference, roofline model, speculative decoding, FlashAttention, or any chapter topic — and receive chapter-cited answers:
+
+👉 **[Launch the interactive companion →](https://claude.ai/artifact/Ub7kUiBpkjfjgAjtRxkyP4)**
+
+---
+
+## 👤 About the Author
+
+**Srinivasa Rao Bittla** is a technology leader with 20+ years of expertise in AI/ML, performance engineering, and distributed systems. He is the author of three books on AI and software engineering.
+
+- 🌐 Website: [bittla.me](https://bittla.me)
+- 💼 LinkedIn: [linkedin.com/in/bittla](https://www.linkedin.com/in/bittla/)
+- 📚 Goodreads: [Srinivasa Rao Bittla on Goodreads](https://www.goodreads.com/author/show/56094666.Srinivasa_Rao_Bittla)
+- 🛒 Amazon Author Page: [amazon.com/stores/Srinivasa-Rao-Bittla/author/B0HKF3WP5F](https://www.amazon.com/stores/Srinivasa-Rao-Bittla/author/B0HKF3WP5F)
+- ⚡ GitHub: [@sbittla](https://github.com/sbittla)
+
+### Other Books
+
+| Book | Publisher | Link |
+|------|-----------|------|
+| The Last Invention: How Artificial Superintelligence Will Redefine Life | Amazon Publishing (2026) | [Amazon](https://www.amazon.com/dp/B0F78PJZ9W) · [Ask the Book](https://claude.ai/artifact/FEoYK9zvHndNQPrg9koQsG) |
+| AI-Driven Software Testing: Transforming Software Testing with AI and ML | Apress / Springer Nature (2025) | [Amazon](https://www.amazon.com/AI-Driven-Software-Testing-Transforming-Intelligence/dp/B0FGJ3QCS4/) · [Springer](https://link.springer.com/book/10.1007/979-8-8688-1829-5) |
 
 ---
 
@@ -71,7 +101,7 @@ ai-perf-engineering-book/
 │   └── 23.Accelerator_Spectrum/       ← Ch 23: Accelerator selection guide
 │
 ├── VIII.Advanced_Performance/         ← Part VIII: Chapters 24–27
-│   ├── 24.Triton/                     ← Ch 24: Triton kernels
+│   ├── 24.Triton/                     ← Ch 24: Triton custom kernels
 │   ├── 25.FlashAttention/             ← Ch 25: FlashAttention
 │   ├── 26.Distributed_Training/       ← Ch 26: Scaling analysis
 │   └── 27.Observability/              ← Ch 27: Observability metrics
@@ -111,7 +141,7 @@ ai-perf-engineering-book/
 ## Hardware Requirements
 
 | Component | Minimum | Recommended |
-|---|---|---|
+|-----------|---------|-------------|
 | GPU | RTX 3060 (12 GB) | RTX 4060 (8 GB) / RTX 4070 |
 | CPU | 6 cores | 8+ cores |
 | RAM | 16 GB | 32 GB |
@@ -127,7 +157,7 @@ ai-perf-engineering-book/
 
 ## Getting Started
 
-### 1. Install Dependencies
+### 1. Clone and verify
 
 ```bash
 git clone https://github.com/sbittla/ai-perf-engineering-book.git
@@ -219,12 +249,12 @@ Every exercise file:
 
 **82 runnable exercises** across 9 parts plus 4 appendices. Every file is executed by `run_all_exercises.py`, which captures full output to `_run_logs/` and regenerates `EXERCISE_EXECUTION_REPORT.md`.
 
-> ✅ **Status: 82/82 exercises passing.** (The harness reports 90/90 because it also runs the `sitecustomize.py` bootstrap and the manuscript-tooling scripts.) Verified on the NGC `nvcr.io/nvidia/pytorch:25.01-py3` container (PyTorch 2.6, CUDA 12.x) with an NVIDIA RTX 4060; see [`EXERCISE_EXECUTION_REPORT.md`](EXERCISE_EXECUTION_REPORT.md) for the latest full run.
+> ✅ **Status: 82/82 exercises passing.** Verified on the NGC `nvcr.io/nvidia/pytorch:25.01-py3` container (PyTorch 2.6, CUDA 12.x) with an NVIDIA RTX 4060. See [`EXERCISE_EXECUTION_REPORT.md`](https://github.com/sbittla/ai-perf-engineering-book/blob/main/EXERCISE_EXECUTION_REPORT.md) for the latest full run.
 >
-> 📊 See [`docs/REFERENCE_RESULTS.md`](docs/REFERENCE_RESULTS.md) for sample results, headline metrics, and the reference environment.
+> 📊 See [`docs/REFERENCE_RESULTS.md`](https://github.com/sbittla/ai-perf-engineering-book/blob/main/docs/REFERENCE_RESULTS.md) for sample results, headline metrics, and the reference environment.
 
 | Part | Chapters | Exercises | Files |
-|---|---|---|---|
+|------|----------|-----------|-------|
 | Appendices | A–C, E | 8 | `A.1_environment_check`, `B.1_profiling_cheatsheet`, `C.1_interview_questions`; `E.1_triton_kernel`, `E.2_vllm_trace`, `E.3_nccl_tuning`, `E.4_quant_bakeoff`, `E.5_disaggregated_serving` |
 | I — Foundations | 0–3 | 11 | `0.1_gpu_evolution`; `1.1_roofline_model`; `2.1_tensors`, `2.2_autograd`, `2.3_nn_modules`, `2.4_training_loop`, `2.5_gpu_timing`, `2.6_common_mistakes`; `3.1_cpu_and_memory`, `3.2_gpu_memory_and_compute`, `3.3_hardware_survey` |
 | II — GPU Programming & Profiling | 4–7 | 12 | `4.1_cuda_foundations`, `4.2_execution_model`, `4.3_memory_coalescing`, `4.4_tensor_cores_and_fusion`; `5.1_nsys_profiling`, `5.2_ncu_profiling`, `5.3_torch_profiler`; `6.1_precision_and_amp`, `6.2_quantization`, `6.3_torch_compile`; `7.1_dataloader_pipeline`, `7.2_io_bottleneck` |
@@ -249,7 +279,7 @@ python run_all_exercises.py
 ## Tool Reference
 
 | Tool | Category | Purpose | Install |
-|---|---|---|---|
+|------|----------|---------|---------|
 | `nsys` | GPU profiling | System-wide GPU timeline | CUDA Toolkit |
 | `ncu` | GPU profiling | Per-kernel hardware counters | CUDA Toolkit |
 | `torch.profiler` | GPU profiling | PyTorch op-level timing | `pip install torch` |
@@ -270,7 +300,7 @@ python run_all_exercises.py
 ## Learning Path
 
 | Part | Chapters | Duration | Key Outcome |
-|---|---|---|---|
+|------|----------|----------|-------------|
 | I — Foundations | 0–3 | 2 weeks | Roofline model, PyTorch, hardware mental model |
 | II — GPU Profiling | 4–7 | 5 weeks | Profile any GPU workload end-to-end |
 | III — Linux Systems | 8–9 | 3 weeks | Flamegraphs, perf, eBPF, NUMA |
@@ -298,14 +328,14 @@ docker run --gpus all -it --rm \
   ai-perf-eng
 ```
 
-See [`docs/HARDWARE_SETUP.md`](docs/HARDWARE_SETUP.md) for full setup including Windows/WSL2 and cloud instances.
+See [`docs/HARDWARE_SETUP.md`](https://github.com/sbittla/ai-perf-engineering-book/blob/main/docs/HARDWARE_SETUP.md) for full setup including Windows/WSL2 and cloud instances.
 
 ---
 
 ## Troubleshooting
 
 | Error | Fix |
-|---|---|
+|-------|-----|
 | `bpfcc-tools` not found | Package renamed in Ubuntu 24.04 — use `-bpfcc` suffix |
 | `perf: Permission denied` | Add `--privileged` to `docker run` |
 | `bpftrace: Cannot open tracefs` | Mount `-v /sys/kernel/debug:/sys/kernel/debug` |
@@ -317,3 +347,7 @@ See [`docs/HARDWARE_SETUP.md`](docs/HARDWARE_SETUP.md) for full setup including 
 ## License
 
 MIT
+
+---
+
+*Built with ❤️ for the AI performance engineering community · [bittla.me](https://bittla.me)*
